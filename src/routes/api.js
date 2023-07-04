@@ -17,6 +17,19 @@ router.post('/create-song', (req, res) => {
 })
 
 /**
+ * @route POST /api/create-author
+ *
+ * Adds a new author into the database
+ * @param {string} name - Name of the author
+ */
+router.post('/create-author', (req, res) => {
+  const { name } = req.body
+  db.createAuthor(name)
+
+  res.status(200).send('OK')
+})
+
+/**
  * @route POST /api/get-song
  *
  * Gets the information for a song

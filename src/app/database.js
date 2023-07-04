@@ -15,7 +15,7 @@ class Database {
   }
 
   /**
-   * Creates the tables if they don't exists
+   * Creates the tables if they don't exist
    */
   initializeDatabase () {
     this.db.run(`
@@ -23,6 +23,23 @@ class Database {
         name TEXT
       )
     `)
+
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS authors (
+        name TEXT
+      )
+  `)
+  }
+
+  /**
+   * Create a new value in a table only by a name property
+   * @param {string} table - Name of the table
+   * @param {string} name - Name to use
+   */
+  createByName (table, name) {
+    this.db.run(`
+      INSERT INTO ${table} (name) VALUES (?)
+    `, [name], err => { if (err) throw err })
   }
 
   /**
@@ -30,9 +47,15 @@ class Database {
    * @param {string} name - Name of the song
    */
   createSong (name) {
-    this.db.run(`
-      INSERT INTO songs (name) VALUES (?)
-    `, [name], err => { if (err) throw err })
+    this.createByName('songs', name)
+  }
+
+  /**
+   * Create a new author
+   * @param {string} name - Name of the author
+   */
+  createAuthor (name) {
+    this.createByName('authors', name)
   }
 
   /**
