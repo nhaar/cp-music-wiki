@@ -2,6 +2,11 @@ const path = require('path')
 const sqlite3 = require('sqlite3').verbose()
 
 /**
+ * Object containing information from a row
+ * @typedef {object} Row
+ */
+
+/**
  * Class that handles the database
  */
 class Database {
@@ -31,13 +36,14 @@ class Database {
   }
 
   /**
-   * Asynchronously gets the row for a song
-   * @param {string} name - Name of the song
-   * @returns {object | null} Object containing row info or null if song doesn't exist
+   * Asynchronously gets the row for a song based on a property
+   * @param {string} property - Name of the property (eg name)
+   * @param {*} value - Value to search in the property
+   * @returns {Row | null} Row info or null if doesn't exist
    */
-  async getSong (name) {
+  async getSong (property, value) {
     const promise = new Promise((resolve, reject) => {
-      this.db.get('SELECT * FROM songs WHERE name = ?', [name], (err, row) => {
+      this.db.get(`SELECT rowid, * FROM songs WHERE ${property} = ?`, [value], (err, row) => {
         if (err) reject(err)
         else {
           if (row) {
@@ -51,6 +57,37 @@ class Database {
 
     const row = await promise
     return row
+  }
+
+  /**
+   * Asynchronously gets the row for a song based on its name
+   * @param {string} name - Name of the song
+   * @returns {Row | null} Row info or null if doesn't exist
+   */
+  async getSongByName (name) {
+    const row = await this.getSong('name', name)
+    return row
+  }
+
+  /**
+   * Asynchronously gets the row for a song based on its row id
+   * @param {number} id - Row id of the song
+   * @returns {Row | null} Row info or null if doesn't exist
+   */
+  async getSongById (id) {
+    const row = await this.getSong('rowid', id)
+    return row
+  }
+
+  /**
+   * Updates a song with a new row info
+   * @param {Row} data - Row info with new data to be used
+   */
+  async updateSong (data) {
+    const row = await this.getSongById(data.rowid)
+    if (row.name !== data.name) {
+      this.db.run('UPDATE songs SET name = ? WHERE rowid = ?', [data.name, row.rowid])
+    }
   }
 }
 

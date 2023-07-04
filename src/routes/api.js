@@ -25,12 +25,24 @@ router.post('/create-song', (req, res) => {
  */
 router.post('/get-song', async (req, res) => {
   const { name } = req.body
-  const song = await db.getSong(name)
+  const song = await db.getSongByName(name)
   if (song) {
     res.status(200).send(song)
   } else {
     res.status(404).send('')
   }
+})
+
+/**
+ * @route POST /api/submit-data
+ *
+ * Updates the information for a song
+ * @param {object} body - Object with song data
+ */
+router.post('/submit-data', (req, res) => {
+  const data = req.body
+  db.updateSong(data)
+  res.status(200).send('OK')
 })
 
 module.exports = router
