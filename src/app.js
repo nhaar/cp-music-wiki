@@ -4,6 +4,9 @@ const app = express()
 
 const indexRouter = require('./routes/index')
 
+const db = require('./app/database')
+db.initializeDatabase()
+
 const SERVER_PORT = 5000
 
 nunjucks.configure('src/views', {
@@ -12,7 +15,7 @@ nunjucks.configure('src/views', {
 })
 
 app.use(express.static('src/public'))
-
+app.use(express.json())
 app.use('/', indexRouter)
 
 app.listen(SERVER_PORT, () => {
