@@ -1,3 +1,5 @@
+import { postJSON } from './utils.js'
+
 /*******************************************************
 * model
 *******************************************************/
@@ -12,11 +14,5 @@ const createButton = document.querySelector('.js-create-button')
 // add song to database
 createButton.addEventListener('click', () => {
   const name = songName.value
-  fetch('api/create-song', {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
+  postJSON('api/create-song', { name })
 })

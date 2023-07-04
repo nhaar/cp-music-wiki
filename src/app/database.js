@@ -26,8 +26,31 @@ class Database {
    */
   createSong (name) {
     this.db.run(`
-      INSERT INTO songs (name) VALUeS (?)
+      INSERT INTO songs (name) VALUES (?)
     `, [name], err => { if (err) throw err })
+  }
+
+  /**
+   * Asynchronously gets the row for a song
+   * @param {string} name - Name of the song
+   * @returns {object | null} Object containing row info or null if song doesn't exist
+   */
+  async getSong (name) {
+    const promise = new Promise((resolve, reject) => {
+      this.db.get('SELECT * FROM songs WHERE name = ?', [name], (err, row) => {
+        if (err) reject(err)
+        else {
+          if (row) {
+            resolve(row)
+          } else {
+            resolve(null)
+          }
+        }
+      })
+    })
+
+    const row = await promise
+    return row
   }
 }
 
