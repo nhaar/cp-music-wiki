@@ -5,6 +5,11 @@ import { postJSON } from './utils.js'
  * @typedef {object} Row
  */
 
+/**
+ * Object containing name for element classes
+ * @typedef {object} Elements
+ */
+
 /*******************************************************
 * model
 *******************************************************/
@@ -19,6 +24,10 @@ const params = paramsToObject(urlParams)
 switch (params.t) {
   case '0': {
     renderSongEditor(params.id)
+    break
+  }
+  case '1': {
+    renderAuthorEditor(params.id)
     break
   }
   default: {
@@ -45,16 +54,54 @@ function paramsToObject (urlParams) {
 /**
  * Gather song data from the page inside
  * a song editor
- * @param {string} nameInput - Class of the input containing the name
+ * @param {Elements} elements
  * @param {string} id - Id of the song
  * @returns {Row} Song data from the user
  */
-function getSongData (nameInput, id) {
+function getSongData (elements, id) {
+  const { nameInput } = elements
   const data = {}
   data.name = document.querySelector('.' + nameInput).value
   data.rowid = id
 
   return data
+}
+
+/**
+ * Gather author data from the page inside
+ * an author editor
+ * @param {Elements} elements
+ * @param {string} id - Id of the author
+ * @returns {Row} Author data from the user
+ */
+function getAuthorData (elements, id) {
+  const { nameInput } = elements
+  console.log(elements)
+  const data = {}
+  data.name = document.querySelector('.' + nameInput).value
+  data.rowid = id
+
+  return data
+}
+
+/**
+ * Get an item from the database
+ * and render its editor
+ * @param {string} route - Route to get
+ * @param {string} id - Row id to get
+ * @param {string} notFoundMessage - Message if none found
+ * @param {function(object)} renderFunction
+ * Function which takes as argument a row with the data
+ * and renders the editor onto the screen
+ */
+function getFromDatabase (route, id, notFoundMessage, renderFunction) {
+  postJSON(route, { id }).then(response => {
+    if (response.status === 200) {
+      response.json().then(renderFunction)
+    } else {
+      editor.innerHTML = notFoundMessage
+    }
+  })
 }
 
 /*******************************************************
@@ -66,26 +113,40 @@ function getSongData (nameInput, id) {
  * @param {string} id - Id of the song
  */
 function renderSongEditor (id) {
-  postJSON('api/get-song', { id }).then(response => {
-    if (response.status === 200) {
-      response.json().then(data => {
-        if (data) {
-          const nameInput = 'js-name-input'
-          const submitButton = 'js-submit-button'
+  getFromDatabase('api/get-song', id, 'NO SONG FOUND', data => {
+    const nameInput = 'js-name-input'
+    const submitButton = 'js-submit-button'
 
-          const { name } = data
-          const html = `
-            <input class="${nameInput}" type="text" value="${name}">
-            <button class="${submitButton}"> Submit </button>
-          `
+    const { name } = data
+    const html = `
+      <input class="${nameInput}" type="text" value="${name}">
+      <button class="${submitButton}"> Submit </button>
+    `
 
-          editor.innerHTML = html
-          setupSubmitSong(submitButton, nameInput, id)
-        }
-      })
-    } else {
-      editor.innerHTML = 'NO SONG FOUND'
-    }
+    editor.innerHTML = html
+    const elements = { nameInput }
+    setupSubmitSong(submitButton, elements, id)
+  })
+}
+
+/**
+ * Renders the song editor for a specific author
+ * @param {string} id - Author id
+ */
+function renderAuthorEditor (id) {
+  getFromDatabase('api/get-author', id, 'NO AUTHOR FOUND', data => {
+    const nameInput = 'js-name-input'
+    const submitButton = 'js-submit-button'
+
+    const { name } = data
+    const html = `
+      <input class="${nameInput}" type="text" value="${name}">
+      <button class="${submitButton}"> Submit </button>
+    `
+
+    editor.innerHTML = html
+    const elements = { nameInput }
+    setupSubmitAuthor(submitButton, elements, id)
   })
 }
 
@@ -96,12 +157,37 @@ function renderSongEditor (id) {
 /**
  * Sets up a submit button to send the song data to the database
  * @param {string} submitButton - Class of the button to submit data
- * @param {string} nameInput - Class of the input containing the name
+ * @param {Elements} elements
  * @param {string} id - Id of the song
  */
-function setupSubmitSong (submitButton, nameInput, id) {
+function setupSubmitSong (submitButton, elements, id) {
+  setupSubmitButton(submitButton, elements, id, 'api/submit-data', getSongData)
+}
+
+/**
+ * Sets up a submit button to send the author data to the database
+ * @param {string} submitButton - Class of the button to submit data
+ * @param {Elements} elements
+ * @param {string} id - Id of the author
+ */
+function setupSubmitAuthor (submitButton, elements, id) {
+  setupSubmitButton(submitButton, elements, id, 'api/submit-author', getAuthorData)
+}
+
+/**
+ * Base function to setup a submit button to send
+ * data to the database
+ * @param {string} submitButton - Class of the button to submit data
+ * @param {Elements} elements
+ * @param {string} id - Row id to submit
+ * @param {string} route - Route to submit
+ * @param {function(Elements, string)} dataFunction
+ * Function to get the data, which takes as arguments the
+ * elements object and the row id
+ */
+function setupSubmitButton (submitButton, elements, id, route, dataFunction) {
   document.querySelector('.' + submitButton).addEventListener('click', () => {
-    const data = getSongData(nameInput, id)
-    postJSON('api/submit-data', data)
+    const data = dataFunction(elements, id)
+    postJSON(route, data)
   })
 }

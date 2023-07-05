@@ -37,13 +37,18 @@ router.post('/create-author', (req, res) => {
  * @returns {object} 200 - Song information
  */
 router.post('/get-song', async (req, res) => {
-  const { id } = req.body
-  const song = await db.getSongById(id)
-  if (song) {
-    res.status(200).send(song)
-  } else {
-    res.status(404).send('')
-  }
+  await getFromDatabaseById(req, res, 'songs')
+})
+
+/**
+ * @route POST /api/get-author
+ *
+ * Gets the information for an author
+ * @param {string} body.id - Id of the author to get
+ * @returns {object} 200 - Author information
+ */
+router.post('/get-author', async (req, res) => {
+  await getFromDatabaseById(req, res, 'authors')
 })
 
 /**
@@ -57,5 +62,35 @@ router.post('/submit-data', (req, res) => {
   db.updateSong(data)
   res.status(200).send('OK')
 })
+
+/**
+ * @route POST /api/submit-author
+ *
+ * Updates the information for an author
+ * @param {object} body - Object with author data
+ */
+router.post('/submit-author', (req, res) => {
+  const data = req.body
+  db.updateAuthor(data)
+  res.status(200).send('OK')
+})
+
+/**
+ * Asynchronously get a row from a table
+ *
+ * The request body must contain the row id
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {string} table - Table to target
+ */
+async function getFromDatabaseById (req, res, table) {
+  const { id } = req.body
+  const info = await db.getFromTableById(table, id)
+  if (info) {
+    res.status(200).send(info)
+  } else {
+    res.status(404).send('')
+  }
+}
 
 module.exports = router
