@@ -21,6 +21,15 @@ router.get('/song', (req, res) => {
   res.status(200).render('song.html')
 })
 
+/**
+ * @route GET /creator
+ *
+ * Renders the creator page
+ */
+router.get('/creator', (req, res) => {
+  res.status(200).render('creator.html')
+})
+
 router.use('/api', apiRouter)
 
 router.use('*', (req, res) => {
