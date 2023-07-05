@@ -13,21 +13,21 @@ router.get('/', (req, res) => {
 })
 
 /**
- * @route GET /song
- *
- * Renders the page for a song
- */
-router.get('/song', (req, res) => {
-  res.status(200).render('song.html')
-})
-
-/**
  * @route GET /creator
  *
  * Renders the creator page
  */
 router.get('/creator', (req, res) => {
   res.status(200).render('creator.html')
+})
+
+/**
+ * @route GET /editor
+ *
+ * Renders the editor page
+ */
+router.get('/editor', (req, res) => {
+  res.status(200).render('editor.html')
 })
 
 router.use('/api', apiRouter)

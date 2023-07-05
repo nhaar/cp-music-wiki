@@ -33,12 +33,12 @@ router.post('/create-author', (req, res) => {
  * @route POST /api/get-song
  *
  * Gets the information for a song
- * @param {string} name - Name of the song to find
+ * @param {string} body.id - Id of the song to find
  * @returns {object} 200 - Song information
  */
 router.post('/get-song', async (req, res) => {
-  const { name } = req.body
-  const song = await db.getSongByName(name)
+  const { id } = req.body
+  const song = await db.getSongById(id)
   if (song) {
     res.status(200).send(song)
   } else {

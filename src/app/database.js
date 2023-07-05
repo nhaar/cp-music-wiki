@@ -94,7 +94,7 @@ class Database {
 
   /**
    * Asynchronously gets the row for a song based on its row id
-   * @param {number} id - Row id of the song
+   * @param {string} id - Row id of the song
    * @returns {Row | null} Row info or null if doesn't exist
    */
   async getSongById (id) {
