@@ -136,11 +136,12 @@ function renderSongEditor (id) {
     const submitButton = 'js-submit-button'
     const addButton = 'add-button'
     const delButton = 'del-button'
+    const moveButton = 'move-button'
 
     const { name, authors } = data
     let authorsHTML = ''
     authors.forEach(author => {
-      authorsHTML += `<div class=${authorRow}>${generateAuthorRow(authorInput, author, delButton)}</div>`
+      authorsHTML += `<div class=${authorRow}>${generateAuthorRow(authorInput, author, delButton, moveButton)}</div>`
     })
 
     const html = `
@@ -155,9 +156,8 @@ function renderSongEditor (id) {
     editor.innerHTML = html
 
     // controlers
-    const rows = document.querySelectorAll('.' + authorRow)
-    rows.forEach(row => addRowControls(row, delButton))
-    setupAddAuthorButton(addButton, authorRow, authorInput, delButton)
+    addRowControls(authorDiv, authorRow, delButton, moveButton)
+    setupAddAuthorButton(addButton, authorRow, authorInput, delButton, moveButton)
 
     const elements = { nameInput, authorInput }
     setupSubmitSong(submitButton, elements, id)
@@ -192,11 +192,11 @@ function renderAuthorEditor (id) {
  * @param {string} deleteClass - Class for the delete button
  * @returns {string} HTML string
  */
-function generateAuthorRow (inputClass, author, deleteClass) {
+function generateAuthorRow (inputClass, author, deleteClass, moveClass) {
   return `
     <input class="${inputClass}" type="text" value="${author}">
     <button class="${deleteClass}"> X </button>
-    <button> M </button>
+    <button class="${moveClass}"> M </button>
   `
 }
 
@@ -248,15 +248,16 @@ function setupSubmitButton (submitButton, elements, id, route, dataFunction) {
  * @param {string} rowClass - Class for the row
  * @param {string} inputClass - Class for the author input
  * @param {string} deleteClass - CLass for the delete button
+ * @param {string} moveClass - Class for the move button
  */
-function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass) {
+function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass, moveClass) {
   const addButton = document.querySelector('.' + addClass)
   addButton.addEventListener('click', () => {
     const newRow = document.createElement('div')
     newRow.classList.add(rowClass)
-    newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass)
+    newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass, moveClass)
     addButton.parentElement.insertBefore(newRow, addButton)
-    addRowControls(newRow, deleteClass)
+    addRowControl(newRow, deleteClass, moveClass)
   })
 }
 
@@ -270,13 +271,82 @@ function removeAuthor (deleteButton) {
 }
 
 /**
- * 
- * @param {HTMLElement} row - HTML element for tha author row
+ * Add control to all of the current rows and setup
+ *
+ * Must only be used once due to it setting up the
+ * listener for moving rows
+ * @param {string} divClass - Author div class name
+ * @param {string} rowClass - Row class name
  * @param {string} deleteClass - Delete button class
+ * @param {string} moveClass - Move button class
  */
-function addRowControls (row, deleteClass) {
+function addRowControls (divClass, rowClass, deleteClass, moveClass) {
+  const authorsDiv = document.querySelector('.' + divClass)
+  const rows = document.querySelectorAll('.' + rowClass)
+
+  rows.forEach(row => {
+    addRowControl(row, deleteClass, moveClass)
+  })
+
+  // to move rows
+  authorsDiv.addEventListener('mouseup', () => {
+    if (authorsDiv.dataset.isMoving) {
+      authorsDiv.dataset.isMoving = ''
+      const destination = Number(authorsDiv.dataset.hoveringRow)
+      const origin = Number(authorsDiv.dataset.currentRow)
+
+      // don't move if trying to move on itself
+      if (destination !== origin) {
+        // offset is to possibly compensate for indexes being displaced
+        // post deletion
+        const offset = destination > origin ? 1 : 0
+        const originElement = authorsDiv.children[origin]
+        const targetElement = authorsDiv.children[destination + offset]
+        authorsDiv.removeChild(originElement)
+        authorsDiv.insertBefore(originElement, targetElement)
+      }
+    }
+  })
+}
+
+/**
+ * Add controls to an author row
+ * @param {HTMLDivElement} row - Element for the row
+ * @param {string} deleteClass - Delete button class
+ * @param {string} moveClass - Move button class
+ */
+function addRowControl (row, deleteClass, moveClass) {
+  const authorsDiv = row.parentElement
   const deleteButton = row.querySelector('.' + deleteClass)
   deleteButton.addEventListener('click', () => {
     removeAuthor(deleteButton)
   })
+
+  const moveButton = row.querySelector('.' + moveClass)
+
+  // start dragging
+  moveButton.addEventListener('mousedown', () => {
+    const index = indexOfChild(authorsDiv, row)
+    authorsDiv.dataset.currentRow = index
+    authorsDiv.dataset.isMoving = '1'
+  })
+
+  // hover listener
+  row.addEventListener('mouseover', () => {
+    console.log('e')
+    const index = indexOfChild(authorsDiv, row)
+    authorsDiv.dataset.hoveringRow = index
+  })
+}
+
+/**
+ * Helper function to get the index of a child
+ * inside an element (0-indexed)
+ * @param {HTMLElement} parent - Parent element
+ * @param {HTMLElement} child - Child to finx index of
+ * @returns {number} Index
+ */
+function indexOfChild (parent, child) {
+  console.log(parent, child)
+  return [...parent.children].indexOf(child)
 }
