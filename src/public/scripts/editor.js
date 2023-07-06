@@ -77,8 +77,6 @@ function getSongData (elements, id) {
   data.authors = authors
   data.rowid = id
 
-  console.log(authors)
-
   return data
 }
 
@@ -91,7 +89,6 @@ function getSongData (elements, id) {
  */
 function getAuthorData (elements, id) {
   const { nameInput } = elements
-  console.log(elements)
   const data = {}
   data.name = document.querySelector('.' + nameInput).value
   data.rowid = id
@@ -333,7 +330,6 @@ function addRowControl (row, deleteClass, moveClass) {
 
   // hover listener
   row.addEventListener('mouseover', () => {
-    console.log('e')
     const index = indexOfChild(authorsDiv, row)
     authorsDiv.dataset.hoveringRow = index
   })
@@ -347,6 +343,5 @@ function addRowControl (row, deleteClass, moveClass) {
  * @returns {number} Index
  */
 function indexOfChild (parent, child) {
-  console.log(parent, child)
   return [...parent.children].indexOf(child)
 }
