@@ -1,0 +1,15 @@
+.editor {
+  display: grid;
+  grid-template-columns: 400px;
+  row-gap: 10px;
+}
+
+.authors-div {
+  display: flex;
+  flex-direction: column;
+}
+
+.author-row {
+  display: grid;
+  grid-template-columns: 80% 10% 10%;
+}

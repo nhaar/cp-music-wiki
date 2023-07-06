@@ -136,14 +136,16 @@ function renderSongEditor (id) {
     authors.forEach(author => {
       authorsHTML += `
         <input class="${authorRow}" type="text" value="${author}">
+        <button> X </button>
+        <button> M </button>
       `
     })
 
     const html = `
       <input class="${nameInput}" type="text" value="${name}">
       <div class="authors-div">
-        ${authorsHTML}
-        <button class="add-button"> ADD</button>
+        <div class="author-row"> ${authorsHTML} </div>
+        <button class="add-button"> ADD </button>
       </div>
       <button class="${submitButton}"> Submit </button>
     `
