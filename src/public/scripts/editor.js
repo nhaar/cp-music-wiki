@@ -155,12 +155,8 @@ function renderSongEditor (id) {
     editor.innerHTML = html
 
     // controlers
-    const deleteButtons = document.querySelectorAll('.' + delButton)
-    deleteButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        removeAuthor(button)
-      })
-    })
+    const rows = document.querySelectorAll('.' + authorRow)
+    rows.forEach(row => addRowControls(row, delButton))
 
     const addButtonElement = document.querySelector('.' + addButton)
     addButtonElement.addEventListener('click', () => {
@@ -262,6 +258,7 @@ function addAuthor (addButton, rowClass, inputClass, deleteClass) {
   newRow.classList.add(rowClass)
   newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass)
   addButton.parentElement.insertBefore(newRow, addButton)
+  addRowControls(newRow, deleteClass)
 }
 
 /**
@@ -271,4 +268,16 @@ function addAuthor (addButton, rowClass, inputClass, deleteClass) {
 function removeAuthor (deleteButton) {
   const row = deleteButton.parentElement
   row.parentElement.removeChild(row)
+}
+
+/**
+ * 
+ * @param {HTMLElement} row - HTML element for tha author row
+ * @param {string} deleteClass - Delete button class
+ */
+function addRowControls (row, deleteClass) {
+  const deleteButton = row.querySelector('.' + deleteClass)
+  deleteButton.addEventListener('click', () => {
+    removeAuthor(deleteButton)
+  })
 }
