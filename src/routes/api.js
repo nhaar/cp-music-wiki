@@ -76,6 +76,20 @@ router.post('/submit-author', (req, res) => {
 })
 
 /**
+ * @route POST /api/get-author-names
+ *
+ * Gives all the author rows filtered by a keyword
+ * @param {object} body.keyword
+ * @returns {import('../app/database').Row[]}
+ */
+router.post('/get-author-names', async (req, res) => {
+  const { keyword } = req.body
+  const rows = await db.getAuthorNames(keyword)
+  console.log(rows)
+  res.status(200).send(rows)
+})
+
+/**
  * Asynchronously get a data object from the database
  *
  * The request body must contain the row id

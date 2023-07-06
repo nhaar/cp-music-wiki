@@ -68,9 +68,10 @@ function paramsToObject (urlParams) {
 function getSongData (elements, id) {
   const { nameInput, authorInput } = elements
 
+  // author ids are saved as data variables in inputs
   const authors = []
-  const authorRows = document.querySelectorAll('.' + authorInput)
-  authorRows.forEach(row => authors.push(row.value))
+  const authorInputs = document.querySelectorAll('.' + authorInput)
+  authorInputs.forEach(input => authors.push(input.dataset.authorId))
 
   const data = {}
   data.name = document.querySelector('.' + nameInput).value
@@ -125,7 +126,7 @@ function getFromDatabase (route, id, notFoundMessage, renderFunction) {
  * @param {string} id - Id of the song
  */
 function renderSongEditor (id) {
-  getFromDatabase('api/get-song', id, 'NO SONG FOUND', data => {
+  getFromDatabase('api/get-song', id, 'NO SONG FOUND', async data => {
     const nameInput = 'js-name-input'
     const authorInput = 'author'
     const authorRow = 'author-row'
@@ -136,6 +137,14 @@ function renderSongEditor (id) {
     const moveButton = 'move-button'
 
     const { name, authors } = data
+
+    // replace id with the author names
+    const authorNames = await getAuthorNames('')
+    authorNames.forEach(name => {
+      const index = authors.indexOf(name.rowid)
+      authors[index] = name.name
+    })
+
     let authorsHTML = ''
     authors.forEach(author => {
       authorsHTML += `<div class=${authorRow}>${generateAuthorRow(authorInput, author, delButton, moveButton)}</div>`
@@ -153,7 +162,7 @@ function renderSongEditor (id) {
     editor.innerHTML = html
 
     // controlers
-    addRowControls(authorDiv, authorRow, delButton, moveButton)
+    addRowControls(authorDiv, authorRow, delButton, moveButton, authorInput)
     setupAddAuthorButton(addButton, authorRow, authorInput, delButton, moveButton)
 
     const elements = { nameInput, authorInput }
@@ -246,6 +255,7 @@ function setupSubmitButton (submitButton, elements, id, route, dataFunction) {
  * @param {string} inputClass - Class for the author input
  * @param {string} deleteClass - CLass for the delete button
  * @param {string} moveClass - Class for the move button
+ * @param {string} inputClass - Class for the name input
  */
 function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass, moveClass) {
   const addButton = document.querySelector('.' + addClass)
@@ -254,7 +264,7 @@ function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass, move
     newRow.classList.add(rowClass)
     newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass, moveClass)
     addButton.parentElement.insertBefore(newRow, addButton)
-    addRowControl(newRow, deleteClass, moveClass)
+    addRowControl(newRow, deleteClass, moveClass, inputClass)
   })
 }
 
@@ -276,13 +286,14 @@ function removeAuthor (deleteButton) {
  * @param {string} rowClass - Row class name
  * @param {string} deleteClass - Delete button class
  * @param {string} moveClass - Move button class
+ * @param {string} inputClass - Class for the name input
  */
-function addRowControls (divClass, rowClass, deleteClass, moveClass) {
+function addRowControls (divClass, rowClass, deleteClass, moveClass, inputClass) {
   const authorsDiv = document.querySelector('.' + divClass)
   const rows = document.querySelectorAll('.' + rowClass)
 
   rows.forEach(row => {
-    addRowControl(row, deleteClass, moveClass)
+    addRowControl(row, deleteClass, moveClass, inputClass)
   })
 
   // to move rows
@@ -311,8 +322,9 @@ function addRowControls (divClass, rowClass, deleteClass, moveClass) {
  * @param {HTMLDivElement} row - Element for the row
  * @param {string} deleteClass - Delete button class
  * @param {string} moveClass - Move button class
+ * @param {string} inputClass - Class for the name input
  */
-function addRowControl (row, deleteClass, moveClass) {
+function addRowControl (row, deleteClass, moveClass, inputClass) {
   const authorsDiv = row.parentElement
   const deleteButton = row.querySelector('.' + deleteClass)
   deleteButton.addEventListener('click', () => {
@@ -333,6 +345,29 @@ function addRowControl (row, deleteClass, moveClass) {
     const index = indexOfChild(authorsDiv, row)
     authorsDiv.dataset.hoveringRow = index
   })
+
+  // element to have the available options
+  const queryOptions = document.createElement('div')
+  queryOptions.className = 'author-options'
+  row.appendChild(queryOptions)
+
+  const input = row.querySelector('.' + inputClass)
+
+  // flag for hovering options or not
+  const listenerRel = { mouseover: '1', mouseout: '' }
+  for (const event in listenerRel) {
+    queryOptions.addEventListener(event, () => (input.dataset.choosing = listenerRel[event]))
+  }
+
+  const updateQuery = updateId => updateQueryOptions(input, queryOptions, updateId)
+  input.addEventListener('input', () => updateQuery(true))
+  input.addEventListener('focus', () => updateQuery(false))
+  input.addEventListener('blur', () => {
+    // track if the user is focusing out by picking an option
+    if (!input.dataset.choosing) {
+      queryOptions.innerHTML = ''
+    }
+  })
 }
 
 /**
@@ -340,8 +375,39 @@ function addRowControl (row, deleteClass, moveClass) {
  * inside an element (0-indexed)
  * @param {HTMLElement} parent - Parent element
  * @param {HTMLElement} child - Child to finx index of
+ * @param {boolean} - True if represents an input (the text changing)
  * @returns {number} Index
  */
 function indexOfChild (parent, child) {
   return [...parent.children].indexOf(child)
+}
+
+function updateQueryOptions (input, queryOptions, updateId) {
+  // reset ID if altered anything
+  if (updateId) input.dataset.authorId = ''
+
+  getAuthorNames(input.value).then(data => {
+    queryOptions.innerHTML = ''
+    data.forEach(author => {
+      const authorOption = document.createElement('div')
+      authorOption.innerHTML = author.name
+      authorOption.addEventListener('click', () => {
+        queryOptions.innerHTML = ''
+        input.dataset.authorId = author.rowid
+        input.value = author.name
+      })
+      queryOptions.appendChild(authorOption)
+    })
+  })
+}
+
+/**
+ * Get all authors that contains a keyword
+ * @param {string} keyword
+ * @returns {Row[]}
+ */
+async function getAuthorNames (keyword) {
+  const response = await postJSON('api/get-author-names', { keyword })
+  const rows = await response.json()
+  return rows
 }

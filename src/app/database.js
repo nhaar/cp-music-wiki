@@ -218,6 +218,18 @@ class Database {
   }
 
   /**
+   * Get all authors that contains a keyword
+   * @param {string} keyword
+   * @returns {Row[]}
+   */
+  async getAuthorNames (keyword) {
+    const rows = await this.runSelectMethod(callback => {
+      this.db.all("SELECT rowid, * FROM authors WHERE name LIKE '%' || ? || '%'", [keyword], callback)
+    })
+    return rows
+  }
+
+  /**
    * Runs a certain SELECT method which returns data from the database
    * @param {function(function)} methodCallback
    * A function that runs .get or .all (to select from database)
