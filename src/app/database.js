@@ -188,12 +188,12 @@ class Database {
 
   /**
    * Get all the authors from a song in an ordered array
-   * @param {string} song_id - Song id
+   * @param {string} songId - Song id
    * @returns {Row[]} Rows from song_author
    */
-  async getSongAuthors (song_id) {
+  async getSongAuthors (songId) {
     const authors = await this.runSelectMethod(callback => {
-      this.db.all(`SELECT * FROM song_author WHERE song_id = ? ORDER BY pos ASC`, [song_id], callback)
+      this.db.all('SELECT * FROM song_author WHERE song_id = ? ORDER BY pos ASC', [songId], callback)
     })
     return authors
   }
@@ -204,7 +204,7 @@ class Database {
    * @param {string} id - Id of the data in the database
    * @returns {object} - Object representing the data type
    */
-  async getDataById(type, id) {
+  async getDataById (type, id) {
     switch (type) {
       case 'songs': {
         const response = await this.getSongById(id)
@@ -219,7 +219,7 @@ class Database {
 
   /**
    * Runs a certain SELECT method which returns data from the database
-   * @param {function(function)} methodCallback 
+   * @param {function(function)} methodCallback
    * A function that runs .get or .all (to select from database)
    * and uses for its callback the argument being passed
    * @returns {Row | Row[]} - Single data row or multiple depending on method
