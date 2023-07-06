@@ -157,11 +157,7 @@ function renderSongEditor (id) {
     // controlers
     const rows = document.querySelectorAll('.' + authorRow)
     rows.forEach(row => addRowControls(row, delButton))
-
-    const addButtonElement = document.querySelector('.' + addButton)
-    addButtonElement.addEventListener('click', () => {
-      addAuthor(addButtonElement, authorRow, authorInput, delButton)
-    })
+    setupAddAuthorButton(addButton, authorRow, authorInput, delButton)
 
     const elements = { nameInput, authorInput }
     setupSubmitSong(submitButton, elements, id)
@@ -247,18 +243,21 @@ function setupSubmitButton (submitButton, elements, id, route, dataFunction) {
 }
 
 /**
- * Add an empty author row
- * @param {HTMLButtonElement} addButton - Add button element
+ * Add control to the add author button
+ * @param {string} addClass - Add button class
  * @param {string} rowClass - Class for the row
  * @param {string} inputClass - Class for the author input
  * @param {string} deleteClass - CLass for the delete button
  */
-function addAuthor (addButton, rowClass, inputClass, deleteClass) {
-  const newRow = document.createElement('div')
-  newRow.classList.add(rowClass)
-  newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass)
-  addButton.parentElement.insertBefore(newRow, addButton)
-  addRowControls(newRow, deleteClass)
+function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass) {
+  const addButton = document.querySelector('.' + addClass)
+  addButton.addEventListener('click', () => {
+    const newRow = document.createElement('div')
+    newRow.classList.add(rowClass)
+    newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass)
+    addButton.parentElement.insertBefore(newRow, addButton)
+    addRowControls(newRow, deleteClass)
+  })
 }
 
 /**
