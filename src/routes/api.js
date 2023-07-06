@@ -76,16 +76,16 @@ router.post('/submit-author', (req, res) => {
 })
 
 /**
- * Asynchronously get a row from a table
+ * Asynchronously get a data object from the database
  *
  * The request body must contain the row id
  * @param {import('express').Request} req
  * @param {import('express').Response} res
- * @param {string} table - Table to target
+ * @param {string} type - Data type to target
  */
-async function getFromDatabaseById (req, res, table) {
+async function getFromDatabaseById (req, res, type) {
   const { id } = req.body
-  const info = await db.getFromTableById(table, id)
+  const info = await db.getDataById(type, id)
   if (info) {
     res.status(200).send(info)
   } else {

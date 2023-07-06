@@ -6,6 +6,13 @@ import { postJSON } from './utils.js'
  */
 
 /**
+ * Data structure for a song
+ * @typedef {object} Song
+ * @property {string} name
+ * @property {string[]} authors
+ */
+
+/**
  * Object containing name for element classes
  * @typedef {object} Elements
  */
@@ -59,9 +66,15 @@ function paramsToObject (urlParams) {
  * @returns {Row} Song data from the user
  */
 function getSongData (elements, id) {
-  const { nameInput } = elements
+  const { nameInput, authorRow } = elements
+
+  const authors = []
+  const authorRows = document.querySelectorAll('.' + authorRow)
+  authorRows.forEach(row => authors.push(row.value))
+
   const data = {}
   data.name = document.querySelector('.' + nameInput).value
+  data.authors = authors
   data.rowid = id
 
   return data
@@ -115,16 +128,28 @@ function getFromDatabase (route, id, notFoundMessage, renderFunction) {
 function renderSongEditor (id) {
   getFromDatabase('api/get-song', id, 'NO SONG FOUND', data => {
     const nameInput = 'js-name-input'
+    const authorRow = 'author'
     const submitButton = 'js-submit-button'
 
-    const { name } = data
+    const { name, authors } = data
+    let authorsHTML = ''
+    authors.forEach(author => {
+      authorsHTML += `
+        <input class="${authorRow}" type="text" value="${author}">
+      `
+    })
+
     const html = `
       <input class="${nameInput}" type="text" value="${name}">
+      <div class="authors-div">
+        ${authorsHTML}
+        <button class="add-button"> ADD</button>
+      </div>
       <button class="${submitButton}"> Submit </button>
     `
 
     editor.innerHTML = html
-    const elements = { nameInput }
+    const elements = { nameInput, authorRow }
     setupSubmitSong(submitButton, elements, id)
   })
 }
