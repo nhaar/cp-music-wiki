@@ -155,12 +155,12 @@ class Database {
     }
 
     const authorRows = await this.getSongAuthors(rowid)
-    if (authorRows.length < authors) {
+    if (authorRows.length < authors.length) {
       // check for adding
       for (let i = authorRows.length; i < authors.length; i++) {
         this.db.run('INSERT INTO song_author (song_id, author_id, pos) VALUES (?, ?, ?)', [rowid, authors[i], i + 1])
       }
-    } else if (authorRows.length > authors) {
+    } else if (authorRows.length > authors.length) {
       // check for deletion
       for (let i = authors.length; i < authorRows.length; i++) {
         this.db.run('DELETE FROM song_author WHERE song_id = ?  AND author_id = ? AND pos = ?', [rowid, authorRows[i].author_id, i + 1])

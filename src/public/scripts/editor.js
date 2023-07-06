@@ -66,16 +66,18 @@ function paramsToObject (urlParams) {
  * @returns {Row} Song data from the user
  */
 function getSongData (elements, id) {
-  const { nameInput, authorRow } = elements
+  const { nameInput, authorInput } = elements
 
   const authors = []
-  const authorRows = document.querySelectorAll('.' + authorRow)
+  const authorRows = document.querySelectorAll('.' + authorInput)
   authorRows.forEach(row => authors.push(row.value))
 
   const data = {}
   data.name = document.querySelector('.' + nameInput).value
   data.authors = authors
   data.rowid = id
+
+  console.log(authors)
 
   return data
 }
@@ -128,30 +130,36 @@ function getFromDatabase (route, id, notFoundMessage, renderFunction) {
 function renderSongEditor (id) {
   getFromDatabase('api/get-song', id, 'NO SONG FOUND', data => {
     const nameInput = 'js-name-input'
-    const authorRow = 'author'
+    const authorInput = 'author'
+    const authorRow = 'author-row'
+    const authorDiv = 'authors-div'
     const submitButton = 'js-submit-button'
+    const addButton = 'add-button'
 
     const { name, authors } = data
     let authorsHTML = ''
     authors.forEach(author => {
-      authorsHTML += `
-        <input class="${authorRow}" type="text" value="${author}">
-        <button> X </button>
-        <button> M </button>
-      `
+      authorsHTML += `<div class=${authorRow}>${generateAuthorRow(authorInput, author)}</div>`
     })
 
     const html = `
       <input class="${nameInput}" type="text" value="${name}">
-      <div class="authors-div">
-        <div class="author-row"> ${authorsHTML} </div>
-        <button class="add-button"> ADD </button>
+      <div class="${authorDiv}">
+        ${authorsHTML}
+        <button class="${addButton}"> ADD </button>
       </div>
       <button class="${submitButton}"> Submit </button>
     `
 
     editor.innerHTML = html
-    const elements = { nameInput, authorRow }
+
+    // controlers
+    const addButtonElement = document.querySelector('.' + addButton)
+    addButtonElement.addEventListener('click', () => {
+      addAuthor(addButtonElement, authorRow, authorInput)
+    })
+
+    const elements = { nameInput, authorInput }
     setupSubmitSong(submitButton, elements, id)
   })
 }
@@ -175,6 +183,20 @@ function renderAuthorEditor (id) {
     const elements = { nameInput }
     setupSubmitAuthor(submitButton, elements, id)
   })
+}
+
+/**
+ * Generate the HTML for an author row
+ * @param {string} inputClass - Class name for the input
+ * @param {string} author - Value of the author
+ * @returns {string} HTML string
+ */
+function generateAuthorRow (inputClass, author) {
+  return `
+    <input class="${inputClass}" type="text" value="${author}">
+    <button> X </button>
+    <button> M </button>
+  `
 }
 
 /*******************************************************
@@ -217,4 +239,17 @@ function setupSubmitButton (submitButton, elements, id, route, dataFunction) {
     const data = dataFunction(elements, id)
     postJSON(route, data)
   })
+}
+
+/**
+ * Add an empty author row
+ * @param {HTMLButtonElement} addButton - Add button element
+ * @param {string} rowClass - Class for the row
+ * @param {string} inputClass - Class for the author input
+ */
+function addAuthor (addButton, rowClass, inputClass) {
+  const newRow = document.createElement('div')
+  newRow.classList.add(rowClass)
+  newRow.innerHTML = generateAuthorRow(inputClass, '')
+  addButton.parentElement.insertBefore(newRow, addButton)
 }
