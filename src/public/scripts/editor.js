@@ -135,11 +135,12 @@ function renderSongEditor (id) {
     const authorDiv = 'authors-div'
     const submitButton = 'js-submit-button'
     const addButton = 'add-button'
+    const delButton = 'del-button'
 
     const { name, authors } = data
     let authorsHTML = ''
     authors.forEach(author => {
-      authorsHTML += `<div class=${authorRow}>${generateAuthorRow(authorInput, author)}</div>`
+      authorsHTML += `<div class=${authorRow}>${generateAuthorRow(authorInput, author, delButton)}</div>`
     })
 
     const html = `
@@ -154,9 +155,16 @@ function renderSongEditor (id) {
     editor.innerHTML = html
 
     // controlers
+    const deleteButtons = document.querySelectorAll('.' + delButton)
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        removeAuthor(button)
+      })
+    })
+
     const addButtonElement = document.querySelector('.' + addButton)
     addButtonElement.addEventListener('click', () => {
-      addAuthor(addButtonElement, authorRow, authorInput)
+      addAuthor(addButtonElement, authorRow, authorInput, delButton)
     })
 
     const elements = { nameInput, authorInput }
@@ -189,12 +197,13 @@ function renderAuthorEditor (id) {
  * Generate the HTML for an author row
  * @param {string} inputClass - Class name for the input
  * @param {string} author - Value of the author
+ * @param {string} deleteClass - Class for the delete button
  * @returns {string} HTML string
  */
-function generateAuthorRow (inputClass, author) {
+function generateAuthorRow (inputClass, author, deleteClass) {
   return `
     <input class="${inputClass}" type="text" value="${author}">
-    <button> X </button>
+    <button class="${deleteClass}"> X </button>
     <button> M </button>
   `
 }
@@ -246,10 +255,20 @@ function setupSubmitButton (submitButton, elements, id, route, dataFunction) {
  * @param {HTMLButtonElement} addButton - Add button element
  * @param {string} rowClass - Class for the row
  * @param {string} inputClass - Class for the author input
+ * @param {string} deleteClass - CLass for the delete button
  */
-function addAuthor (addButton, rowClass, inputClass) {
+function addAuthor (addButton, rowClass, inputClass, deleteClass) {
   const newRow = document.createElement('div')
   newRow.classList.add(rowClass)
-  newRow.innerHTML = generateAuthorRow(inputClass, '')
+  newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass)
   addButton.parentElement.insertBefore(newRow, addButton)
+}
+
+/**
+ * Remove an author row
+ * @param {HTMLButtonElement} deleteButton - Delete button of the row
+ */
+function removeAuthor (deleteButton) {
+  const row = deleteButton.parentElement
+  row.parentElement.removeChild(row)
 }
