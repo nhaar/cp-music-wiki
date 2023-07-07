@@ -35,7 +35,7 @@ class Database {
         song_id INT,
         author_id INT,
         pos INT,
-        PRIMARY KEY (song_id, author_id),
+        PRIMARY KEY (song_id, pos),
         FOREIGN KEY (song_id) REFERENCES songs(song_id)
         FOREIGN KEY (author_id) REFERENCES authors(author_id)
       )
@@ -163,13 +163,13 @@ class Database {
     } else if (authorRows.length > authors.length) {
       // check for deletion
       for (let i = authors.length; i < authorRows.length; i++) {
-        this.db.run('DELETE FROM song_author WHERE song_id = ?  AND author_id = ? AND pos = ?', [rowid, authorRows[i].author_id, i + 1])
+        this.db.run('DELETE FROM song_author WHERE song_id = ? AND pos = ?', [rowid, authorRows[i].author_id, i + 1])
       }
     }
     // check for editting authors
     for (let i = 0; i < authors.length && i < authorRows.length; i++) {
       if (authorRows[i].author_id !== Number(authors[i])) {
-        this.db.run('UPDATE song_author SET author_id = ? WHERE song_id = ? AND author_id = ?', [authors[i], rowid, authorRows[i].author_id])
+        this.db.run('UPDATE song_author SET author_id = ? WHERE song_id = ? AND pos = ?', [authors[i], rowid, i + 1])
       }
     }
   }
