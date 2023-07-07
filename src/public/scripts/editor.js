@@ -138,11 +138,13 @@ function renderSongEditor (id) {
 
     const { name, authors } = data
 
-    // replace id with the author names
-    const authorNames = await getAuthorNames('')
-    authorNames.forEach(name => {
-      const index = authors.indexOf(name.rowid)
-      authors[index] = name.name
+    // filter and order author names
+    const authorInfo = await getAuthorNames('')
+    authorInfo.forEach(info => {
+      const index = authors.indexOf(info.rowid)
+      if (index > -1) {
+        authors[index] = info
+      }
     })
 
     let authorsHTML = ''
@@ -194,13 +196,15 @@ function renderAuthorEditor (id) {
 /**
  * Generate the HTML for an author row
  * @param {string} inputClass - Class name for the input
- * @param {string} author - Value of the author
+ * @param {object} author - Author main info
+ * @param {string} author.rowid - Author id
+ * @param {string} author.name - Author name
  * @param {string} deleteClass - Class for the delete button
  * @returns {string} HTML string
  */
 function generateAuthorRow (inputClass, author, deleteClass, moveClass) {
   return `
-    <input class="${inputClass}" type="text" value="${author}">
+    <input class="${inputClass}" type="text" value="${author.name}" data-author-id="${author.rowid}">
     <button class="${deleteClass}"> X </button>
     <button class="${moveClass}"> M </button>
   `
@@ -262,7 +266,7 @@ function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass, move
   addButton.addEventListener('click', () => {
     const newRow = document.createElement('div')
     newRow.classList.add(rowClass)
-    newRow.innerHTML = generateAuthorRow(inputClass, '', deleteClass, moveClass)
+    newRow.innerHTML = generateAuthorRow(inputClass, { rowid: '', name: '' }, deleteClass, moveClass)
     addButton.parentElement.insertBefore(newRow, addButton)
     addRowControl(newRow, deleteClass, moveClass, inputClass)
   })
@@ -387,6 +391,15 @@ function updateQueryOptions (input, queryOptions, updateId) {
   if (updateId) input.dataset.authorId = ''
 
   getAuthorNames(input.value).then(data => {
+    // fetching all taken authors
+    const authorsDiv = input.parentElement.parentElement
+    const allInputs = authorsDiv.querySelectorAll('input')
+    const takenIds = []
+    allInputs.forEach(input => {
+      const id = input.dataset.authorId
+      if (id) takenIds.push(id)
+    })
+
     queryOptions.innerHTML = ''
     data.forEach(author => {
       const authorOption = document.createElement('div')
@@ -396,7 +409,11 @@ function updateQueryOptions (input, queryOptions, updateId) {
         input.dataset.authorId = author.rowid
         input.value = author.name
       })
-      queryOptions.appendChild(authorOption)
+
+      // filtering taken authors
+      if (!takenIds.includes(author.rowid + '')) {
+        queryOptions.appendChild(authorOption)
+      }
     })
   })
 }
