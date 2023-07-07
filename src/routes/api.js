@@ -85,7 +85,6 @@ router.post('/submit-author', (req, res) => {
 router.post('/get-author-names', async (req, res) => {
   const { keyword } = req.body
   const rows = await db.getAuthorNames(keyword)
-  console.log(rows)
   res.status(200).send(rows)
 })
 
