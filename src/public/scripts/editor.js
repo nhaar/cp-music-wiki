@@ -10,6 +10,7 @@ import { postJSON } from './utils.js'
 /**
  * Data structure for a song
  * @typedef {object} Song
+ * @property {string} songId
  * @property {string} name
  * @property {string[]} authors
  */
@@ -73,10 +74,10 @@ function paramsToObject (urlParams) {
  * Gather song data from the page inside
  * a song editor
  * @param {Elements} elements
- * @param {string} id - Id of the song
+ * @param {string} songId
  * @returns {Row} Song data from the user
  */
-function getSongData (elements, id) {
+function getSongData (elements, songId) {
   const { nameInput, authorInput } = elements
 
   // author ids are saved as data variables in inputs
@@ -84,10 +85,8 @@ function getSongData (elements, id) {
   const authorInputs = document.querySelectorAll('.' + authorInput)
   authorInputs.forEach(input => authors.push(input.dataset.authorId))
 
-  const data = {}
-  data.name = document.querySelector('.' + nameInput).value
-  data.authors = authors
-  data.rowid = id
+  const name = document.querySelector('.' + nameInput).value
+  const data = { songId, name, authors }
 
   return data
 }
@@ -96,14 +95,13 @@ function getSongData (elements, id) {
  * Gather author data from the page inside
  * an author editor
  * @param {Elements} elements
- * @param {string} id - Id of the author
+ * @param {string} authorId
  * @returns {Row} Author data from the user
  */
-function getAuthorData (elements, id) {
+function getAuthorData (elements, authorId) {
   const { nameInput } = elements
-  const data = {}
-  data.name = document.querySelector('.' + nameInput).value
-  data.rowid = id
+  const name = document.querySelector('.' + nameInput).value
+  const data = { authorId, name }
 
   return data
 }
@@ -112,7 +110,7 @@ function getAuthorData (elements, id) {
  * Get an item from the database
  * and render its editor
  * @param {string} route - Route to get
- * @param {string} id - Row id to get
+ * @param {string} id - Id of item in the table
  * @param {string} notFoundMessage - Message if none found
  * @param {function(object)} renderFunction
  * Function which takes as argument a row with the data
@@ -143,8 +141,8 @@ function getAllTakenAuthors (authorsDiv) {
   const takenIds = []
   let hasUntakenId = false
   allInputs.forEach(input => {
-    const id = input.dataset.authorId
-    if (id) takenIds.push(id)
+    const { authorId } = input.dataset
+    if (authorId) takenIds.push(authorId)
     else hasUntakenId = true
   })
 
@@ -160,10 +158,10 @@ function getAllTakenAuthors (authorsDiv) {
 
 /**
  * Renders the song editor for a specific song
- * @param {string} id - Id of the song
+ * @param {string} songId
  */
-function renderSongEditor (id) {
-  getFromDatabase('api/get-song', id, 'NO SONG FOUND', async data => {
+function renderSongEditor (songId) {
+  getFromDatabase('api/get-song', songId, 'NO SONG FOUND', async data => {
     const nameInput = 'js-name-input'
     const authorInput = 'author'
     const authorRow = 'author-row'
@@ -177,7 +175,7 @@ function renderSongEditor (id) {
     // filter and order author names
     const authorInfo = await getAuthorNames('')
     authorInfo.forEach(info => {
-      const index = authors.indexOf(info.rowid)
+      const index = authors.indexOf(info.author_id)
       if (index > -1) {
         authors[index] = info
       }
@@ -204,16 +202,16 @@ function renderSongEditor (id) {
     setupAddAuthorButton(addButton, authorRow, authorInput, delButton, moveButton)
 
     const elements = { nameInput, authorInput }
-    setupSubmitSong(elements, id)
+    setupSubmitSong(elements, songId)
   })
 }
 
 /**
  * Renders the song editor for a specific author
- * @param {string} id - Author id
+ * @param {string} authorId
  */
-function renderAuthorEditor (id) {
-  getFromDatabase('api/get-author', id, 'NO AUTHOR FOUND', data => {
+function renderAuthorEditor (authorId) {
+  getFromDatabase('api/get-author', authorId, 'NO AUTHOR FOUND', data => {
     const nameInput = 'js-name-input'
 
     const { name } = data
@@ -224,7 +222,7 @@ function renderAuthorEditor (id) {
 
     editor.innerHTML = html
     const elements = { nameInput }
-    setupSubmitAuthor(elements, id)
+    setupSubmitAuthor(elements, authorId)
   })
 }
 
@@ -232,14 +230,14 @@ function renderAuthorEditor (id) {
  * Generate the HTML for an author row
  * @param {string} inputClass - Class name for the input
  * @param {object} author - Author main info
- * @param {string} author.rowid - Author id
+ * @param {string} author.author_id - Author id
  * @param {string} author.name - Author name
  * @param {string} deleteClass - Class for the delete button
  * @returns {string} HTML string
  */
 function generateAuthorRow (inputClass, author, deleteClass, moveClass) {
   return `
-    <input class="${inputClass}" type="text" value="${author.name}" data-author-id="${author.rowid}">
+    <input class="${inputClass}" type="text" value="${author.name}" data-author-id="${author.author_id}">
     <button class="${deleteClass}"> X </button>
     <button class="${moveClass}"> M </button>
   `
@@ -252,26 +250,26 @@ function generateAuthorRow (inputClass, author, deleteClass, moveClass) {
 /**
  * Sets up a submit button to send the song data to the database
  * @param {Elements} elements
- * @param {string} id - Id of the song
+ * @param {string} songId
  */
-function setupSubmitSong (elements, id) {
-  setupSubmitButton(elements, id, 'api/submit-data', getSongData)
+function setupSubmitSong (elements, songId) {
+  setupSubmitButton(elements, songId, 'api/submit-data', getSongData)
 }
 
 /**
  * Sets up a submit button to send the author data to the database
  * @param {Elements} elements
- * @param {string} id - Id of the author
+ * @param {string} authorId
  */
-function setupSubmitAuthor (elements, id) {
-  setupSubmitButton(elements, id, 'api/submit-author', getAuthorData)
+function setupSubmitAuthor (elements, authorId) {
+  setupSubmitButton(elements, authorId, 'api/submit-author', getAuthorData)
 }
 
 /**
  * Base function to setup a submit button to send
  * data to the database
  * @param {Elements} elements
- * @param {string} id - Row id to submit
+ * @param {string} id - Id to submit
  * @param {string} route - Route to submit
  * @param {function(Elements, string)} dataFunction
  * Function to get the data, which takes as arguments the
@@ -313,7 +311,7 @@ function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass, move
   addButton.addEventListener('click', () => {
     const newRow = document.createElement('div')
     newRow.classList.add(rowClass)
-    newRow.innerHTML = generateAuthorRow(inputClass, { rowid: '', name: '' }, deleteClass, moveClass)
+    newRow.innerHTML = generateAuthorRow(inputClass, { author_id: '', name: '' }, deleteClass, moveClass)
     addButton.parentElement.insertBefore(newRow, addButton)
     addRowControl(newRow, deleteClass, moveClass, inputClass)
     blockSubmit()
@@ -457,7 +455,7 @@ function updateQueryOptions (input, queryOptions) {
       authorOption.innerHTML = author.name
       authorOption.addEventListener('click', () => {
         queryOptions.innerHTML = ''
-        input.dataset.authorId = author.rowid
+        input.dataset.authorId = author.author_id
         input.value = author.name
         input.classList.remove(blockedClass)
 
@@ -466,7 +464,7 @@ function updateQueryOptions (input, queryOptions) {
       })
 
       // filtering taken authors
-      if (!takenIds.includes(author.rowid + '')) {
+      if (!takenIds.includes(author.author_id + '')) {
         queryOptions.appendChild(authorOption)
       }
     })

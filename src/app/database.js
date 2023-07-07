@@ -20,21 +20,23 @@ class Database {
   initializeDatabase () {
     this.db.run(`
       CREATE TABLE IF NOT EXISTS songs (
+        song_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT
       )
     `)
 
     this.db.run(`
       CREATE TABLE IF NOT EXISTS authors (
+        author_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT
       )
     `)
 
     this.db.run(`
       CREATE TABLE IF NOT EXISTS song_author (
-        song_id INT,
-        author_id INT,
-        pos INT,
+        song_id INTEGER,
+        author_id INTEGER,
+        pos INTEGER,
         PRIMARY KEY (song_id, pos),
         FOREIGN KEY (song_id) REFERENCES songs(song_id)
         FOREIGN KEY (author_id) REFERENCES authors(author_id)
@@ -72,25 +74,14 @@ class Database {
   /**
    * Asynchronously get the row in a table based on a property
    * @param {string} table - Name of the table
-   * @param {string} column - Name of the property (eg name)
+   * @param {string} column - Name of the column (eg name)
    * @param {string} value - Value to search in the property
    * @returns {Row | null} Row info or null if doesn't exist
    */
   async getFromTable (table, column, value) {
     const row = await this.runSelectMethod(callback => {
-      this.db.get(`SELECT rowid, * FROM ${table} WHERE ${column} = ?`, [value], callback)
+      this.db.get(`SELECT * FROM ${table} WHERE ${column} = ?`, [value], callback)
     })
-    return row
-  }
-
-  /**
-   * Asynchronously get a row from a table by row id
-   * @param {string} table - Table name
-   * @param {string} id - Row id to get
-   * @returns {Row | null} Row info or null if doesn't exist
-   */
-  async getFromTableById (table, id) {
-    const row = await this.getFromTable(table, 'rowid', id)
     return row
   }
 
@@ -116,13 +107,13 @@ class Database {
   }
 
   /**
-   * Asynchronously gets the data for a song based on its row id
-   * @param {string} id - Row id of the song
+   * Asynchronously gets the data for a song based on its id
+   * @param {string} songId
    * @returns {import('../public/scripts/editor').Song | null} Song object or null if doesn't exist
    */
-  async getSongById (id) {
-    const row = await this.getSong('rowid', id)
-    const authorRows = await this.getSongAuthors(id)
+  async getSongById (songId) {
+    const row = await this.getSong('song_id', songId)
+    const authorRows = await this.getSongAuthors(songId)
     const authors = []
     authorRows.forEach(row => {
       authors.push(row.author_id)
@@ -133,12 +124,12 @@ class Database {
   }
 
   /**
-   * Asynchronously get the row for an author based on its row id
-   * @param {string} id - Row id of the song
+   * Asynchronously get the row for an author based on its id
+   * @param {string} authorId
    * @returns {Row | null} Row info or null if doesn't exist
    */
-  async getAuthorById (id) {
-    const row = await this.getFromTableById('authors', id)
+  async getAuthorById (authorId) {
+    const row = await this.getFromTable('authors', 'author_id', authorId)
     return row
   }
 
@@ -147,29 +138,29 @@ class Database {
    * @param {import('../public/scripts/editor').Song} data - Song object with new data to be used
    */
   async updateSong (data) {
-    const { name, rowid, authors } = data
-    const row = await this.getSongById(rowid)
+    const { name, songId, authors } = data
+    const row = await this.getSongById(songId)
 
     if (row.name !== name) {
-      this.db.run('UPDATE songs SET name = ? WHERE rowid = ?', [name, rowid])
+      this.db.run('UPDATE songs SET name = ? WHERE song_id = ?', [name, songId])
     }
 
-    const authorRows = await this.getSongAuthors(rowid)
+    const authorRows = await this.getSongAuthors(songId)
     if (authorRows.length < authors.length) {
       // check for adding
       for (let i = authorRows.length; i < authors.length; i++) {
-        this.db.run('INSERT INTO song_author (song_id, author_id, pos) VALUES (?, ?, ?)', [rowid, authors[i], i + 1])
+        this.db.run('INSERT INTO song_author (song_id, author_id, pos) VALUES (?, ?, ?)', [songId, authors[i], i + 1])
       }
     } else if (authorRows.length > authors.length) {
       // check for deletion
       for (let i = authors.length; i < authorRows.length; i++) {
-        this.db.run('DELETE FROM song_author WHERE song_id = ? AND pos = ?', [rowid, i + 1])
+        this.db.run('DELETE FROM song_author WHERE song_id = ? AND pos = ?', [songId, i + 1])
       }
     }
     // check for editting authors
     for (let i = 0; i < authors.length && i < authorRows.length; i++) {
       if (authorRows[i].author_id !== Number(authors[i])) {
-        this.db.run('UPDATE song_author SET author_id = ? WHERE song_id = ? AND pos = ?', [authors[i], rowid, i + 1])
+        this.db.run('UPDATE song_author SET author_id = ? WHERE song_id = ? AND pos = ?', [authors[i], songId, i + 1])
       }
     }
   }
@@ -179,16 +170,16 @@ class Database {
    * @param {Row} data - Row info with new data to be used
    */
   async updateAuthor (data) {
-    const { name, rowid } = data
-    const row = await this.getAuthorById(rowid)
+    const { name, authorId } = data
+    const row = await this.getAuthorById(authorId)
     if (row.name !== name) {
-      this.db.run('UPDATE authors SET name = ? WHERE rowid = ?', [name, rowid])
+      this.db.run('UPDATE authors SET name = ? WHERE author_id = ?', [name, authorId])
     }
   }
 
   /**
    * Get all the authors from a song in an ordered array
-   * @param {string} songId - Song id
+   * @param {string} songId
    * @returns {Row[]} Rows from song_author
    */
   async getSongAuthors (songId) {
@@ -224,7 +215,7 @@ class Database {
    */
   async getAuthorNames (keyword) {
     const rows = await this.runSelectMethod(callback => {
-      this.db.all("SELECT rowid, * FROM authors WHERE name LIKE '%' || ? || '%'", [keyword], callback)
+      this.db.all("SELECT * FROM authors WHERE name LIKE '%' || ? || '%'", [keyword], callback)
     })
     return rows
   }

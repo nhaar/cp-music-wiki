@@ -33,7 +33,7 @@ router.post('/create-author', (req, res) => {
  * @route POST /api/get-song
  *
  * Gets the information for a song
- * @param {string} body.id - Id of the song to find
+ * @param {string} body.songId
  * @returns {object} 200 - Song information
  */
 router.post('/get-song', async (req, res) => {
@@ -44,7 +44,7 @@ router.post('/get-song', async (req, res) => {
  * @route POST /api/get-author
  *
  * Gets the information for an author
- * @param {string} body.id - Id of the author to get
+ * @param {string} body.authorId
  * @returns {object} 200 - Author information
  */
 router.post('/get-author', async (req, res) => {
