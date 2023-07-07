@@ -30,3 +30,7 @@
   padding-left: 5px;
   width: calc(var(--author-input-ratio) * var(--author-row-width));
 }
+
+.blocked-button {
+  background-color: red;
+}
