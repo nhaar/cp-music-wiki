@@ -131,15 +131,14 @@ function getFromDatabase (route, id, notFoundMessage, renderFunction) {
 /**
  * Gets information about the taken authors
  * (ie authors that were picked by an input)
- * @param {HTMLInputElement} input - Any author input
+ * @param {HTMLDivElement} authorsDiv - The authors div
  * @returns {object}
  * Object containing:
  *
  * @property {string[]} - Array of all authors that belong to an input
  * @property {boolean} hasUntakenId - True if any input doesn't have an author id
  */
-function getAllTakenAuthors (input) {
-  const authorsDiv = input.parentElement.parentElement
+function getAllTakenAuthors (authorsDiv) {
   const allInputs = authorsDiv.querySelectorAll('input')
   const takenIds = []
   let hasUntakenId = false
@@ -317,6 +316,7 @@ function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass, move
     newRow.innerHTML = generateAuthorRow(inputClass, { rowid: '', name: '' }, deleteClass, moveClass)
     addButton.parentElement.insertBefore(newRow, addButton)
     addRowControl(newRow, deleteClass, moveClass, inputClass)
+    blockSubmit()
   })
 }
 
@@ -447,7 +447,8 @@ function indexOfChild (parent, child) {
 function updateQueryOptions (input, queryOptions) {
   getAuthorNames(input.value).then(data => {
     // fetching all taken authors
-    const { hasUntakenId, takenIds } = getAllTakenAuthors(input)
+    const authorsDiv = input.parentElement.parentElement
+    const { hasUntakenId, takenIds } = getAllTakenAuthors(authorsDiv)
     if (hasUntakenId) blockSubmit()
 
     queryOptions.innerHTML = ''
@@ -460,7 +461,7 @@ function updateQueryOptions (input, queryOptions) {
         input.value = author.name
         input.classList.remove(blockedClass)
 
-        const { hasUntakenId } = getAllTakenAuthors(input)
+        const { hasUntakenId } = getAllTakenAuthors(authorsDiv)
         if (!hasUntakenId) unblockSubmit()
       })
 
