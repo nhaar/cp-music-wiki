@@ -163,7 +163,7 @@ class Database {
     } else if (authorRows.length > authors.length) {
       // check for deletion
       for (let i = authors.length; i < authorRows.length; i++) {
-        this.db.run('DELETE FROM song_author WHERE song_id = ? AND pos = ?', [rowid, authorRows[i].author_id, i + 1])
+        this.db.run('DELETE FROM song_author WHERE song_id = ? AND pos = ?', [rowid, i + 1])
       }
     }
     // check for editting authors
