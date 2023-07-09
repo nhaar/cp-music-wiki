@@ -10,7 +10,8 @@ const createSection = document.querySelector('.js-create-section')
 /** Holds all the type names displayed and functions to render their creation menu */
 const types = {
   Song: renderSongCreate,
-  Author: renderAuthorCreate
+  Author: renderAuthorCreate,
+  Collection: renderCollectionCreate
 }
 
 /*******************************************************
@@ -60,6 +61,22 @@ function renderAuthorCreate () {
   `
 
   addCreateListener(authorName, authorButton, 'api/create-author')
+}
+
+/**
+ * Renders the collection creation menu
+ */
+function renderCollectionCreate () {
+  const inputClass = 'collection-name'
+  const buttonClass = 'collection-button'
+  createSection.innerHTML = `
+    <input class="${inputClass}" type="text">
+    <button class="${buttonClass}">
+      Create author page
+    </button>
+  `
+
+  addCreateListener(inputClass, buttonClass, 'api/create-collection')
 }
 
 /*******************************************************

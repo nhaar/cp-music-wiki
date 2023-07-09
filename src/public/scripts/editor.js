@@ -55,6 +55,10 @@ switch (params.t) {
     renderAuthorEditor(params.id)
     break
   }
+  case '2': {
+    renderCollectionEditor(params.id)
+    break
+  }
   default: {
     editor.innerHTML = 'ERROR'
     break
@@ -121,6 +125,21 @@ function getAuthorData (elements, authorId) {
   const { nameInput } = elements
   const name = document.querySelector('.' + nameInput).value
   const data = { authorId, name }
+
+  return data
+}
+
+/**
+ * Gather collection data from the page
+ * inside a collection editor
+ * @param {Elements} elements 
+ * @param {string} collectionId 
+ * @returns {Row} Collection data
+ */
+function getCollectionData (elements, collectionId) {
+  const { nameInput } = elements
+  const name = document.querySelector('.' + nameInput).value
+  const data = {collectionId, name }
 
   return data
 }
@@ -226,6 +245,26 @@ function renderAuthorEditor (authorId) {
     editor.innerHTML = html
     const elements = { nameInput }
     setupSubmitAuthor(elements, authorId)
+  })
+}
+
+/**
+ * Renders the collection editor for a specific collection
+ * @param {string} collectionId 
+ */
+function renderCollectionEditor (collectionId) {
+  getFromDatabase('api/get-collection', collectionId, 'NO COLLECTION FOUND', data => {
+    const nameInput = 'collection-input'
+
+    const { name } = data
+    const html = `
+      <input class="${nameInput}" type="text" value="${name}">
+      <button class="${submitClass}"> Submit </button>
+    `
+
+    editor.innerHTML = html
+    const elements = { nameInput }
+    setupSubmitCollection(elements, collectionId)
   })
 }
 
@@ -371,6 +410,16 @@ function setupSubmitSong (elements, songId) {
  */
 function setupSubmitAuthor (elements, authorId) {
   setupSubmitButton(elements, authorId, 'api/submit-author', getAuthorData)
+}
+
+/**
+ * Sets up a submit button to send the collection data
+ * to the database
+ * @param {Elements} elements 
+ * @param {string} collectionId 
+ */
+function setupSubmitCollection (elements, collectionId) {
+  setupSubmitButton(elements, collectionId, 'api/submit-collection', getCollectionData)
 }
 
 /**

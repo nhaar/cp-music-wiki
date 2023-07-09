@@ -52,6 +52,13 @@ class Database {
         FOREIGN KEY (author_id) REFERENCES authors(author_id)
       )
     `)
+
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS collections (
+        collection_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT
+      )
+    `)
   }
 
   /**
@@ -88,6 +95,14 @@ class Database {
    */
   createAuthor (name) {
     this.createByName('authors', name)
+  }
+
+  /**
+   * Create a new collection
+   * @param {string} name
+   */
+  createCollection (name) {
+    this.createByName('collections', name)
   }
 
   /**
@@ -146,6 +161,16 @@ class Database {
    */
   async getAuthorById (authorId) {
     const row = await this.getFromTable('authors', 'author_id', authorId)
+    return row
+  }
+
+  /**
+   * Asynchronously get the row for a collection
+   * @param {string} collectionId 
+   * @returns {Row | null} Row or null if doesn't exist
+   */
+  async getCollectionById (collectionId) {
+    const row = await this.getFromTable('collections', 'collection_id', collectionId)
     return row
   }
 
@@ -219,6 +244,18 @@ class Database {
   }
 
   /**
+   * Update a collection with new info
+   * @param {Row} data - New row info
+   */
+  async updateCollection (data) {
+    const { name, collectionId } = data
+    const row = await this.getCollectionById(collectionId)
+    if (row.name !== name) {
+      this.db.run('UPDATE collections SET name = ? WHERE collection_id = ?', [name, collectionId])
+    }
+  }
+
+  /**
    * Gets an array with the rows of a positional table ordered for a single song
    * @param {number} songId
    * @param {string} table - Table name
@@ -265,6 +302,10 @@ class Database {
       }
       case 'authors': {
         const response = await this.getAuthorById(id)
+        return response
+      }
+      case 'collections': {
+        const response = await this.getCollectionById(id)
         return response
       }
     }

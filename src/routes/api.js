@@ -30,6 +30,19 @@ router.post('/create-author', (req, res) => {
 })
 
 /**
+ * @route POST /api/create-collection
+ *
+ * Adds a new collection into the database
+ * @param {string} name
+ */
+router.post('/create-collection', (req, res) => {
+  const { name } = req.body
+  db.createCollection(name)
+
+  res.sendStatus(200)
+})
+
+/**
  * @route POST /api/get-song
  *
  * Gets the information for a song
@@ -49,6 +62,17 @@ router.post('/get-song', async (req, res) => {
  */
 router.post('/get-author', async (req, res) => {
   await getFromDatabaseById(req, res, 'authors')
+})
+
+/**
+ * @route POST /api/get-collection
+ *
+ * Gets the information for a collection
+ * @param {string} body.collectionId
+ * @returns {object} 200 - Collection information
+ */
+router.post('/get-collection', async (req, res) => {
+  await getFromDatabaseById(req, res, 'collections')
 })
 
 /**
@@ -73,6 +97,18 @@ router.post('/submit-author', (req, res) => {
   const data = req.body
   db.updateAuthor(data)
   res.status(200).send('OK')
+})
+
+/**
+ * @route POST /api/submit-collection
+ *
+ * Updates the information for a collection
+ * @param {object} body - Object with collection data
+ */
+router.post('/submit-collection', (req, res) => {
+  const data = req.body
+  db.updateCollection(data)
+  res.sendStatus(200)
 })
 
 /**
