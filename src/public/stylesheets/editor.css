@@ -15,7 +15,7 @@
   flex-direction: column;
 }
 
-.author-row {
+.moveable-row {
   position: relative;
   display: grid;
   grid-template-columns: calc(var(--author-input-ratio) * 100%) 10% 10%;

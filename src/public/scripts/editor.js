@@ -11,13 +11,19 @@ import { postJSON } from './utils.js'
  * Data structure for a song
  * @typedef {object} Song
  * @property {string} songId
- * @property {string} name
+ * @property {string[]} names
  * @property {string[]} authors
  */
 
 /**
  * Object containing name for element classes
  * @typedef {object} Elements
+ */
+
+/**
+ * @typedef {object} RowData
+ * @property {string} value
+ * @property {object} dataset
  */
 
 /*******************************************************
@@ -81,14 +87,26 @@ function getSongData (elements, songId) {
   const { nameInput, authorInput } = elements
 
   // author ids are saved as data variables in inputs
-  const authors = []
-  const authorInputs = document.querySelectorAll('.' + authorInput)
-  authorInputs.forEach(input => authors.push(input.dataset.authorId))
+  const names = collectInputData(nameInput, false)
+  const authors = collectInputData(authorInput, true, 'authorId')
 
-  const name = document.querySelector('.' + nameInput).value
-  const data = { songId, name, authors }
+  const data = { songId, names, authors }
 
   return data
+}
+
+/**
+ * Saves data from all inputs under a certain class
+ * @param {string} inputClass - All elements to collect the data
+ * @param {boolean} isDataset - True if the searching data variable, false if searching value
+ * @param {string} dataProperty - If isDataset, this is the name of the data variable
+ * @returns {string[]} Array with all the data
+ */
+function collectInputData (inputClass, isDataset, dataProperty) {
+  const mapFunction = isDataset
+    ? input => input.dataset[dataProperty]
+    : input => input.value
+  return [...document.querySelectorAll('.' + inputClass)].map(mapFunction)
 }
 
 /**
@@ -162,15 +180,10 @@ function getAllTakenAuthors (authorsDiv) {
  */
 function renderSongEditor (songId) {
   getFromDatabase('api/get-song', songId, 'NO SONG FOUND', async data => {
-    const nameInput = 'js-name-input'
-    const authorInput = 'author'
-    const authorRow = 'author-row'
-    const authorDiv = 'authors-div'
-    const addButton = 'add-button'
-    const delButton = 'del-button'
-    const moveButton = 'move-button'
+    editor.innerHTML = ''
+    const elements = {}
 
-    const { name, authors } = data
+    const { names, authors } = data
 
     // filter and order author names
     const authorInfo = await getAuthorNames('')
@@ -181,27 +194,15 @@ function renderSongEditor (songId) {
       }
     })
 
-    let authorsHTML = ''
-    authors.forEach(author => {
-      authorsHTML += `<div class=${authorRow}>${generateAuthorRow(authorInput, author, delButton, moveButton)}</div>`
-    })
+    // draw editor elements
+    elements.nameInput = renderSongNames(names)
+    elements.authorInput = renderSongAuthors(authors)
 
-    const html = `
-      <input class="${nameInput}" type="text" value="${name}">
-      <div class="${authorDiv}">
-        ${authorsHTML}
-        <button class="${addButton}"> ADD </button>
-      </div>
-      <button class="${submitClass}"> Submit </button>
-    `
-
-    editor.innerHTML = html
-
-    // controlers
-    addRowControls(authorDiv, authorRow, delButton, moveButton, authorInput)
-    setupAddAuthorButton(addButton, authorRow, authorInput, delButton, moveButton)
-
-    const elements = { nameInput, authorInput }
+    // draw submit button
+    const submitButton = document.createElement('button')
+    submitButton.className = submitClass
+    submitButton.innerHTML = 'Submit'
+    editor.appendChild(submitButton)
     setupSubmitSong(elements, songId)
   })
 }
@@ -227,20 +228,107 @@ function renderAuthorEditor (authorId) {
 }
 
 /**
- * Generate the HTML for an author row
- * @param {string} inputClass - Class name for the input
- * @param {object} author - Author main info
- * @param {string} author.author_id - Author id
- * @param {string} author.name - Author name
- * @param {string} deleteClass - Class for the delete button
- * @returns {string} HTML string
+ * Render an element with moveable rows of inputs
+ * @param {*[]} rows - Arrays with the data to be put into row, is arbitrary and will communicate with rowCallback
+ * @param {string} inputClass
+ * @param {string} divClass Class of the div that will contain all the elements
+ * @param {function(Row) : RowData} rowCallback
+ * Function that takes the data from the database and turns into a format
+ * to be put inside the input
+ * @param {function(string, object)} setupCallback
+ * Function that setups the controls, first argument is the div
+ * that contians all moveable rows and the second argument
+ * is an object with all the class names
+ * @returns {string} The input class
  */
-function generateAuthorRow (inputClass, author, deleteClass, moveClass) {
+function renderMoveableRows (rows, inputClass, divClass, rowCallback, setupCallback) {
+  const rowClass = 'moveable-row'
+  const addClass = 'add-button'
+  const delClass = 'del-button'
+  const moveClass = 'move-button'
+  const classes = { divClass, inputClass, rowClass, addClass, delClass, moveClass }
+
+  const rowsDiv = document.createElement('div')
+  rowsDiv.className = divClass
+
+  let html = ''
+  rows.forEach(row => {
+    const rowData = rowCallback(row)
+    html += `<div class=${rowClass}>${generateMoveableRow(rowData, classes)}</div>`
+  })
+
+  rowsDiv.innerHTML = html + `
+  <button class="${addClass}">
+    ADD
+  </button>
+  `
+
+  editor.appendChild(rowsDiv)
+
+  setupCallback(rowsDiv, classes)
+
+  return inputClass
+}
+
+/**
+ * Render the song authors moveable list
+ * @param {object[]} authors Array with authors information
+ * @returns {string} Class for the author name inputs
+ */
+function renderSongAuthors (authors) {
+  return renderMoveableRows(authors, 'author', 'authors-div', authorRowCallback, setupAuthorDivControls)
+}
+
+/**
+ * Render the song names moveable list
+ * @param {string[]} names Array with all the names
+ * @returns {string} Class for the song name inputs
+ */
+function renderSongNames (names) {
+  return renderMoveableRows(names, 'name-input', 'name-div', nameRowCallback, setupNameDivControls)
+}
+
+/**
+ * Generates the HTML for a moveable row
+ * @param {RowData} rowData Data for this row
+ * @param {object} classes Object with all the class names
+ * @returns {string} HTML for the row
+ */
+function generateMoveableRow (rowData, classes) {
+  const { inputClass, delClass, moveClass } = classes
+  let dataset = ''
+  for (const data in rowData.dataset) {
+    dataset += `data-${data}="${rowData.dataset[data]}"`
+  }
+
   return `
-    <input class="${inputClass}" type="text" value="${author.name}" data-author-id="${author.author_id}">
-    <button class="${deleteClass}"> X </button>
+    <input class="${inputClass}" type="text" value="${rowData.value}"${dataset}">
+    <button class="${delClass}"> X </button>
     <button class="${moveClass}"> M </button>
   `
+}
+
+/**
+ * Get the row data from an author row in the database
+ * @param {object} author Object with name and id
+ * @returns {RowData}
+ */
+function authorRowCallback (author) {
+  return {
+    value: author.name,
+    dataset: {
+      'author-id': author.author_id
+    }
+  }
+}
+
+/**
+ * Get the row data for a name
+ * @param {string} name
+ * @returns {RowData}
+ */
+function nameRowCallback (row) {
+  return { value: row }
 }
 
 /*******************************************************
@@ -298,87 +386,157 @@ function setupSubmitButton (elements, id, route, dataFunction) {
 }
 
 /**
- * Add control to the add author button
- * @param {string} addClass - Add button class
- * @param {string} rowClass - Class for the row
- * @param {string} inputClass - Class for the author input
- * @param {string} deleteClass - CLass for the delete button
- * @param {string} moveClass - Class for the move button
- * @param {string} inputClass - Class for the name input
+ * Setup the control to all the rows that currently are present
+ * in a moveable row container
+ * @param {HTMLDivElement} rowsDiv The container
+ * @param {object} classes Object with the classes
+ * @param {*} defaultValue Default value for the row data
+ * @param {function(*) : RowData} rowCallback Function to convert into row data
+ * @param {function} controlCallback Function to add control to a single row
+ * @param {*} rowsCallback
+ * @param {*} setupCallback
+ * @param {*} clickCallback
  */
-function setupAddAuthorButton (addClass, rowClass, inputClass, deleteClass, moveClass) {
-  const addButton = document.querySelector('.' + addClass)
+function setupRowControls (
+  rowsDiv,
+  classes,
+  defaultValue,
+  rowCallback,
+  controlCallback,
+  rowsCallback,
+  setupCallback,
+  clickCallback
+) {
+  const callbacks = { rowCallback, controlCallback, rowsCallback, clickCallback }
+  const addButton = rowsDiv.querySelector('.' + classes.addClass)
+  rowsCallback(rowsDiv, classes)
+  setupCallback(addButton, classes, defaultValue, callbacks)
+}
+
+/**
+ * Setup controls for the names editor
+ * @param {HTMLDivElement} namesDiv - Div containing names
+ * @param {object} classes - Object with class names
+ */
+function setupNameDivControls (namesDiv, classes) {
+  setupRowControls(
+    namesDiv,
+    classes,
+    '',
+    nameRowCallback,
+    addMoveableRowControl,
+    addNameRowControls,
+    setupAddMoveableRowButton
+  )
+}
+
+/**
+ * Setup controls for the authors editor
+ * @param {HTMLDivElement} authorsDiv - Div containing authors
+ * @param {object} classes - Object with class names
+ */
+function setupAuthorDivControls (authorsDiv, classes) {
+  setupRowControls(
+    authorsDiv,
+    classes,
+    { author_id: '', name: '' },
+    authorRowCallback,
+    addAuthorRowControl,
+    addAuthorRowControls,
+    setupAddMoveableRowButton,
+    blockSubmit
+  )
+}
+
+/**
+ * Setup the button that adds new rows in
+ * the moveable rows structure
+ * @param {HTMLButtonElement} addButton - Reference to the add button
+ * @param {object} classes - Object with class names
+ * @param {*} blankRow - Model for a blank row (see RowData and rowCallback)
+ * @param {object} callbacks - Object containing functions
+ */
+function setupAddMoveableRowButton (
+  addButton, classes, blankRow, callbacks
+) {
+  const { rowClass } = classes
+  const { rowCallback, controlCallback, clickCallback } = callbacks
   addButton.addEventListener('click', () => {
     const newRow = document.createElement('div')
     newRow.classList.add(rowClass)
-    newRow.innerHTML = generateAuthorRow(inputClass, { author_id: '', name: '' }, deleteClass, moveClass)
+    newRow.innerHTML = generateMoveableRow(rowCallback(blankRow), classes)
     addButton.parentElement.insertBefore(newRow, addButton)
-    addRowControl(newRow, deleteClass, moveClass, inputClass)
-    blockSubmit()
+    controlCallback(newRow, classes)
+    if (clickCallback) clickCallback()
   })
 }
 
 /**
- * Remove an author row
- * @param {HTMLButtonElement} deleteButton - Delete button of the row
+ * Adds controls to all (current) rows in a moveable row structure
+ * @param {HTMLDivElement} rowsDiv - Element containing rows
+ * @param {object} classes - Object with class names
+ * @param {function(HTMLDivElement, object)} controlCallback
+ * Function that takes an element (for a row) and the classes object
+ * and adds control to that single row
  */
-function removeAuthor (deleteButton) {
-  const row = deleteButton.parentElement
-  row.parentElement.removeChild(row)
-}
-
-/**
- * Add control to all of the current rows and setup
- *
- * Must only be used once due to it setting up the
- * listener for moving rows
- * @param {string} divClass - Author div class name
- * @param {string} rowClass - Row class name
- * @param {string} deleteClass - Delete button class
- * @param {string} moveClass - Move button class
- * @param {string} inputClass - Class for the name input
- */
-function addRowControls (divClass, rowClass, deleteClass, moveClass, inputClass) {
-  const authorsDiv = document.querySelector('.' + divClass)
-  const rows = document.querySelectorAll('.' + rowClass)
+function addMoveableRowControls (rowsDiv, classes, controlCallback) {
+  const { rowClass } = classes
+  const rows = rowsDiv.querySelectorAll('.' + rowClass)
 
   rows.forEach(row => {
-    addRowControl(row, deleteClass, moveClass, inputClass)
+    controlCallback(row, classes)
   })
 
   // to move rows
-  authorsDiv.addEventListener('mouseup', () => {
-    if (authorsDiv.dataset.isMoving) {
-      authorsDiv.dataset.isMoving = ''
-      const destination = Number(authorsDiv.dataset.hoveringRow)
-      const origin = Number(authorsDiv.dataset.currentRow)
+  rowsDiv.addEventListener('mouseup', () => {
+    if (rowsDiv.dataset.isMoving) {
+      rowsDiv.dataset.isMoving = ''
+      const destination = Number(rowsDiv.dataset.hoveringRow)
+      const origin = Number(rowsDiv.dataset.currentRow)
 
       // don't move if trying to move on itself
       if (destination !== origin) {
         // offset is to possibly compensate for indexes being displaced
         // post deletion
         const offset = destination > origin ? 1 : 0
-        const originElement = authorsDiv.children[origin]
-        const targetElement = authorsDiv.children[destination + offset]
-        authorsDiv.removeChild(originElement)
-        authorsDiv.insertBefore(originElement, targetElement)
+        const originElement = rowsDiv.children[origin]
+        const targetElement = rowsDiv.children[destination + offset]
+        rowsDiv.removeChild(originElement)
+        rowsDiv.insertBefore(originElement, targetElement)
       }
     }
   })
 }
 
 /**
- * Add controls to an author row
- * @param {HTMLDivElement} row - Element for the row
- * @param {string} deleteClass - Delete button class
- * @param {string} moveClass - Move button class
- * @param {string} inputClass - Class for the name input
+ * Adds control to all the rows in the name editor
+ * @param {HTMLDivElement} namesDiv - Div containing the names
+ * @param {object} classes - Object with classes
  */
-function addRowControl (row, deleteClass, moveClass, inputClass) {
+function addNameRowControls (namesDiv, classes) {
+  addMoveableRowControls(namesDiv, classes, addMoveableRowControl)
+}
+
+/**
+ * Adds control to all the rows in the authors editor
+ * @param {HTMLDivElement} authorsDiv - Div containing the authors
+ * @param {object} classes - Object with classes
+ */
+function addAuthorRowControls (authorsDiv, classes) {
+  addMoveableRowControls(authorsDiv, classes, addAuthorRowControl)
+}
+
+/**
+ * Add control to a single row in a moveable row structure
+ * @param {HTMLDivElement} row - Div element for the row
+ * @param {object} classes - Object containing class names
+ */
+function addMoveableRowControl (row, classes) {
+  const { delClass, moveClass } = classes
   const authorsDiv = row.parentElement
-  const deleteButton = row.querySelector('.' + deleteClass)
+  const deleteButton = row.querySelector('.' + delClass)
   deleteButton.addEventListener('click', () => {
-    removeAuthor(deleteButton)
+    authorsDiv.removeChild(row)
   })
 
   const moveButton = row.querySelector('.' + moveClass)
@@ -395,6 +553,16 @@ function addRowControl (row, deleteClass, moveClass, inputClass) {
     const index = indexOfChild(authorsDiv, row)
     authorsDiv.dataset.hoveringRow = index
   })
+}
+
+/**
+ * Add controls to an author row
+ * @param {HTMLDivElement} row - Element for the row
+ * @param {object} classes - Object containing classes
+ */
+function addAuthorRowControl (row, classes) {
+  const { inputClass } = classes
+  addMoveableRowControl(row, classes)
 
   // element to have the available options
   const queryOptions = document.createElement('div')
