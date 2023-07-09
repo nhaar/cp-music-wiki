@@ -84,13 +84,14 @@ function paramsToObject (urlParams) {
  * @returns {Row} Song data from the user
  */
 function getSongData (elements, songId) {
-  const { nameInput, authorInput } = elements
+  const { nameInput, authorInput, linkInput } = elements
 
   // author ids are saved as data variables in inputs
   const names = collectInputData(nameInput, false)
   const authors = collectInputData(authorInput, true, 'authorId')
+  const link = document.querySelector('.' + linkInput).value
 
-  const data = { songId, names, authors }
+  const data = { songId, names, authors, link }
 
   return data
 }
@@ -183,7 +184,7 @@ function renderSongEditor (songId) {
     editor.innerHTML = ''
     const elements = {}
 
-    const { names, authors } = data
+    const { names, authors, link } = data
 
     // filter and order author names
     const authorInfo = await getAuthorNames('')
@@ -197,6 +198,7 @@ function renderSongEditor (songId) {
     // draw editor elements
     elements.nameInput = renderSongNames(names)
     elements.authorInput = renderSongAuthors(authors)
+    elements.linkInput = renderLinkInput(link)
 
     // draw submit button
     const submitButton = document.createElement('button')
@@ -289,6 +291,24 @@ function renderSongNames (names) {
 }
 
 /**
+ * Render the input for the video link
+ * @param {string} link - Video link string
+ * @returns {string} Class for the link input
+ */
+function renderLinkInput (link) {
+  const inputClass = 'link-input'
+
+  const linkInput = document.createElement('input')
+  linkInput.className = inputClass
+  linkInput.value = link
+
+  setupLinkControls(linkInput)
+  editor.appendChild(linkInput)
+
+  return inputClass
+}
+
+/**
  * Generates the HTML for a moveable row
  * @param {RowData} rowData Data for this row
  * @param {object} classes Object with all the class names
@@ -365,8 +385,9 @@ function setupSubmitAuthor (elements, authorId) {
  */
 function setupSubmitButton (elements, id, route, dataFunction) {
   const submitButton = document.querySelector('.' + submitClass)
+  const blocked = () => isBlocked(submitButton)
   submitButton.addEventListener('click', () => {
-    if (!submitButton.dataset.blocked) {
+    if (!blocked()) {
       const data = dataFunction(elements, id)
       postJSON(route, data)
     }
@@ -375,11 +396,9 @@ function setupSubmitButton (elements, id, route, dataFunction) {
   // handling disabling submissions
   submitButton.dataset.blocked = ''
   submitButton.addEventListener(lockSubmission, () => {
-    if (submitButton.dataset.blocked) {
-      submitButton.dataset.blocked = ''
+    if (!blocked()) {
       submitButton.classList.remove(blockedClass)
     } else {
-      submitButton.dataset.blocked = '1'
       submitButton.classList.add(blockedClass)
     }
   })
@@ -594,6 +613,35 @@ function addAuthorRowControl (row, classes) {
 }
 
 /**
+ * Adds control to link input to
+ * block submission if invalid link
+ * @param {HTMLInputElement} linkInput - Element reference
+ */
+function setupLinkControls (linkInput) {
+  const blockVar = 'link'
+
+  const blockToggle = () => {
+    if (!isValidLink(linkInput.value)) blockSubmit(blockVar)
+    else unblockSubmit(blockVar)
+  }
+
+  linkInput.addEventListener('input', blockToggle)
+}
+
+/**
+ * Helper function that checks if a link
+ * is valid to submit to database
+ * @param {string} link
+ * @returns {boolean} True if valid
+ */
+function isValidLink (link) {
+  const validFull = link.includes('youtube') && link.includes('watch')
+  const validShortened = link.includes('youtu.be/')
+  const notLink = link === ''
+  return validFull || validShortened || notLink
+}
+
+/**
  * Helper function to get the index of a child
  * inside an element (0-indexed)
  * @param {HTMLElement} parent - Parent element
@@ -611,11 +659,13 @@ function indexOfChild (parent, child) {
  * @param {HTMLDivElement} queryOptions
  */
 function updateQueryOptions (input, queryOptions) {
+  const blockVar = 'author'
+
   getAuthorNames(input.value).then(data => {
     // fetching all taken authors
     const authorsDiv = input.parentElement.parentElement
     const { hasUntakenId, takenIds } = getAllTakenAuthors(authorsDiv)
-    if (hasUntakenId) blockSubmit()
+    if (hasUntakenId) blockSubmit(blockVar)
 
     queryOptions.innerHTML = ''
     data.forEach(author => {
@@ -628,7 +678,7 @@ function updateQueryOptions (input, queryOptions) {
         input.classList.remove(blockedClass)
 
         const { hasUntakenId } = getAllTakenAuthors(authorsDiv)
-        if (!hasUntakenId) unblockSubmit()
+        if (!hasUntakenId) unblockSubmit(blockVar)
       })
 
       // filtering taken authors
@@ -651,32 +701,60 @@ async function getAuthorNames (keyword) {
 }
 
 /**
- * Send a block event
- *
- * Only sends when the button is blocked if blockedOk is true
- * and same for unblocked and unblockedOk
- * @param {boolean} blockedOk
- * @param {boolean} unblockedOk
+ * Blocks or unblocks the submit button for a certain variable
+ * and updates button itself if necessary
+ * @param {boolean} blocking - True if want to block the variable, false if want to unblock
+ * @param {string} variable - Name of data variable
  */
-function sendBlockEvent (blockedOk, unblockedOk) {
+function toggleBlockVariable (blocking, variable) {
   const submitButton = document.querySelector('.' + submitClass)
-  const blocked = submitButton.dataset.blocked
-  if ((blockedOk && blocked) || (unblockedOk && !blocked)) {
-    const block = new CustomEvent(lockSubmission)
-    submitButton.dispatchEvent(block)
+  const sendEvent = () => sendBlockEvent(submitButton)
+  const previouslyBlocked = isBlocked(submitButton)
+  const blockedVariable = submitButton.dataset[variable]
+
+  if (blocking && !blockedVariable) {
+    submitButton.dataset[variable] = '1'
+
+    if (!previouslyBlocked) sendEvent()
+  } else if (!blocking & blockedVariable) {
+    submitButton.dataset[variable] = ''
+
+    if (!isBlocked(submitButton)) sendEvent()
   }
+}
+
+/**
+ * Dispatches the block event
+ * @param {HTMLButtonElement} submitButton Button reference
+ */
+function sendBlockEvent (submitButton) {
+  const block = new CustomEvent(lockSubmission)
+  submitButton.dispatchEvent(block)
+}
+
+/**
+ * Checks if the submit button should be blocked
+ * @param {HTMLButtonElement} submitButton Button reference
+ * @returns {boolean} True if should be blocked
+ */
+function isBlocked (submitButton) {
+  for (const key in submitButton.dataset) {
+    if (submitButton.dataset[key]) return true
+  }
+
+  return false
 }
 
 /**
  * Block the submit button
  */
-function blockSubmit () {
-  sendBlockEvent(false, true)
+function blockSubmit (variable) {
+  toggleBlockVariable(true, variable)
 }
 
 /**
  * Unblock the submit button
  */
-function unblockSubmit () {
-  sendBlockEvent(true, false)
+function unblockSubmit (variable) {
+  toggleBlockVariable(false, variable)
 }

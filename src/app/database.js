@@ -20,7 +20,8 @@ class Database {
   initializeDatabase () {
     this.db.run(`
       CREATE TABLE IF NOT EXISTS songs (
-        song_id INTEGER PRIMARY KEY AUTOINCREMENT
+        song_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        link TEXT
       )
     `)
 
@@ -130,9 +131,11 @@ class Database {
    * @returns {import('../public/scripts/editor').Song | null} Song object or null if doesn't exist
    */
   async getSongById (songId) {
+    const row = await this.getSong('song_id', songId)
     const authors = await deconstructRows(() => this.getSongAuthors(songId), 'author_id')
     const names = await deconstructRows(() => this.getSongNames(songId), 'name_text')
-    const song = { names, authors }
+    const link = row.link ? youtubify(row.link) : ''
+    const song = { names, authors, link }
     return song
   }
 
@@ -151,7 +154,7 @@ class Database {
    * @param {import('../public/scripts/editor').Song} data - Song object with new data to be used
    */
   async updateSong (data) {
-    const { names, songId } = data
+    const { names, songId, link } = data
     const authors = data.authors.map(n => Number(n))
 
     // authors
@@ -165,6 +168,9 @@ class Database {
       const oldData = await this.getSongNames(songId)
       return oldData
     })
+
+    // link
+    this.db.run(`UPDATE songs SET link = ? WHERE song_id = ${songId}`, [extractVideoCode(link)])
   }
 
   /**
@@ -329,6 +335,30 @@ async function deconstructRows (rowCallback, column) {
   })
 
   return values
+}
+
+/**
+ * Transforms a youtube video code
+ * into a shortened link
+ * @param {string} videoCode
+ * @returns {string} Shortened link
+ */
+function youtubify (videoCode) {
+  return 'youtube.be/' + videoCode
+}
+
+/**
+ * Transforms a youtube link/blank string
+ * and gets either the video code or nothing
+ * @param {string} link - Link string
+ * @returns {string | null} Video code or null if blank
+ */
+function extractVideoCode (link) {
+  if (link === '') return null
+  console.log(link, link.includes('youtube'))
+
+  if (link.includes('youtube')) return link.match('(?<=v=)[^&]+')[0]
+  else return link.match('(?<=be/)[^&^?]+')[0]
 }
 
 const db = new Database()
