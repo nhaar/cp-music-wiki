@@ -80,14 +80,22 @@ class Database {
   }
 
   /**
+   * Shorthand for INSERT INTO ... (...) VALUES (...)
+   * @param {string} command A command of of format "table (columns...)""
+   * @param {*[]} values Array of values respective to each column
+   */
+  runInsert (command, values) {
+    const questionMarks = values.map(() => '?')
+    this.db.run(`INSERT INTO ${command} VALUES (${questionMarks})`, values, err => { if (err) throw err })
+  }
+
+  /**
    * Create a new value in a table only by a name property
    * @param {string} table - Name of the table
    * @param {string} name - Name to use
    */
   createByName (table, name) {
-    this.db.run(`
-      INSERT INTO ${table} (name) VALUES (?)
-    `, [name], err => { if (err) throw err })
+    this.runInsert(`${table} (name)`, [name])
   }
 
   /**
@@ -99,12 +107,11 @@ class Database {
       this.db.run('INSERT INTO songs DEFAULT VALUES', [], callback)
     })
     // get automatically created song id from the sequence
-    const seq = await this.runSelectMethod(callback => {
-      this.db.get("SELECT * FROM sqlite_sequence WHERE name = 'songs'", [], callback)
-    })
+    const seq = await this.getFromTable('sqlite_sequence', 'name', 'songs')
+
     const songId = seq.seq
     // insert default user-picked name
-    this.db.run('INSERT INTO song_names (song_id, pos, name_text) VALUES (?, ?, ?)', [songId, 1, name])
+    this.runInsert('song_names (song_id, pos, name_text)', [songId, 1, name])
   }
 
   /**
@@ -131,7 +138,7 @@ class Database {
    * @param {string} name - File name as is stored in the database
    */
   createFile (songId, collectionId, originalName, name) {
-    this.db.run('INSERT INTO files (song_id, collection_id, original_name, file_name) VALUES (?, ?, ?, ?)', [songId, collectionId, originalName, name])
+    this.runInsert('files (song_id, collection_id, original_name, file_name)', [songId, collectionId, originalName, name])
   }
 
   /**
@@ -245,7 +252,7 @@ class Database {
     const oldData = await getRowsFunction(songId)
     if (oldData.length < newData.length) {
       for (let i = oldData.length; i < newData.length; i++) {
-        this.db.run(`INSERT INTO ${table} (song_id, pos, ${dataColumn}) VALUES (?, ?, ?)`, [songId, i + 1, newData[i]])
+        this.runInsert(`${table} (song_id, pos, ${dataColumn})`, [songId, i + 1, newData[i]])
       }
     } else if (oldData.length > newData.length) {
       for (let i = newData.length; i < oldData.length; i++) {
@@ -341,14 +348,26 @@ class Database {
   }
 
   /**
+   * Shorthand for SELECT * FROM ... WHERE ... LIKE ...
+   * @param {string} table - Table name
+   * @param {*} column - Column name
+   * @param {*} keyword - Keyword for column to be like
+   * @returns {Row[]}
+   */
+  async selectLike (table, column, keyword) {
+    const rows = await this.runSelectMethod(callback => {
+      this.db.all(`SELECT * FROM ${table} WHERE ${column} LIKE '%' || ? || '%'`, [keyword], callback)
+    })
+    return rows
+  }
+
+  /**
    * Get all authors that contains a keyword
    * @param {string} keyword
    * @returns {Row[]}
    */
   async getAuthorNames (keyword) {
-    const rows = await this.runSelectMethod(callback => {
-      this.db.all("SELECT * FROM authors WHERE name LIKE '%' || ? || '%'", [keyword], callback)
-    })
+    const rows = await this.selectLike('authors', 'name', keyword)
     return rows
   }
 
@@ -358,9 +377,7 @@ class Database {
    * @returns {Row[]}
    */
   async getSongMainNames (keyword) {
-    const rows = await this.runSelectMethod(callback => {
-      this.db.all("SELECT * FROM song_names WHERE name_text LIKE '%' || ? || '%'", [keyword], callback)
-    })
+    const rows = await this.selectLike('song_names', 'name_text', keyword)
     return rows
   }
 
@@ -370,9 +387,7 @@ class Database {
    * @returns {Row[]}
    */
   async getCollectionNames (keyword) {
-    const rows = await this.runSelectMethod(callback => {
-      this.db.all("SELECT * FROM collections WHERE name LIKE '%' || ? || '%'", [keyword], callback)
-    })
+    const rows = await this.selectLike('collections', 'name', keyword)
     return rows
   }
 
