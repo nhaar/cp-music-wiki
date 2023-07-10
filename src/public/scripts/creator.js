@@ -144,13 +144,18 @@ function addCreateListener (inputClass, buttonClass, route) {
  * @param {HTMLButtonElement} uploadButton - Element for the upload button
  */
 function addFileCreateControl (songInputClass, collectionInputClass, fileInput, uploadButton) {
+  const songDataVar = 'songId'
+  const collectionDataVar = 'collectionId'
+  
   // blocking upload button
   addBlockListener(uploadButton, blockEvent, blockClass, () => {
     const songInput = document.querySelector('.' + songInputClass)
     const collectionInput = document.querySelector('.' + collectionInputClass)
 
-    const songId = songInput.dataset.songId
-    const collectionId = collectionInput.dataset.collectionId
+
+
+    const songId = songInput.dataset[songVar]
+    const collectionId = collectionInput.dataset[collectionVar]
     const file = fileInput.files[0]
 
     const formData = new FormData()
@@ -181,7 +186,7 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
   createQuery(createSection, songInputClass, {
     fetchDataFunction: getSongNames,
     checkTakenFunction: getTakenSong,
-    dataVar: 'songId',
+    dataVar: songDataVar,
     databaseVar: 'song_id',
     databaseValue: 'name_text'
   }, {
@@ -195,7 +200,7 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
   createQuery(createSection, collectionInputClass, {
     fetchDataFunction: getCollectionNames,
     checkTakenFunction: getTakenCollection,
-    dataVar: 'collectionId',
+    dataVar: collectionDataVar,
     databaseVar: 'collection_id',
     databaseValue: 'name'
   }, {
