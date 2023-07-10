@@ -41,13 +41,18 @@ export function createQuery (div, inputClass, queryConfig, blockConfig) {
   const { dataVar } = queryConfig
   let blockedClass
   if (blockConfig) ({ blockedClass } = blockConfig)
+  const input = div.querySelector('.' + inputClass)
 
   // element to have the available options
   const queryOptions = document.createElement('div')
   queryOptions.className = 'query-options'
+
+  queryOptions.style.top = input.offsetHeight + input.offsetTop + 'px'
+  queryOptions.style.width = input.offsetWidth + 'px'
+  queryOptions.style.left = input.offsetLeft + 'px'
+
   div.appendChild(queryOptions)
 
-  const input = div.querySelector('.' + inputClass)
 
   // flag for hovering options or not
   const listenerRel = { mouseover: '1', mouseout: '' }
