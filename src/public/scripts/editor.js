@@ -1,4 +1,6 @@
-import { postJSON } from './utils.js'
+import { postAndGetJSON, postJSON } from './utils.js'
+import { createQuery } from './query-options.js'
+import { addBlockListener, block, unblock } from './submit-block.js'
 
 /* global CustomEvent */
 
@@ -167,14 +169,15 @@ function getFromDatabase (route, id, notFoundMessage, renderFunction) {
 /**
  * Gets information about the taken authors
  * (ie authors that were picked by an input)
- * @param {HTMLDivElement} authorsDiv - The authors div
+ * @param {HTMLInputElement} input - One of the inputs for authors
  * @returns {object}
  * Object containing:
  *
  * @property {string[]} - Array of all authors that belong to an input
  * @property {boolean} hasUntakenId - True if any input doesn't have an author id
  */
-function getAllTakenAuthors (authorsDiv) {
+function getAllTakenAuthors (input) {
+  const authorsDiv = input.parentElement.parentElement
   const allInputs = authorsDiv.querySelectorAll('input')
   const takenIds = []
   let hasUntakenId = false
@@ -434,24 +437,15 @@ function setupSubmitCollection (elements, collectionId) {
  */
 function setupSubmitButton (elements, id, route, dataFunction) {
   const submitButton = document.querySelector('.' + submitClass)
-  const blocked = () => isBlocked(submitButton)
-  submitButton.addEventListener('click', () => {
-    if (!blocked()) {
-      const data = dataFunction(elements, id)
-      postJSON(route, data)
-    }
-  })
 
   // handling disabling submissions
-  submitButton.dataset.blocked = ''
-  submitButton.addEventListener(lockSubmission, () => {
-    if (!blocked()) {
-      submitButton.classList.remove(blockedClass)
-    } else {
-      submitButton.classList.add(blockedClass)
-    }
+  addBlockListener(submitButton, lockSubmission, blockedClass, () => {
+    const data = dataFunction(elements, id)
+    postJSON(route, data)
   })
 }
+
+
 
 /**
  * Setup the control to all the rows that currently are present
@@ -512,7 +506,7 @@ function setupAuthorDivControls (authorsDiv, classes) {
     addAuthorRowControl,
     addAuthorRowControls,
     setupAddMoveableRowButton,
-    blockSubmit
+    () => blockSubmit('author')
   )
 }
 
@@ -632,33 +626,20 @@ function addAuthorRowControl (row, classes) {
   const { inputClass } = classes
   addMoveableRowControl(row, classes)
 
-  // element to have the available options
-  const queryOptions = document.createElement('div')
-  queryOptions.className = 'author-options'
-  row.appendChild(queryOptions)
-
-  const input = row.querySelector('.' + inputClass)
-
-  // flag for hovering options or not
-  const listenerRel = { mouseover: '1', mouseout: '' }
-  for (const event in listenerRel) {
-    queryOptions.addEventListener(event, () => (input.dataset.choosing = listenerRel[event]))
-  }
-
-  const updateQuery = () => updateQueryOptions(input, queryOptions)
-  input.addEventListener('input', () => {
-    updateQuery()
-    // reset ID if altered anything
-    input.dataset.authorId = ''
-    input.classList.add(blockedClass)
+  // add query to authors
+  createQuery(row, inputClass, {
+    fetchDataFunction: getAuthorNames,
+    checkTakenFunction: getAllTakenAuthors,
+    dataVar: 'authorId',
+    databaseVar: 'author_id',
+    databaseValue: 'name'
+  }, {
+    blockVar: 'author',
+    blockFunction: blockSubmit,
+    unblockFunction: unblockSubmit,
+    blockedClass
   })
-  input.addEventListener('focus', updateQuery)
-  input.addEventListener('blur', () => {
-    // track if the user is focusing out by picking an option
-    if (!input.dataset.choosing) {
-      queryOptions.innerHTML = ''
-    }
-  })
+
 }
 
 /**
@@ -702,41 +683,8 @@ function indexOfChild (parent, child) {
   return [...parent.children].indexOf(child)
 }
 
-/**
- * Updates the author query options for an input
- * @param {HTMLInputElement} input
- * @param {HTMLDivElement} queryOptions
- */
-function updateQueryOptions (input, queryOptions) {
-  const blockVar = 'author'
 
-  getAuthorNames(input.value).then(data => {
-    // fetching all taken authors
-    const authorsDiv = input.parentElement.parentElement
-    const { hasUntakenId, takenIds } = getAllTakenAuthors(authorsDiv)
-    if (hasUntakenId) blockSubmit(blockVar)
 
-    queryOptions.innerHTML = ''
-    data.forEach(author => {
-      const authorOption = document.createElement('div')
-      authorOption.innerHTML = author.name
-      authorOption.addEventListener('click', () => {
-        queryOptions.innerHTML = ''
-        input.dataset.authorId = author.author_id
-        input.value = author.name
-        input.classList.remove(blockedClass)
-
-        const { hasUntakenId } = getAllTakenAuthors(authorsDiv)
-        if (!hasUntakenId) unblockSubmit(blockVar)
-      })
-
-      // filtering taken authors
-      if (!takenIds.includes(author.author_id + '')) {
-        queryOptions.appendChild(authorOption)
-      }
-    })
-  })
-}
 
 /**
  * Get all authors that contains a keyword
@@ -744,66 +692,22 @@ function updateQueryOptions (input, queryOptions) {
  * @returns {Row[]}
  */
 async function getAuthorNames (keyword) {
-  const response = await postJSON('api/get-author-names', { keyword })
-  const rows = await response.json()
+  const rows = await postAndGetJSON('api/get-author-names', { keyword })
   return rows
 }
 
 /**
- * Blocks or unblocks the submit button for a certain variable
- * and updates button itself if necessary
- * @param {boolean} blocking - True if want to block the variable, false if want to unblock
- * @param {string} variable - Name of data variable
- */
-function toggleBlockVariable (blocking, variable) {
-  const submitButton = document.querySelector('.' + submitClass)
-  const sendEvent = () => sendBlockEvent(submitButton)
-  const previouslyBlocked = isBlocked(submitButton)
-  const blockedVariable = submitButton.dataset[variable]
-
-  if (blocking && !blockedVariable) {
-    submitButton.dataset[variable] = '1'
-
-    if (!previouslyBlocked) sendEvent()
-  } else if (!blocking & blockedVariable) {
-    submitButton.dataset[variable] = ''
-
-    if (!isBlocked(submitButton)) sendEvent()
-  }
-}
-
-/**
- * Dispatches the block event
- * @param {HTMLButtonElement} submitButton Button reference
- */
-function sendBlockEvent (submitButton) {
-  const block = new CustomEvent(lockSubmission)
-  submitButton.dispatchEvent(block)
-}
-
-/**
- * Checks if the submit button should be blocked
- * @param {HTMLButtonElement} submitButton Button reference
- * @returns {boolean} True if should be blocked
- */
-function isBlocked (submitButton) {
-  for (const key in submitButton.dataset) {
-    if (submitButton.dataset[key]) return true
-  }
-
-  return false
-}
-
-/**
- * Block the submit button
+ * Blocks a data variable in the submit button
+ * @param {string} variable - Data variable
  */
 function blockSubmit (variable) {
-  toggleBlockVariable(true, variable)
+  block(variable, submitClass, lockSubmission)
 }
 
 /**
- * Unblock the submit button
+ * Unblocks a data variable in the submit button
+ * @param {string} variable - Data variable 
  */
 function unblockSubmit (variable) {
-  toggleBlockVariable(false, variable)
+  unblock(variable, submitClass, lockSubmission)
 }

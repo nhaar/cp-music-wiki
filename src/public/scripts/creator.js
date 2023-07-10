@@ -1,4 +1,6 @@
-import { postJSON } from './utils.js'
+import { postAndGetJSON, postJSON } from './utils.js'
+import { createQuery } from './query-options.js'
+import { addBlockListener, block, unblock } from './submit-block.js'
 
 /*******************************************************
 * model
@@ -7,11 +9,19 @@ import { postJSON } from './utils.js'
 const typeSelect = document.querySelector('.js-select-type')
 const createSection = document.querySelector('.js-create-section')
 
+// variables related to blocking the creation buttons
+const blockEvent = 'block'
+const blockClass = 'blocked-button'
+
+/** Class for the upload file button */
+const uploadFileButton = 'upload-file-button'
+
 /** Holds all the type names displayed and functions to render their creation menu */
 const types = {
   Song: renderSongCreate,
   Author: renderAuthorCreate,
-  Collection: renderCollectionCreate
+  Collection: renderCollectionCreate,
+  File: renderFileCreate
 }
 
 /*******************************************************
@@ -79,6 +89,28 @@ function renderCollectionCreate () {
   addCreateListener(inputClass, buttonClass, 'api/create-collection')
 }
 
+/**
+ * Renders the file creation menu
+ */
+function renderFileCreate () {
+  const songInputClass = 'file-song-name'
+  const collectionInputClass = 'collection-name'
+  const fileClass = 'file-upload'
+
+  createSection.innerHTML = `
+    <input class="${songInputClass}" type="text">
+    <input class="${collectionInputClass}" type="text">
+    <input class="${fileClass}" type="file">
+    <button class="${uploadFileButton}">
+      Upload file
+    </button>
+  `
+
+  const fileInput = document.querySelector('.' + fileClass)
+  const uploadButton = document.querySelector('.' + uploadFileButton)
+  addFileCreateControl(songInputClass, collectionInputClass, fileInput, uploadButton)
+}
+
 /*******************************************************
 * controler
 *******************************************************/
@@ -102,4 +134,143 @@ function addCreateListener (inputClass, buttonClass, route) {
     const name = inputElement.value
     postJSON(route, { name })
   })
+}
+
+/**
+ * Adds controls to the file creation menu
+ * @param {string} songInputClass - Class for the song name input
+ * @param {string} collectionInputClass - Class for the collection input
+ * @param {HTMLButtonElement} fileInput - Element for the file input
+ * @param {HTMLButtonElement} uploadButton - Element for the upload button
+ */
+function addFileCreateControl (songInputClass, collectionInputClass, fileInput, uploadButton) {
+  // blocking upload button
+  addBlockListener(uploadButton, blockEvent, blockClass, () => {
+    const songInput = document.querySelector('.' + songInputClass)
+    const collectionInput = document.querySelector('.' + collectionInputClass)
+
+    const songId = songInput.dataset.songId
+    const collectionId = collectionInput.dataset.collectionId
+    const file = fileInput.files[0]
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('songId', songId)
+    formData.append('collectionId', collectionId)
+
+    fetch('api/submit-file', {
+      method: 'POST',
+      body: formData
+    })
+  })
+
+  const fileVar = 'file'
+  const songVar = 'name'
+  const collectionVar = 'collection'
+  const vars = [fileVar, songVar, collectionVar]
+  vars.forEach(variable => blockSubmit(variable))
+  userButton.addEventListener('change', e => {
+    if (e.target.files.length === 0) {
+      blockSubmit(fileVar)
+    } else {
+      unblockSubmit(fileVar)
+    }
+  })
+
+  // query for song name
+  createQuery(createSection, songInputClass, {
+    fetchDataFunction: getSongNames,
+    checkTakenFunction: getTakenSong,
+    dataVar: 'songId',
+    databaseVar: 'song_id',
+    databaseValue: 'name_text'
+  }, {
+    blockVar: songVar,
+    blockFunction: blockSubmit,
+    unblockFunction: unblockSubmit,
+    blockClass
+  })
+
+  // query for collection name
+  createQuery(createSection, collectionInputClass, {
+    fetchDataFunction: getCollectionNames,
+    checkTakenFunction: getTakenCollection,
+    dataVar: 'collectionId',
+    databaseVar: 'collection_id',
+    databaseValue: 'name'
+  }, {
+    blockVar: collectionVar,
+    blockFunction: blockSubmit,
+    unblockFunction: unblockSubmit,
+    blockClass
+  })
+}
+
+/**
+ * Gets the taken data for the song name
+ * @param {HTMLInputElement} input - The song name input
+ * @returns {import('./query-options.js').TakenInfo}
+ */
+function getTakenSong (input) {
+  return getTakenVariable(input, 'songId')
+}
+
+/**
+ * Gets the taken data for the collection
+ * @param {HTMLInputElement} input - The collection name input
+ * @returns {import('./query-options.js').TakenInfo}
+ */
+function getTakenCollection (input) {
+  return getTakenVariable(input, 'collectionId')
+}
+
+/**
+ * Gets the taken data for one of the inputs
+ * @param {HTMLInputElement} element - Reference to the input
+ * @param {string} variable - Name of data variable
+ * @returns {import('./query-options.js').TakenInfo}
+ */
+function getTakenVariable (element, variable) {
+  const value = element.dataset[variable]
+  const hasUntakenId = value ? false : true
+  const takenIds = [value]
+  return { hasUntakenId, takenIds }
+}
+
+/**
+ * Gets all songs based on a keyword
+ * @param {string} keyword 
+ * @returns {import('./editor.js').Row[]}
+ */
+async function getSongNames(keyword) {
+  const rows = await postAndGetJSON('api/get-main-names', { keyword })
+  return rows
+}
+
+
+/**
+ * Gets all collections based on a keyword
+ * @param {string} keyword 
+ * @returns {import('./editor.js').Row[]}
+ */
+async function getCollectionNames(keyword) {
+  console.log(keyword)
+  const rows = await postAndGetJSON('api/get-collection-names', { keyword })
+  // const rows = await postAndGetJSON('api/', { keyword })
+  return rows
+}
+
+/**
+ * Block upload button
+ */
+function blockSubmit (variable) {
+  block(variable, uploadFileButton, blockEvent)
+}
+
+
+/**
+ * Unblock upload button
+ */
+function unblockSubmit (variable) {
+  unblock(variable, uploadFileButton, blockEvent)
 }

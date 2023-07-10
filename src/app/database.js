@@ -59,6 +59,16 @@ class Database {
         name TEXT
       )
     `)
+
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS files (
+        file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        song_id INTEGER,
+        collection_id INTEGER,
+        file_name TEXT,
+        original_name TEXT
+      )
+    `)
   }
 
   /**
@@ -103,6 +113,17 @@ class Database {
    */
   createCollection (name) {
     this.createByName('collections', name)
+  }
+
+  /**
+   * Create a new (music) file
+   * @param {string} songId - Song the file belongs to 
+   * @param {string} collectionId - Collection the file belongs to
+   * @param {string} originalName - Original file name from the user upload
+   * @param {string} name - File name as is stored in the database
+   */
+  createFile (songId, collectionId, originalName, name) {
+    this.db.run('INSERT INTO files (song_id, collection_id, original_name, file_name) VALUES (?, ?, ?, ?)', [songId, collectionId, originalName, name])
   }
 
   /**
@@ -324,6 +345,30 @@ class Database {
   }
 
   /**
+   * Get all songs that contain a keyword in the main name
+   * @param {string} keyword 
+   * @returns {Row[]}
+   */
+  async getSongMainNames (keyword) {
+    const rows = await this.runSelectMethod(callback => {
+      this.db.all("SELECT * FROM song_names WHERE name_text LIKE '%' || ? || '%'", [keyword], callback)
+    })
+    return rows
+  }
+
+  /**
+   * Get all collections that contain a keyword in the name
+   * @param {string} keyword 
+   * @returns {Row[]}
+   */
+  async getCollectionNames (keyword) {
+    const rows = await this.runSelectMethod(callback => {
+      this.db.all("SELECT * FROM collections WHERE name LIKE '%' || ? || '%'", [keyword], callback)
+    })
+    return rows
+  }
+
+  /**
    * Runs an asynchronous SQL method automatically handling resolving and rejecting
    * the promise
    * @param {function(function) : *} methodCallback
@@ -396,7 +441,6 @@ function youtubify (videoCode) {
  */
 function extractVideoCode (link) {
   if (link === '') return null
-  console.log(link, link.includes('youtube'))
 
   if (link.includes('youtube')) return link.match('(?<=v=)[^&]+')[0]
   else return link.match('(?<=be/)[^&^?]+')[0]

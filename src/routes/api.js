@@ -1,6 +1,10 @@
 const express = require('express')
 const router = express.Router()
 
+const multer = require('multer')
+
+const path = require('path')
+
 const db = require('../app/database')
 
 /**
@@ -111,6 +115,24 @@ router.post('/submit-collection', (req, res) => {
   res.sendStatus(200)
 })
 
+const upload = multer({ dest: path.join(__dirname, '../public/music/') })
+
+/**
+ * @route POST /api/submit-file
+ * 
+ * Submits a music file to add it to the database
+ * @param {} file
+ * @param {string} body.songId
+ * @param {string} body.collectionId
+ */
+router.post('/submit-file', upload.single('file'), (req, res) => {
+  const { originalname, filename } = req.file
+  const { songId, collectionId } = req.body
+  db.createFile(songId, collectionId, originalname, filename)
+  res.sendStatus(200)
+})
+
+
 /**
  * @route POST /api/get-author-names
  *
@@ -121,6 +143,33 @@ router.post('/submit-collection', (req, res) => {
 router.post('/get-author-names', async (req, res) => {
   const { keyword } = req.body
   const rows = await db.getAuthorNames(keyword)
+  res.status(200).send(rows)
+})
+
+/**
+ * @route POST /api/get-main-names
+ * 
+ * Gives all the song names filtered by a keyword
+ * @param {string} body.keyword
+ * @returns {import('../app/database').Row[]}
+ */
+router.post('/get-main-names', async (req, res) => {
+  const { keyword } = req.body
+  const rows = await db.getSongMainNames(keyword)
+  res.status(200).send(rows)
+})
+
+/**
+ * @route POST /api/get-collection-names
+ * 
+ * Gives all the collection names filtered by a keyword
+ * @param {string} body.keyword
+ * @returns {import('../app/database').Row[]}
+ */
+router.post('/get-collection-names', async (req, res) => {
+  const { keyword } = req.body
+  const rows = await db.getCollectionNames(keyword)
+  console.log(rows)
   res.status(200).send(rows)
 })
 
