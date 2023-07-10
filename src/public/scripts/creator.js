@@ -254,7 +254,6 @@ async function getSongNames(keyword) {
  * @returns {import('./editor.js').Row[]}
  */
 async function getCollectionNames(keyword) {
-  console.log(keyword)
   const rows = await postAndGetJSON('api/get-collection-names', { keyword })
   // const rows = await postAndGetJSON('api/', { keyword })
   return rows
