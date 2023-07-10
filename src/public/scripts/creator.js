@@ -169,7 +169,7 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
   const collectionVar = 'collection'
   const vars = [fileVar, songVar, collectionVar]
   vars.forEach(variable => blockSubmit(variable))
-  userButton.addEventListener('change', e => {
+  fileInput.addEventListener('change', e => {
     if (e.target.files.length === 0) {
       blockSubmit(fileVar)
     } else {
