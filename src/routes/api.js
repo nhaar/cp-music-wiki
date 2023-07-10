@@ -169,7 +169,6 @@ router.post('/get-main-names', async (req, res) => {
 router.post('/get-collection-names', async (req, res) => {
   const { keyword } = req.body
   const rows = await db.getCollectionNames(keyword)
-  console.log(rows)
   res.status(200).send(rows)
 })
 

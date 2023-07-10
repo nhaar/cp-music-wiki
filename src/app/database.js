@@ -18,57 +18,65 @@ class Database {
    * Creates the tables if they don't exist
    */
   initializeDatabase () {
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS songs (
-        song_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        link TEXT
-      )
-    `)
+    const tables = [
+      `
+        songs (
+          song_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          link TEXT
+        )
+      `,
+      `
+        authors (
+          author_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT
+        )
+      `,
+      `
+        song_names (
+          song_id INTEGER,
+          pos INTEGER,
+          name_text TEXT,
+          PRIMARY KEY (song_id, pos)
+          FOREIGN KEY (song_id) REFERENCES songs(song_id)
+        )
+      `,
+      `
+        song_author (
+          song_id INTEGER,
+          author_id INTEGER,
+          pos INTEGER,
+          PRIMARY KEY (song_id, pos),
+          FOREIGN KEY (song_id) REFERENCES songs(song_id)
+          FOREIGN KEY (author_id) REFERENCES authors(author_id)
+        )
+      `,
+      `
+        collections (
+          collection_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT
+        )
+      `,
+      `
+        files (
+          file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          song_id INTEGER,
+          collection_id INTEGER,
+          file_name TEXT,
+          original_name TEXT
+        )
+      `
+    ]
 
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS authors (
-        author_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT
-      )
-    `)
+    tables.forEach(table => this.createTable(table))
+  }
 
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS song_names (
-        song_id INTEGER,
-        pos INTEGER,
-        name_text TEXT,
-        PRIMARY KEY (song_id, pos)
-        FOREIGN KEY (song_id) REFERENCES songs(song_id)
-      )
-    `)
-
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS song_author (
-        song_id INTEGER,
-        author_id INTEGER,
-        pos INTEGER,
-        PRIMARY KEY (song_id, pos),
-        FOREIGN KEY (song_id) REFERENCES songs(song_id)
-        FOREIGN KEY (author_id) REFERENCES authors(author_id)
-      )
-    `)
-
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS collections (
-        collection_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT
-      )
-    `)
-
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS files (
-        file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        song_id INTEGER,
-        collection_id INTEGER,
-        file_name TEXT,
-        original_name TEXT
-      )
-    `)
+  /**
+   * Shorthand for creating a table if it doesn't exist
+   * @param {string} command
+   * Must be of the format "table name (...everything that goes into creating a table)"
+   */
+  createTable(command) {
+    this.db.run('CREATE TABLE IF NOT EXISTS ' + command)
   }
 
   /**
