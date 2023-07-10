@@ -75,7 +75,7 @@ class Database {
    * @param {string} command
    * Must be of the format "table name (...everything that goes into creating a table)"
    */
-  createTable(command) {
+  createTable (command) {
     this.db.run('CREATE TABLE IF NOT EXISTS ' + command)
   }
 
@@ -125,7 +125,7 @@ class Database {
 
   /**
    * Create a new (music) file
-   * @param {string} songId - Song the file belongs to 
+   * @param {string} songId - Song the file belongs to
    * @param {string} collectionId - Collection the file belongs to
    * @param {string} originalName - Original file name from the user upload
    * @param {string} name - File name as is stored in the database
@@ -195,7 +195,7 @@ class Database {
 
   /**
    * Asynchronously get the row for a collection
-   * @param {string} collectionId 
+   * @param {string} collectionId
    * @returns {Row | null} Row or null if doesn't exist
    */
   async getCollectionById (collectionId) {
@@ -354,7 +354,7 @@ class Database {
 
   /**
    * Get all songs that contain a keyword in the main name
-   * @param {string} keyword 
+   * @param {string} keyword
    * @returns {Row[]}
    */
   async getSongMainNames (keyword) {
@@ -366,7 +366,7 @@ class Database {
 
   /**
    * Get all collections that contain a keyword in the name
-   * @param {string} keyword 
+   * @param {string} keyword
    * @returns {Row[]}
    */
   async getCollectionNames (keyword) {

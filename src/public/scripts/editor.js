@@ -2,8 +2,6 @@ import { postAndGetJSON, postJSON } from './utils.js'
 import { createQuery } from './query-options.js'
 import { addBlockListener, block, unblock } from './submit-block.js'
 
-/* global CustomEvent */
-
 /**
  * Object containing information from a row in a table
  * @typedef {object} Row
@@ -134,14 +132,14 @@ function getAuthorData (elements, authorId) {
 /**
  * Gather collection data from the page
  * inside a collection editor
- * @param {Elements} elements 
- * @param {string} collectionId 
+ * @param {Elements} elements
+ * @param {string} collectionId
  * @returns {Row} Collection data
  */
 function getCollectionData (elements, collectionId) {
   const { nameInput } = elements
   const name = document.querySelector('.' + nameInput).value
-  const data = {collectionId, name }
+  const data = { collectionId, name }
 
   return data
 }
@@ -253,7 +251,7 @@ function renderAuthorEditor (authorId) {
 
 /**
  * Renders the collection editor for a specific collection
- * @param {string} collectionId 
+ * @param {string} collectionId
  */
 function renderCollectionEditor (collectionId) {
   getFromDatabase('api/get-collection', collectionId, 'NO COLLECTION FOUND', data => {
@@ -418,8 +416,8 @@ function setupSubmitAuthor (elements, authorId) {
 /**
  * Sets up a submit button to send the collection data
  * to the database
- * @param {Elements} elements 
- * @param {string} collectionId 
+ * @param {Elements} elements
+ * @param {string} collectionId
  */
 function setupSubmitCollection (elements, collectionId) {
   setupSubmitButton(elements, collectionId, 'api/submit-collection', getCollectionData)
@@ -444,8 +442,6 @@ function setupSubmitButton (elements, id, route, dataFunction) {
     postJSON(route, data)
   })
 }
-
-
 
 /**
  * Setup the control to all the rows that currently are present
@@ -639,7 +635,6 @@ function addAuthorRowControl (row, classes) {
     unblockFunction: unblockSubmit,
     blockedClass
   })
-
 }
 
 /**
@@ -683,9 +678,6 @@ function indexOfChild (parent, child) {
   return [...parent.children].indexOf(child)
 }
 
-
-
-
 /**
  * Get all authors that contains a keyword
  * @param {string} keyword
@@ -706,7 +698,7 @@ function blockSubmit (variable) {
 
 /**
  * Unblocks a data variable in the submit button
- * @param {string} variable - Data variable 
+ * @param {string} variable - Data variable
  */
 function unblockSubmit (variable) {
   unblock(variable, submitClass, lockSubmission)

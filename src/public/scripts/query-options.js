@@ -8,7 +8,7 @@
 
 /**
  * Variables needed to setup the query search
- * @typedef {object} QueryConfig * 
+ * @typedef {object} QueryConfig *
  * @property {string} dataVar - Name of the data variable that has the id of the query
  * @property {string} databaseVar - Name of the id variable as is stored in the database (column name)
  * @property {string} databaseValue - Name of the input's value (eg name) table name in the database
@@ -23,7 +23,7 @@
  * Variables needed to setup the query-blocking upload integration
  * @typedef {object} BlockConfig
  * @property {string} blockVar - Name of the variable that will get saved in the block button for this query
- * @property {function(variable) : void} blockFunction 
+ * @property {function(variable) : void} blockFunction
  * Function that blocks the button for a given data variable
  * @property {function(variable) : void} unblockFunction
  * Function that unblocks the button for a given data variable
@@ -35,7 +35,7 @@
  * @param {HTMLDivElement} div - Container for the input
  * @param {string} inputClass - Class for the input that will have the query
  * @param {QueryConfig} queryConfig
- * @param {BlockConfig} blockConfig 
+ * @param {BlockConfig} blockConfig
  */
 export function createQuery (div, inputClass, queryConfig, blockConfig) {
   const { dataVar } = queryConfig
@@ -52,7 +52,6 @@ export function createQuery (div, inputClass, queryConfig, blockConfig) {
   queryOptions.style.left = input.offsetLeft + 'px'
 
   div.appendChild(queryOptions)
-
 
   // flag for hovering options or not
   const listenerRel = { mouseover: '1', mouseout: '' }
@@ -82,7 +81,7 @@ export function createQuery (div, inputClass, queryConfig, blockConfig) {
  * @param {HTMLInputElement} input - Reference to input
  * @param {HTMLDivElement} queryOptions - Element that will hold the options
  * @param {QueryConfig} queryConfig
- * @param {BlockConfig} blockConfig 
+ * @param {BlockConfig} blockConfig
  */
 function updateQueryOptions (input, queryOptions, queryConfig, blockConfig) {
   const { fetchDataFunction, checkTakenFunction, dataVar, databaseVar, databaseValue } = queryConfig
@@ -98,7 +97,7 @@ function updateQueryOptions (input, queryOptions, queryConfig, blockConfig) {
     // fetching all taken data
     const { hasUntakenId, takenIds } = checkTakenFunction(input)
     if (blockConfig) {
-      if (hasUntakenId) blockFunction(blockVar)      
+      if (hasUntakenId) blockFunction(blockVar)
     }
 
     queryOptions.innerHTML = ''

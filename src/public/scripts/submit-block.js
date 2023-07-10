@@ -1,3 +1,5 @@
+/* global CustomEvent */
+
 /**
  * Adds the event listeners for the blocking button integration
  * @param {HTMLButtonElement} button - Reference to the button
@@ -11,7 +13,7 @@ export function addBlockListener (button, eventName, blockedClass, clickCallback
   button.addEventListener('click', () => {
     if (!blocked()) clickCallback()
   })
-  
+
   button.addEventListener(eventName, () => {
     if (!blocked()) {
       button.classList.remove(blockedClass)

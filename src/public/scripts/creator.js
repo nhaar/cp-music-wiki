@@ -232,28 +232,27 @@ function getTakenCollection (input) {
  */
 function getTakenVariable (element, variable) {
   const value = element.dataset[variable]
-  const hasUntakenId = value ? false : true
+  const hasUntakenId = !value
   const takenIds = [value]
   return { hasUntakenId, takenIds }
 }
 
 /**
  * Gets all songs based on a keyword
- * @param {string} keyword 
+ * @param {string} keyword
  * @returns {import('./editor.js').Row[]}
  */
-async function getSongNames(keyword) {
+async function getSongNames (keyword) {
   const rows = await postAndGetJSON('api/get-main-names', { keyword })
   return rows
 }
 
-
 /**
  * Gets all collections based on a keyword
- * @param {string} keyword 
+ * @param {string} keyword
  * @returns {import('./editor.js').Row[]}
  */
-async function getCollectionNames(keyword) {
+async function getCollectionNames (keyword) {
   const rows = await postAndGetJSON('api/get-collection-names', { keyword })
   // const rows = await postAndGetJSON('api/', { keyword })
   return rows
@@ -265,7 +264,6 @@ async function getCollectionNames(keyword) {
 function blockSubmit (variable) {
   block(variable, uploadFileButton, blockEvent)
 }
-
 
 /**
  * Unblock upload button

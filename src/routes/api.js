@@ -119,7 +119,7 @@ const upload = multer({ dest: path.join(__dirname, '../public/music/') })
 
 /**
  * @route POST /api/submit-file
- * 
+ *
  * Submits a music file to add it to the database
  * @param {} file
  * @param {string} body.songId
@@ -131,7 +131,6 @@ router.post('/submit-file', upload.single('file'), (req, res) => {
   db.createFile(songId, collectionId, originalname, filename)
   res.sendStatus(200)
 })
-
 
 /**
  * @route POST /api/get-author-names
@@ -148,7 +147,7 @@ router.post('/get-author-names', async (req, res) => {
 
 /**
  * @route POST /api/get-main-names
- * 
+ *
  * Gives all the song names filtered by a keyword
  * @param {string} body.keyword
  * @returns {import('../app/database').Row[]}
@@ -161,7 +160,7 @@ router.post('/get-main-names', async (req, res) => {
 
 /**
  * @route POST /api/get-collection-names
- * 
+ *
  * Gives all the collection names filtered by a keyword
  * @param {string} body.keyword
  * @returns {import('../app/database').Row[]}
