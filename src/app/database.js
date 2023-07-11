@@ -62,7 +62,8 @@ class Database {
           song_id INTEGER,
           collection_id INTEGER,
           file_name TEXT,
-          original_name TEXT
+          original_name TEXT,
+          is_hq INTEGER
         )
       `
     ]
@@ -186,7 +187,15 @@ class Database {
     const authors = await deconstructRows(() => this.getSongAuthors(songId), 'author_id')
     const names = await deconstructRows(() => this.getSongNames(songId), 'name_text')
     const link = row.link ? youtubify(row.link) : ''
-    const song = { names, authors, link }
+
+    const files = {}
+    const fileRows = await this.runSelectMethod(callback => {
+      this.db.all('SELECT * FROM files WHERE song_id = ?', [songId], callback)
+    })
+    fileRows.forEach(row => {
+      files[row.file_id] = Boolean(row.is_hq)
+    })
+    const song = { names, authors, link, files }
     return song
   }
 
@@ -215,7 +224,7 @@ class Database {
    * @param {import('../public/scripts/editor').Song} data - Song object with new data to be used
    */
   async updateSong (data) {
-    const { names, songId, link } = data
+    const { names, songId, link, files } = data
     const authors = data.authors.map(n => Number(n))
 
     // authors
@@ -232,6 +241,12 @@ class Database {
 
     // link
     this.db.run(`UPDATE songs SET link = ? WHERE song_id = ${songId}`, [extractVideoCode(link)])
+
+    // file hq info
+    for (const fileId in files) {
+      const is_hq = files[fileId] ? 1 : 0
+      this.db.run('UPDATE files SET is_hq = ? WHERE song_id = ? AND file_id = ?', [is_hq, songId, fileId])
+    }
   }
 
   /**
@@ -388,6 +403,18 @@ class Database {
    */
   async getCollectionNames (keyword) {
     const rows = await this.selectLike('collections', 'name', keyword)
+    return rows
+  }
+
+  /**
+   * Get all file rows linked to a song
+   * @param {string} songId 
+   * @returns {Row[]}
+   */
+  async getFileData (songId) {
+    const rows = await this.runSelectMethod(callback => {
+      this.db.all(`SELECT * FROM files WHERE song_id = ?`, [songId], callback)
+    })
     return rows
   }
 

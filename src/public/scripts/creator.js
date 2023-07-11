@@ -154,8 +154,8 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
 
 
 
-    const songId = songInput.dataset[songVar]
-    const collectionId = collectionInput.dataset[collectionVar]
+    const songId = songInput.dataset[songDataVar]
+    const collectionId = collectionInput.dataset[collectionDataVar]
     const file = fileInput.files[0]
 
     const formData = new FormData()

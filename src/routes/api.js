@@ -172,6 +172,19 @@ router.post('/get-collection-names', async (req, res) => {
 })
 
 /**
+ * @route POST /api/get-file-data
+ * 
+ * Gives all the files for a song
+ * @param {string} body.songId
+ * @returns {import('../app/database').Row[]} - 200
+ */
+router.post('/get-file-data', async (req, res) => {
+  const { songId } = req.body
+  const rows = await db.getFileData(songId)
+  res.status(200).send(rows)
+})
+
+/**
  * Asynchronously get a data object from the database
  *
  * The request body must contain the row id

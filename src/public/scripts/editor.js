@@ -13,6 +13,13 @@ import { addBlockListener, block, unblock } from './submit-block.js'
  * @property {string} songId
  * @property {string[]} names
  * @property {string[]} authors
+ * @property {Files} files
+ */
+
+/**
+ * Each property is a file id and it maps to a boolean representing whether or not
+ * it is a high quality source
+ * @typedef {object} Files
  */
 
 /**
@@ -88,14 +95,15 @@ function paramsToObject (urlParams) {
  * @returns {Row} Song data from the user
  */
 function getSongData (elements, songId) {
-  const { nameInput, authorInput, linkInput } = elements
+  const { nameInput, authorInput, linkInput, fileCheck } = elements
 
   // author ids are saved as data variables in inputs
   const names = collectInputData(nameInput, false)
   const authors = collectInputData(authorInput, true, 'authorId')
   const link = document.querySelector('.' + linkInput).value
+  const files = collectHQCheckData(fileCheck)
 
-  const data = { songId, names, authors, link }
+  const data = { songId, names, authors, link, files }
 
   return data
 }
@@ -112,6 +120,22 @@ function collectInputData (inputClass, isDataset, dataProperty) {
     ? input => input.dataset[dataProperty]
     : input => input.value
   return [...document.querySelectorAll('.' + inputClass)].map(mapFunction)
+}
+
+/**
+ * Gather all the data on the page related to the HQ checks
+ * @param {string} inputClass - CSS class for each hq file checkbox
+ * @returns {Files} Map of HQ files
+ */
+function collectHQCheckData (inputClass) {
+  const files = {}
+  const fileChecks = document.querySelectorAll('.' + inputClass)
+  fileChecks.forEach(checkbox => {
+    const fileId = checkbox.dataset.id
+    files[fileId] = checkbox.checked
+  })
+
+  return files
 }
 
 /**
@@ -191,6 +215,16 @@ function getAllTakenAuthors (input) {
   }
 }
 
+/**
+ * Gets the file data for a song
+ * @param {string} songId 
+ * @returns {Row[]}
+ */
+async function getFileData (songId) {
+  const rows = await postAndGetJSON('api/get-file-data', { songId })
+  return rows
+}
+
 /*******************************************************
 * view
 *******************************************************/
@@ -215,10 +249,13 @@ function renderSongEditor (songId) {
       }
     })
 
+    const files = await getFileData(songId)
+
     // draw editor elements
     elements.nameInput = renderSongNames(names)
     elements.authorInput = renderSongAuthors(authors)
     elements.linkInput = renderLinkInput(link)
+    elements.fileCheck = renderFileCheckmarks(files)
 
     // draw submit button
     const submitButton = document.createElement('button')
@@ -349,6 +386,30 @@ function renderLinkInput (link) {
 }
 
 /**
+ * Renders the div with checkboxes for setting HQ sources
+ * @param {Row[]} files - Row for all files to render
+ * @returns {string} - CSS class name for each checkbox
+ */
+function renderFileCheckmarks (files) {
+  const inputClass = 'file-hq-check'
+  const filesDiv = document.createElement('div')
+  
+  files.forEach(file => {
+    const checkProperty = file.is_hq ? 'checked' : ''
+    const fileDiv = document.createElement('div')
+    fileDiv.innerHTML = `
+      ${file.original_name}
+      ${generateFileAudio(file)}
+      <input class="${inputClass}" type="checkbox" ${checkProperty} data-id="${file.file_id}">
+    `
+    filesDiv.appendChild(fileDiv)
+  })
+  
+  editor.appendChild(filesDiv)
+  return inputClass
+}
+
+/**
  * Generates the HTML for a moveable row
  * @param {RowData} rowData Data for this row
  * @param {object} classes Object with all the class names
@@ -366,6 +427,29 @@ function generateMoveableRow (rowData, classes) {
     <button class="${delClass}"> X </button>
     <button class="${moveClass}"> M </button>
   `
+}
+
+/**
+ * Generates the audio element HTML for a file if possible
+ * @param {Row} file - Row for the file
+ * @returns {string} HTML string
+ */
+function generateFileAudio(file) {
+  const name = file.original_name
+  const extension = name.match(/\.(.*?)$/)[1]
+  const validExtensions = [
+    'mp3',
+    'wav',
+    'flac',
+    'm4a',
+    'ogg',
+  ]
+  if (validExtensions.includes(extension)) {
+    return `
+      <audio src="../music/${file.file_name}" controls></audio>
+    `
+  }
+  return ''
 }
 
 /**
