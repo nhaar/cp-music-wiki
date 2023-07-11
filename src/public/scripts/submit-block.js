@@ -94,7 +94,6 @@ export class Blocker {
    * @param {string} variable - Data variable
    */
   block (variable) {
-    console.log('trying to block')
     this.toggleBlock(true, variable)
   }
 
@@ -103,7 +102,6 @@ export class Blocker {
    * @param {string} variable - Data variable
    */
   unblock (variable) {
-    console.log('trying to unblock')
     this.toggleBlock(false, variable)
   }
 }

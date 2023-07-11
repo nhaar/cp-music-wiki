@@ -1,5 +1,5 @@
 import { postAndGetJSON, postJSON } from './utils.js'
-import { createQuery } from './query-options.js'
+import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 
 /**
@@ -582,7 +582,7 @@ function setupAuthorDivControls (authorsDiv, classes) {
     addAuthorRowControl,
     addAuthorRowControls,
     setupAddMoveableRowButton,
-    () => submitBlocker.block('author')
+    () => submitBlocker.block('authorId')
   )
 }
 
@@ -703,16 +703,16 @@ function addAuthorRowControl (row, classes) {
   addMoveableRowControl(row, classes)
 
   // add query to authors
-  createQuery(row, inputClass, {
-    fetchDataFunction: getAuthorNames,
-    checkTakenFunction: getAllTakenAuthors,
-    dataVar: 'authorId',
-    databaseVar: 'author_id',
-    databaseValue: 'name'
-  }, {
-    blockVar: 'author',
-    blocker: submitBlocker
-  })
+  const input = document.querySelector('.' + inputClass)
+  createSearchQuery(
+    input,
+    'authorId',
+    'author_id',
+    'name',
+    getAuthorNames,
+    getAllTakenAuthors,
+    submitBlocker
+  )
 }
 
 /**

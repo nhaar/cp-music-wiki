@@ -1,5 +1,5 @@
 import { postAndGetJSON, postJSON } from './utils.js'
-import { createQuery } from './query-options.js'
+import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 
 /*******************************************************
@@ -143,15 +143,15 @@ function addCreateListener (inputClass, buttonClass, route) {
  * @param {HTMLButtonElement} uploadButton - Element for the upload button
  */
 function addFileCreateControl (songInputClass, collectionInputClass, fileInput, uploadButton) {
-  const songDataVar = 'songId'
-  const collectionDataVar = 'collectionId'
+  const songVar = 'songId'
+  const collectionVar = 'collectionId'
 
   uploadBlocker = new Blocker(uploadButton, () => {
     const songInput = document.querySelector('.' + songInputClass)
     const collectionInput = document.querySelector('.' + collectionInputClass)
 
-    const songId = songInput.dataset[songDataVar]
-    const collectionId = collectionInput.dataset[collectionDataVar]
+    const songId = songInput.dataset[songVar]
+    const collectionId = collectionInput.dataset[collectionVar]
     const file = fileInput.files[0]
 
     const formData = new FormData()
@@ -166,8 +166,6 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
   })
 
   const fileVar = 'file'
-  const songVar = 'name'
-  const collectionVar = 'collection'
   const vars = [fileVar, songVar, collectionVar]
   vars.forEach(variable => uploadBlocker.block(variable))
   fileInput.addEventListener('change', e => {
@@ -178,29 +176,27 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
     }
   })
 
-  // query for song name
-  createQuery(createSection, songInputClass, {
-    fetchDataFunction: getSongNames,
-    checkTakenFunction: getTakenSong,
-    dataVar: songDataVar,
-    databaseVar: 'song_id',
-    databaseValue: 'name_text'
-  }, {
-    blockVar: songVar,
-    blocker: uploadBlocker
-  })
+  const songInput = document.querySelector('.' + songInputClass)
+  const collectionInput = document.querySelector('.' + collectionInputClass)
+  createSearchQuery(
+    songInput,
+    songVar,
+    'song_id',
+    'name_text',
+    getSongNames,
+    getTakenSong,
+    uploadBlocker
+  )
 
-  // query for collection name
-  createQuery(createSection, collectionInputClass, {
-    fetchDataFunction: getCollectionNames,
-    checkTakenFunction: getTakenCollection,
-    dataVar: collectionDataVar,
-    databaseVar: 'collection_id',
-    databaseValue: 'name'
-  }, {
-    blockVar: collectionVar,
-    blocker: uploadBlocker
-  })
+  createSearchQuery(
+    collectionInput,
+    collectionVar,
+    'collection_id',
+    'name',
+    getCollectionNames,
+    getTakenCollection,
+    uploadBlocker
+  )
 }
 
 /**
