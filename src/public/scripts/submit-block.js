@@ -2,14 +2,14 @@
 
 /**
  * A blocker is a way of rendering a button unfunctional if there are things that should be blocking it
- * 
+ *
  * Every data variable for the button corresponds to a blocking condition
  * being set to '1' if it is blocking and '' if it's not
- * 
+ *
  * This way, if you want to block the button while the user has not done something,
  * you must make that something communicate with the blocker and give it a variable
  * to store
- * 
+ *
  * If all stored variables are non blocking, the button can be used normally
  */
 export class Blocker {

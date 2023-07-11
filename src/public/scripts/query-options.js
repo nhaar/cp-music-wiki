@@ -1,5 +1,3 @@
-import { Blocker } from "./submit-block"
-
 /**
  * Object with information about the
  * current use of data for the query
