@@ -173,7 +173,7 @@ router.post('/get-collection-names', async (req, res) => {
 
 /**
  * @route POST /api/get-file-data
- * 
+ *
  * Gives all the files for a song
  * @param {string} body.songId
  * @returns {import('../app/database').Row[]} - 200

@@ -244,8 +244,8 @@ class Database {
 
     // file hq info
     for (const fileId in files) {
-      const is_hq = files[fileId] ? 1 : 0
-      this.db.run('UPDATE files SET is_hq = ? WHERE song_id = ? AND file_id = ?', [is_hq, songId, fileId])
+      const isHQ = files[fileId] ? 1 : 0
+      this.db.run('UPDATE files SET is_hq = ? WHERE song_id = ? AND file_id = ?', [isHQ, songId, fileId])
     }
   }
 
@@ -408,12 +408,12 @@ class Database {
 
   /**
    * Get all file rows linked to a song
-   * @param {string} songId 
+   * @param {string} songId
    * @returns {Row[]}
    */
   async getFileData (songId) {
     const rows = await this.runSelectMethod(callback => {
-      this.db.all(`SELECT * FROM files WHERE song_id = ?`, [songId], callback)
+      this.db.all('SELECT * FROM files WHERE song_id = ?', [songId], callback)
     })
     return rows
   }

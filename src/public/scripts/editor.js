@@ -217,7 +217,7 @@ function getAllTakenAuthors (input) {
 
 /**
  * Gets the file data for a song
- * @param {string} songId 
+ * @param {string} songId
  * @returns {Row[]}
  */
 async function getFileData (songId) {
@@ -393,7 +393,7 @@ function renderLinkInput (link) {
 function renderFileCheckmarks (files) {
   const inputClass = 'file-hq-check'
   const filesDiv = document.createElement('div')
-  
+
   files.forEach(file => {
     const checkProperty = file.is_hq ? 'checked' : ''
     const fileDiv = document.createElement('div')
@@ -404,7 +404,7 @@ function renderFileCheckmarks (files) {
     `
     filesDiv.appendChild(fileDiv)
   })
-  
+
   editor.appendChild(filesDiv)
   return inputClass
 }
@@ -434,7 +434,7 @@ function generateMoveableRow (rowData, classes) {
  * @param {Row} file - Row for the file
  * @returns {string} HTML string
  */
-function generateFileAudio(file) {
+function generateFileAudio (file) {
   const name = file.original_name
   const extension = name.match(/\.(.*?)$/)[1]
   const validExtensions = [
@@ -442,7 +442,7 @@ function generateFileAudio(file) {
     'wav',
     'flac',
     'm4a',
-    'ogg',
+    'ogg'
   ]
   if (validExtensions.includes(extension)) {
     return `

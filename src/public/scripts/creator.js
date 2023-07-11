@@ -146,13 +146,11 @@ function addCreateListener (inputClass, buttonClass, route) {
 function addFileCreateControl (songInputClass, collectionInputClass, fileInput, uploadButton) {
   const songDataVar = 'songId'
   const collectionDataVar = 'collectionId'
-  
+
   // blocking upload button
   addBlockListener(uploadButton, blockEvent, blockClass, () => {
     const songInput = document.querySelector('.' + songInputClass)
     const collectionInput = document.querySelector('.' + collectionInputClass)
-
-
 
     const songId = songInput.dataset[songDataVar]
     const collectionId = collectionInput.dataset[collectionDataVar]
