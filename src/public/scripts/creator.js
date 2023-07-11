@@ -1,6 +1,6 @@
 import { postAndGetJSON, postJSON } from './utils.js'
 import { createQuery } from './query-options.js'
-import { addBlockListener, block, unblock } from './submit-block.js'
+import { Blocker } from './submit-block.js'
 
 /*******************************************************
 * model
@@ -9,9 +9,8 @@ import { addBlockListener, block, unblock } from './submit-block.js'
 const typeSelect = document.querySelector('.js-select-type')
 const createSection = document.querySelector('.js-create-section')
 
-// variables related to blocking the creation buttons
-const blockEvent = 'block'
-const blockClass = 'blocked-button'
+/** Blocker for the submit new file button */
+let uploadBlocker
 
 /** Class for the upload file button */
 const uploadFileButton = 'upload-file-button'
@@ -147,8 +146,7 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
   const songDataVar = 'songId'
   const collectionDataVar = 'collectionId'
 
-  // blocking upload button
-  addBlockListener(uploadButton, blockEvent, blockClass, () => {
+  uploadBlocker = new Blocker(uploadButton, () => {
     const songInput = document.querySelector('.' + songInputClass)
     const collectionInput = document.querySelector('.' + collectionInputClass)
 
@@ -171,12 +169,12 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
   const songVar = 'name'
   const collectionVar = 'collection'
   const vars = [fileVar, songVar, collectionVar]
-  vars.forEach(variable => blockSubmit(variable))
+  vars.forEach(variable => uploadBlocker.block(variable))
   fileInput.addEventListener('change', e => {
     if (e.target.files.length === 0) {
-      blockSubmit(fileVar)
+      uploadBlocker.block(fileVar)
     } else {
-      unblockSubmit(fileVar)
+      uploadBlocker.unblock(fileVar)
     }
   })
 
@@ -189,9 +187,7 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
     databaseValue: 'name_text'
   }, {
     blockVar: songVar,
-    blockFunction: blockSubmit,
-    unblockFunction: unblockSubmit,
-    blockClass
+    blocker: uploadBlocker
   })
 
   // query for collection name
@@ -203,9 +199,7 @@ function addFileCreateControl (songInputClass, collectionInputClass, fileInput, 
     databaseValue: 'name'
   }, {
     blockVar: collectionVar,
-    blockFunction: blockSubmit,
-    unblockFunction: unblockSubmit,
-    blockClass
+    blocker: uploadBlocker
   })
 }
 
@@ -259,18 +253,4 @@ async function getCollectionNames (keyword) {
   const rows = await postAndGetJSON('api/get-collection-names', { keyword })
   // const rows = await postAndGetJSON('api/', { keyword })
   return rows
-}
-
-/**
- * Block upload button
- */
-function blockSubmit (variable) {
-  block(variable, uploadFileButton, blockEvent)
-}
-
-/**
- * Unblock upload button
- */
-function unblockSubmit (variable) {
-  unblock(variable, uploadFileButton, blockEvent)
 }

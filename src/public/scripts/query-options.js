@@ -1,3 +1,5 @@
+import { Blocker } from "./submit-block"
+
 /**
  * Object with information about the
  * current use of data for the query
@@ -23,11 +25,7 @@
  * Variables needed to setup the query-blocking upload integration
  * @typedef {object} BlockConfig
  * @property {string} blockVar - Name of the variable that will get saved in the block button for this query
- * @property {function(variable) : void} blockFunction
- * Function that blocks the button for a given data variable
- * @property {function(variable) : void} unblockFunction
- * Function that unblocks the button for a given data variable
- * @property {string} blockedClass - Name of the CSS class that changes the color of the button that will get blocked
+ * @property {Blocker} blocker - Reference to the blocker object
  */
 
 /**
@@ -39,8 +37,8 @@
  */
 export function createQuery (div, inputClass, queryConfig, blockConfig) {
   const { dataVar } = queryConfig
-  let blockedClass
-  if (blockConfig) ({ blockedClass } = blockConfig)
+  let blocker
+  if (blockConfig) ({ blocker } = blockConfig)
   const input = div.querySelector('.' + inputClass)
 
   // element to have the available options
@@ -65,7 +63,7 @@ export function createQuery (div, inputClass, queryConfig, blockConfig) {
     updateQuery()
     // reset ID if altered anything
     input.dataset[dataVar] = ''
-    if (blockConfig) input.classList.add(blockedClass)
+    if (blockConfig) input.classList.add(blocker.blockedClass)
   })
   input.addEventListener('focus', updateQuery)
   input.addEventListener('blur', () => {
@@ -86,18 +84,16 @@ export function createQuery (div, inputClass, queryConfig, blockConfig) {
 function updateQueryOptions (input, queryOptions, queryConfig, blockConfig) {
   const { fetchDataFunction, checkTakenFunction, dataVar, databaseVar, databaseValue } = queryConfig
   let blockVar
-  let blockFunction
-  let unblockFunction
-  let blockedClass
+  let blocker
   if (blockConfig) {
-    ({ blockVar, blockFunction, unblockFunction, blockedClass } = blockConfig)
+    ({ blockVar, blocker } = blockConfig)
   }
 
   fetchDataFunction(input.value).then(data => {
     // fetching all taken data
     const { hasUntakenId, takenIds } = checkTakenFunction(input)
     if (blockConfig) {
-      if (hasUntakenId) blockFunction(blockVar)
+      if (hasUntakenId) blocker.block(blockVar)
     }
 
     queryOptions.innerHTML = ''
@@ -108,11 +104,11 @@ function updateQueryOptions (input, queryOptions, queryConfig, blockConfig) {
         queryOptions.innerHTML = ''
         input.dataset[dataVar] = option[databaseVar]
         input.value = option[databaseValue]
-        input.classList.remove(blockedClass)
+        input.classList.remove(blocker.blockedClass)
 
         if (blockConfig) {
           const { hasUntakenId } = checkTakenFunction(input)
-          if (!hasUntakenId) unblockFunction(blockVar)
+          if (!hasUntakenId) blocker.unblock(blockVar)
         }
       })
 

@@ -1,6 +1,6 @@
 import { postAndGetJSON, postJSON } from './utils.js'
 import { createQuery } from './query-options.js'
-import { addBlockListener, block, unblock } from './submit-block.js'
+import { Blocker } from './submit-block.js'
 
 /**
  * Object containing information from a row in a table
@@ -43,11 +43,7 @@ const editor = document.querySelector('.js-editor')
 const urlParams = new URLSearchParams(window.location.search)
 const params = paramsToObject(urlParams)
 
-/** Name for the event that is responsible for disabling the submit button */
-const lockSubmission = 'block'
-
-/** CSS class name for the blocked submit button */
-const blockedClass = 'blocked-button'
+const submitBlocker = new Blocker()
 
 /** CSS class for the submit button */
 const submitClass = 'js-submit-button'
@@ -519,12 +515,12 @@ function setupSubmitCollection (elements, collectionId) {
  */
 function setupSubmitButton (elements, id, route, dataFunction) {
   const submitButton = document.querySelector('.' + submitClass)
-
-  // handling disabling submissions
-  addBlockListener(submitButton, lockSubmission, blockedClass, () => {
+  submitBlocker.button = submitButton
+  submitBlocker.clickCallback = () => {
     const data = dataFunction(elements, id)
     postJSON(route, data)
-  })
+  }
+  submitBlocker.addListeners()
 }
 
 /**
@@ -586,7 +582,7 @@ function setupAuthorDivControls (authorsDiv, classes) {
     addAuthorRowControl,
     addAuthorRowControls,
     setupAddMoveableRowButton,
-    () => blockSubmit('author')
+    () => submitBlocker.block('author')
   )
 }
 
@@ -715,9 +711,7 @@ function addAuthorRowControl (row, classes) {
     databaseValue: 'name'
   }, {
     blockVar: 'author',
-    blockFunction: blockSubmit,
-    unblockFunction: unblockSubmit,
-    blockedClass
+    blocker: submitBlocker
   })
 }
 
@@ -730,8 +724,8 @@ function setupLinkControls (linkInput) {
   const blockVar = 'link'
 
   const blockToggle = () => {
-    if (!isValidLink(linkInput.value)) blockSubmit(blockVar)
-    else unblockSubmit(blockVar)
+    if (!isValidLink(linkInput.value)) submitBlocker.block(blockVar)
+    else submitBlocker.unblock(blockVar)
   }
 
   linkInput.addEventListener('input', blockToggle)
@@ -770,20 +764,4 @@ function indexOfChild (parent, child) {
 async function getAuthorNames (keyword) {
   const rows = await postAndGetJSON('api/get-author-names', { keyword })
   return rows
-}
-
-/**
- * Blocks a data variable in the submit button
- * @param {string} variable - Data variable
- */
-function blockSubmit (variable) {
-  block(variable, submitClass, lockSubmission)
-}
-
-/**
- * Unblocks a data variable in the submit button
- * @param {string} variable - Data variable
- */
-function unblockSubmit (variable) {
-  unblock(variable, submitClass, lockSubmission)
 }
