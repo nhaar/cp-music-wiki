@@ -119,7 +119,7 @@ class View {
     this.clearCreator()
     this.songInput = createElement({ parent: this.createSection, tag: 'input' })
     this.collectionInput = createElement({ parent: this.createSection, tag: 'input' })
-    this.fileInput = createElement({ parent: this.createSection, tag: 'input' })
+    this.fileInput = createElement({ parent: this.createSection, tag: 'input', type: 'file' })
     this.uploadButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Upload file' })
   }
 
@@ -209,7 +209,7 @@ class Controller {
     const collectionVar = 'collectionId'
     const fileVar = 'file'
 
-    const uploadBlocker = new Blocker(this.uploadButton, () => {
+    const uploadBlocker = new Blocker(this.view.uploadButton, () => {
       const songId = this.view.songInput.dataset[songVar]
       const collectionId = this.view.collectionInput.dataset[collectionVar]
       const file = this.view.fileInput.files[0]
