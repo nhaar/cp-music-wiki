@@ -1,4 +1,4 @@
-import { postAndGetJSON, postJSON } from './utils.js'
+import { createElement, postAndGetJSON, postJSON, selectElement } from './utils.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 
@@ -57,9 +57,8 @@ class Model {
 
 class View {
   constructor () {
-    this.typeSelect = document.querySelector('.js-select-type')
-    this.createSection = document.querySelector('.js-create-section')
-    this.uploadFileButton = 'upload-file-button'
+    this.typeSelect = selectElement('js-select-type')
+    this.createSection = selectElement('js-create-section')
   }
 
   /**
@@ -67,84 +66,41 @@ class View {
    * @param {string} type - Name to use
    */
   addOption (type) {
-    this.typeSelect.innerHTML += `
-      <option value="${type}"> ${type} </option>
-    `
+    createElement({ parent: this.typeSelect, tag: 'option', value: type, innerHTML: type })
   }
 
   /**
    * Renders the song creator
    */
   renderSongCreate () {
-    const songName = 'js-song-name'
-    const createButton = 'js-create-button'
-    this.createSection.innerHTML = `
-      <input class="${songName}" type="text">
-      <button class="${createButton}">
-        Create song
-      </button>  
-    `
-
-    this.songName = document.querySelector('.' + songName)
-    this.createButton = document.querySelector('.' + createButton)
+    this.songName = createElement({ parent: this.createSection, tag: 'input' })
+    this.createButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Create song' })
   }
 
   /**
    * Renders the author creator
    */
   renderAuthorCreate () {
-    const authorName = 'js-author-name'
-    const authorButton = 'js-author-button'
-    this.createSection.innerHTML = `
-      <input class="${authorName}" type="text">
-      <button class="${authorButton}">
-        Create author page
-      </button>
-    `
-
-    this.authorName = document.querySelector('.' + authorName)
-    this.authorButton = document.querySelector('.' + authorButton)
+    this.authorName = createElement({ parent: this.createSection, tag: 'input' })
+    this.authorButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Add author' })
   }
 
   /**
    * Renders the collection creator
    */
   renderCollectionCreate () {
-    const inputClass = 'collection-name'
-    const buttonClass = 'collection-button'
-    this.createSection.innerHTML = `
-      <input class="${inputClass}" type="text">
-      <button class="${buttonClass}">
-        Create author page
-      </button>
-    `
-
-    this.collectionName = document.querySelector('.' + inputClass)
-    this.collectionButton = document.querySelector('.' + buttonClass)
+    this.collectionName = createElement({ parent: this.createSection, tag: 'input' })
+    this.collectionButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Add collection' })
   }
 
   /**
    * Renders the file creator
    */
   renderFileCreate () {
-    const songInputClass = 'file-song-name'
-    const collectionInputClass = 'collection-name'
-    const fileClass = 'file-upload'
-
-    this.createSection.innerHTML = `
-      <input class="${songInputClass}" type="text">
-      <input class="${collectionInputClass}" type="text">
-      <input class="${fileClass}" type="file">
-      <button class="${this.uploadFileButton}">
-        Upload file
-      </button>
-    `
-
-    const fileInput = document.querySelector('.' + fileClass)
-    const uploadButton = document.querySelector('.' + this.uploadFileButton)
-    const songInput = document.querySelector('.' + songInputClass)
-    const collectionInput = document.querySelector('.' + collectionInputClass)
-    Object.assign(this, { songInput, collectionInput, fileInput, uploadButton })
+    this.songInput = createElement({ parent: this.createSection, tag: 'input' })
+    this.collectionInput = createElement({ parent: this.createSection, tag: 'input' })
+    this.fileInput = createElement({ parent: this.createSection, tag: 'input' })
+    this.uploadButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Upload file' })
   }
 }
 
@@ -176,20 +132,17 @@ class Controller {
    * Start the creator page
    */
   initializePage () {
-    const { view, types } = this
-    const { typeSelect } = view
-
     let isFirstOne = true
-    for (const type in types) {
+    for (const type in this.types) {
       if (isFirstOne) {
         isFirstOne = false
-        types[type]()
+        this.types[type]()
       }
-      view.addOption(type)
+      this.view.addOption(type)
     }
 
-    typeSelect.addEventListener('change', () => {
-      types[typeSelect.value]()
+    this.view.typeSelect.addEventListener('change', () => {
+      this.types[this.view.typeSelect.value]()
     })
   }
 
@@ -197,41 +150,35 @@ class Controller {
    * Give controls to the song creator
    */
   setupSongCreator () {
-    const { view } = this
-    this.setupNameCreator(view.songName, view.createButton, 'api/create-song')
+    this.setupNameCreator(this.view.songName, this.view.createButton, 'api/create-song')
   }
 
   /**
    * Give controls to the author creator
    */
   setupAuthorCreator () {
-    const { view } = this
-    this.setupNameCreator(view.authorName, view.authorButton, 'api/create-author')
+    this.setupNameCreator(this.view.authorName, this.view.authorButton, 'api/create-author')
   }
 
   /**
    * Give controls to the collection creator
    */
   setupCollectionCreator () {
-    const { view } = this
-    this.setupNameCreator(view.collectionName, view.collectionButton, 'api/create-collection')
+    this.setupNameCreator(this.view.collectionName, this.view.collectionButton, 'api/create-collection')
   }
 
   /**
    * Give controls to the file creator
    */
   setupFileCreator () {
-    const { view } = this
-    const { fileInput, uploadButton, songInput, collectionInput } = view
-
     const songVar = 'songId'
     const collectionVar = 'collectionId'
     const fileVar = 'file'
 
-    const uploadBlocker = new Blocker(uploadButton, () => {
-      const songId = songInput.dataset[songVar]
-      const collectionId = collectionInput.dataset[collectionVar]
-      const file = fileInput.files[0]
+    const uploadBlocker = new Blocker(this.uploadButton, () => {
+      const songId = this.view.songInput.dataset[songVar]
+      const collectionId = this.view.collectionInput.dataset[collectionVar]
+      const file = this.view.fileInput.files[0]
 
       const formData = new FormData()
       formData.append('file', file)
@@ -246,7 +193,7 @@ class Controller {
 
     const vars = [fileVar, songVar, collectionVar]
     vars.forEach(variable => uploadBlocker.block(variable))
-    fileInput.addEventListener('change', e => {
+    this.view.fileInput.addEventListener('change', e => {
       if (e.target.files.length === 0) {
         uploadBlocker.block(fileVar)
       } else {
@@ -255,7 +202,7 @@ class Controller {
     })
 
     createSearchQuery(
-      songInput,
+      this.view.songInput,
       songVar,
       'song_id',
       'name_text',
@@ -265,7 +212,7 @@ class Controller {
     )
 
     createSearchQuery(
-      collectionInput,
+      this.view.collectionInput,
       collectionVar,
       'collection_id',
       'name',

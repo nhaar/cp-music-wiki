@@ -214,7 +214,7 @@ class View {
    * Renders the element with the youtube link input
    */
   renderLinkInput () {
-    this.linkInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: this.link})
+    this.linkInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: this.link })
   }
 
   /**
@@ -492,12 +492,12 @@ class Controller {
 class MoveableRowsElement {
   /**
    * Creates the element
-   * 
+   *
    * The data is used with rows and rowCallback, rows is an arbitrary data type that is handled
    * by a specific rowCallback that transforms it into a RowData object
    * @param {string} divClass - CSS class for the element
-   * @param {*} rows 
-   * @param {function(*) : RowData} rowCallback 
+   * @param {*} rows
+   * @param {function(*) : RowData} rowCallback
    */
   constructor (divClass, rows, rowCallback) {
     this.rowCallback = rowCallback
@@ -506,7 +506,6 @@ class MoveableRowsElement {
     this.delClass = 'del-button'
     this.moveClass = 'move-button'
     this.inputClass = 'row-input'
-
 
     let innerHTML = ''
     rows.forEach(row => {

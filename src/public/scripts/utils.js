@@ -1,15 +1,38 @@
-
+/**
+ * Selects element with a CSS class within another element or within the document
+ * @param {string} className
+ * @param {HTMLElement} element - Element to search in, default: document
+ * @returns {HTMLElement}
+ */
 export function selectElement (className, element = document) {
   return element.querySelector('.' + className)
 }
 
+/**
+ * Selects all elements with a CSS class within another element or within the document
+ * @param {string} className
+ * @param {HTMLElement} element - Element to search in, default: document
+ * @returns {HTMLElement}
+ */
 export function selectElements (className, element = document) {
   return element.querySelectorAll('.' + className)
 }
 
-export function createElement (
-  options
-) {
+/**
+ * Creates an element following the specified options
+ * @param {object} options
+ * @param {string} options.tag - Tag name, like 'input', if 'div', don't need to write it
+ * @param {string} options.parent - If want to append to an element, its parent reference
+ * @param {string} options.className - If want to give it a single CSS class
+ * @param {string} options.innerHTML - To replace its innerHTML
+ * @param {string[]} options.classes - Array with all classes to add to it
+ * @param {string} options.type - If want to set a type, like 'number' for inputs
+ * @param {string} options.value - If want to set a value
+ * @param {object} options.dataset - Object where each key is a data variable name and its value
+ * @param {boolean} options.checked - True if it's a checked checkbox
+ * @returns {HTMLElement}
+ */
+export function createElement (options) {
   let tag
   if (options) ({ tag } = options)
   if (!tag) tag = 'div'
@@ -21,7 +44,7 @@ export function createElement (
     if (!tag) tag = 'div'
 
     if (className) newElement.className = className
-    
+
     if (classes) {
       classes.forEach(className => {
         newElement.classList.add(className)
@@ -45,11 +68,8 @@ export function createElement (
     if (parent) parent.appendChild(newElement)
   }
 
-
-
   return newElement
 }
-
 
 /**
  * Asynchronously posts with JSON as content
