@@ -1,4 +1,4 @@
-import { postAndGetJSON, postJSON } from './utils.js'
+import { selectElement, selectElements, createElement, postAndGetJSON, postJSON } from './utils.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 
@@ -114,10 +114,7 @@ class Model {
 
 class View {
   constructor () {
-    const editor = document.querySelector('.js-editor')
-    const submitClass = 'js-submit-button'
-
-    Object.assign(this, { editor, submitClass })
+    this.editor = selectElement('js-editor')
   }
 
   /**
@@ -127,8 +124,6 @@ class View {
    * @param {Row[]} files -
    */
   renderSongEditor (song, authorInfo, files) {
-    const { editor } = this
-    // getFromDatabase('api/get-song', songId, 'NO SONG FOUND', async data => {
     if (song) {
       const { names, authors, link } = song
 
@@ -147,10 +142,9 @@ class View {
       this.renderSongAuthors()
       this.renderLinkInput()
       this.renderFileCheckmarks()
-
       this.renderSubmitButton()
     } else {
-      editor.innerHTML = 'NO SONG FOUND'
+      this.editor.innerHTML = 'NO SONG FOUND'
     }
   }
 
@@ -159,22 +153,12 @@ class View {
    * @param {Row} author
    */
   renderAuthorEditor (author) {
-    const { editor } = this
     if (author) {
-      const nameInput = 'js-name-input'
-
       const { name } = author
-      const html = `
-        <input class="${nameInput}" type="text" value="${name}">
-      `
-
-      editor.innerHTML = html
-      const input = document.querySelector('.' + nameInput)
-      Object.assign(this, { nameInput: input })
-
+      this.nameInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: name })
       this.renderSubmitButton()
     } else {
-      editor.innerHTML = 'NO AUTHOR FOUND'
+      this.editor.innerHTML = 'NO AUTHOR FOUND'
     }
   }
 
@@ -185,17 +169,8 @@ class View {
   renderCollectionEditor (collection) {
     const { editor } = this
     if (collection) {
-      const nameInput = 'js-name-input'
-
       const { name } = collection
-      const html = `
-        <input class="${nameInput}" type="text" value="${name}">
-      `
-
-      editor.innerHTML = html
-      const input = document.querySelector('.' + nameInput)
-      Object.assign(this, { nameInput: input })
-
+      this.nameInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: name })
       this.renderSubmitButton()
     } else {
       editor.innerHTML = 'NO AUTHOR FOUND'
@@ -206,20 +181,16 @@ class View {
    * Renders the submit data button at the end of the page
    */
   renderSubmitButton () {
-    this.submitButton = document.createElement('button')
-    this.submitButton.className = this.submitClass
-    this.submitButton.innerHTML = 'Submit'
-    this.editor.appendChild(this.submitButton)
+    this.submitButton = createElement({ parent: this.editor, tag: 'button', innerHTML: 'Submit' })
   }
 
   /**
    * Renders the element with the song authors
    */
   renderSongAuthors () {
-    const { authors } = this
     this.authorsDiv = new MoveableRowsElement(
-      authors,
       'authors-div',
+      this.authors,
       row => this.authorRowCallback(row)
     )
 
@@ -231,11 +202,10 @@ class View {
    */
   renderSongNames () {
     this.namesDiv = new MoveableRowsElement(
-      this.names,
       'name-div',
+      this.names,
       row => this.nameRowCallback(row)
     )
-    console.log(this.namesDiv)
 
     this.namesDiv.renderElement(this.editor)
   }
@@ -244,36 +214,24 @@ class View {
    * Renders the element with the youtube link input
    */
   renderLinkInput () {
-    const { editor, link } = this
-
-    const linkInput = document.createElement('input')
-    linkInput.className = 'link-input'
-    linkInput.value = link
-
-    editor.appendChild(linkInput)
-    Object.assign(this, { linkInput })
+    this.linkInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: this.link})
   }
 
   /**
    * Renders the element with the HQ source checkboxes
    */
   renderFileCheckmarks () {
-    const { files, editor } = this
-    const filesDiv = document.createElement('div')
+    this.filesDiv = createElement({ parent: this.editor })
 
-    files.forEach(file => {
+    this.files.forEach(file => {
       const checkProperty = file.is_hq ? 'checked' : ''
-      const fileDiv = document.createElement('div')
-      fileDiv.innerHTML = `
+      const innerHTML = `
         ${file.original_name}
         ${this.generateFileAudio(file)}
         <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
       `
-      filesDiv.appendChild(fileDiv)
+      createElement({ parent: this.filesDiv, innerHTML })
     })
-
-    editor.appendChild(filesDiv)
-    Object.assign(this, { filesDiv })
   }
 
   /**
@@ -283,7 +241,10 @@ class View {
    */
   generateFileAudio (file) {
     const name = file.original_name
-    const extension = name.match(/\.(.*?)$/)[1]
+    let extension = name.match(/\.(.*?)$/)
+    // in case there is no match
+    if (extension) extension = extension[1]
+
     const validExtensions = [
       'mp3',
       'wav',
@@ -291,7 +252,8 @@ class View {
       'm4a',
       'ogg'
     ]
-    if (validExtensions.includes(extension)) {
+
+    if (extension && validExtensions.includes(extension)) {
       return `
         <audio src="../music/${file.file_name}" controls></audio>
       `
@@ -302,7 +264,7 @@ class View {
   /**
    * Get the row data from an author row in the database
    * @param {object} author
-   * @param {string} author.Name
+   * @param {string} author.name
    * @param {object} author.dataset - Each key is a data variable name and its value
    * @returns {RowData}
    */
@@ -327,39 +289,41 @@ class View {
 
 class Controller {
   constructor (model, view) {
-    const submitBlocker = new Blocker()
+    this.submitBlocker = new Blocker()
 
-    Object.assign(this, { model, view, submitBlocker })
+    Object.assign(this, { model, view })
   }
 
   async initializePage () {
-    const { model, view } = this
-    const { type, id } = model
-    switch (type) {
+    switch (this.model.type) {
       case '0': {
-        const song = await model.getSong()
-        const authorInfo = await model.getAuthorNames('')
-        const files = await model.getFileData()
-        view.renderSongEditor(song, authorInfo, files)
+        const song = await this.model.getSong()
+        const authorInfo = await this.model.getAuthorNames('')
+        const files = await this.model.getFileData()
+        this.view.renderSongEditor(song, authorInfo, files)
         this.setupSubmitSong()
-        view.namesDiv.setupRows('')
-        view.authorsDiv.setupRows({ author_id: '', name: '' }, obj => this.setupAuthorQuery(obj), () => this.submitBlocker.block('authorId'))
-        this.setupLinkControls()
+        this.view.namesDiv.setupControls('')
+        this.view.authorsDiv.setupControls({ author_id: '', name: '' },
+          a => this.setupAuthorQuery(a),
+          () => this.submitBlocker.block('authorId')
+        )
+        this.setupLink()
         break
       }
       case '1': {
-        const author = await model.getAuthor()
-        view.renderAuthorEditor(author)
+        const author = await this.model.getAuthor()
+        this.view.renderAuthorEditor(author)
         this.setupSubmitAuthor()
         break
       }
       case '2': {
-        view.renderCollectionEditor(id)
+        const collection = await this.model.getCollection()
+        this.view.renderCollectionEditor(collection)
         this.setupSubmitCollection()
         break
       }
       default: {
-        view.editor.innerHTML = 'ERROR'
+        this.view.editor.innerHTML = 'ERROR'
         break
       }
     }
@@ -392,15 +356,12 @@ class Controller {
    * @param {function() : object} dataFunction - Function that returns the data to be sent
    */
   setupSubmitButton (route, dataFunction) {
-    const { submitBlocker, view } = this
-    const { submitButton } = view
-
-    submitBlocker.button = submitButton
-    submitBlocker.clickCallback = () => {
+    this.submitBlocker.button = this.view.submitButton
+    this.submitBlocker.clickCallback = () => {
       const data = dataFunction()
       postJSON(route, data)
     }
-    submitBlocker.addListeners()
+    this.submitBlocker.addListeners()
   }
 
   /**
@@ -422,19 +383,13 @@ class Controller {
    * @returns {Song}
    */
   getSongData () {
-    const { view, model } = this
-    const { id } = model
-    const { namesDiv, authorsDiv, linkInput } = view
-
     // author ids are saved as data variables in inputs
-    const names = this.collectInputData(namesDiv.rowsDiv, false)
-    const authors = this.collectInputData(authorsDiv.rowsDiv, true, 'authorId')
-    const link = linkInput.value
+    const names = this.collectInputData(this.view.namesDiv.rowsDiv, false)
+    const authors = this.collectInputData(this.view.authorsDiv.rowsDiv, true, 'authorId')
+    const link = this.view.linkInput.value
     const files = this.collectHQCheckData()
 
-    const data = { songId: id, names, authors, link, files }
-
-    return data
+    return { songId: this.model.id, names, authors, link, files }
   }
 
   /**
@@ -451,7 +406,6 @@ class Controller {
     const mapFunction = isDataset
       ? input => input.dataset[dataProperty]
       : input => input.value
-    console.log(parent)
     return [...parent.querySelectorAll('input')].map(mapFunction)
   }
 
@@ -475,14 +429,7 @@ class Controller {
    * @returns {Row}
    */
   getAuthorData () {
-    const { view } = this
-    const { nameInput } = view
-    console.log(nameInput)
-    const name = nameInput.value
-    const data = { authorId: this.model.id, name }
-    console.log(data)
-
-    return data
+    return { authorId: this.model.id, name: this.view.nameInput.value }
   }
 
   /**
@@ -490,12 +437,7 @@ class Controller {
    * @returns {Row}
    */
   getCollectionData () {
-    const { view } = this
-    const { nameInput } = view
-    const name = nameInput.value
-    const data = { collectionId: this.model.id, name }
-
-    return data
+    return { collectionId: this.model.id, name: this.view.nameInput.value }
   }
 
   /**
@@ -504,9 +446,7 @@ class Controller {
    * @returns {import('./query-options.js').TakenInfo}
    */
   getAllTakenAuthors () {
-    const { view } = this
-    const { authorsDiv } = view
-    const allInputs = authorsDiv.rowsDiv.querySelectorAll('input')
+    const allInputs = this.view.authorsDiv.rowsDiv.querySelectorAll('input')
     const takenIds = []
     let hasUntakenId = false
     allInputs.forEach(input => {
@@ -526,7 +466,7 @@ class Controller {
    * @param {MoveableRowsElement} moveableRows
    */
   setupAuthorQuery (moveableRows) {
-    const input = moveableRows.rowsDiv.querySelector('.' + moveableRows.inputClass)
+    const input = selectElement(moveableRows.inputClass, moveableRows.rowsDiv)
     createSearchQuery(
       input,
       'authorId',
@@ -550,31 +490,32 @@ class Controller {
 }
 
 class MoveableRowsElement {
-  constructor (rows, divClass, rowCallback) {
+  /**
+   * Creates the element
+   * 
+   * The data is used with rows and rowCallback, rows is an arbitrary data type that is handled
+   * by a specific rowCallback that transforms it into a RowData object
+   * @param {string} divClass - CSS class for the element
+   * @param {*} rows 
+   * @param {function(*) : RowData} rowCallback 
+   */
+  constructor (divClass, rows, rowCallback) {
     this.rowCallback = rowCallback
 
     this.rowClass = 'moveable-row'
     this.delClass = 'del-button'
     this.moveClass = 'move-button'
     this.inputClass = 'row-input'
-    const addClass = 'add-button'
 
-    this.rowsDiv = document.createElement('div')
-    this.rowsDiv.className = divClass
 
-    let html = ''
+    let innerHTML = ''
     rows.forEach(row => {
       const rowData = rowCallback(row)
-      html += `<div class=${this.rowClass}>${this.generateRow(rowData)}</div>`
+      innerHTML += `<div class=${this.rowClass}>${this.generateRow(rowData)}</div>`
     })
 
-    this.rowsDiv.innerHTML = html + `
-    <button class="${addClass}">
-      ADD
-    </button>
-    `
-
-    this.addButton = this.rowsDiv.querySelector('.' + addClass)
+    this.rowsDiv = createElement({ className: divClass, innerHTML })
+    this.addButton = createElement({ parent: this.rowsDiv, tag: 'button', innerHTML: 'ADD' })
   }
 
   /**
@@ -597,7 +538,7 @@ class MoveableRowsElement {
     }
 
     return `
-      <input class="${this.inputClass}" type="text" value="${rowData.value}"${dataset}">
+      <input class="${this.inputClass}" type="text" value="${rowData.value}" ${dataset}>
       <button class="${this.delClass}"> X </button>
       <button class="${this.moveClass}"> M </button>
     `
@@ -612,15 +553,16 @@ class MoveableRowsElement {
   setupControls (defaultValue, controlCallback, clickCallback) {
     this.controlCallback = controlCallback
     this.clickCallback = clickCallback
+    this.defaultValue = defaultValue
     this.setupRows()
-    this.setupAddButton(defaultValue)
+    this.setupAddButton()
   }
 
   /**
    * Adds control to all the current moveable rows
    */
   setupRows () {
-    const rows = this.rowsDiv.querySelectorAll('.' + this.rowClass)
+    const rows = selectElements(this.rowClass, this.rowsDiv)
 
     rows.forEach(row => {
       this.setupRow(row)
@@ -649,20 +591,15 @@ class MoveableRowsElement {
 
   /**
    * Adds control to the add row button
-   * @param {*} blankRow "Default value" argument of the rowCallback
    */
-  setupAddButton (blankRow) {
-    console.log(this.addButton)
+  setupAddButton () {
     this.addButton.addEventListener('click', () => {
-      const newRow = document.createElement('div')
-      newRow.classList.add(this.rowClass)
-      newRow.innerHTML = this.generateRow(this.rowCallback(blankRow))
-      this.setupRow(newRow)
+      const innerHTML = this.generateRow(this.rowCallback(this.defaultValue))
+      const newRow = createElement({ className: this.rowClass, innerHTML })
       this.addButton.parentElement.insertBefore(newRow, this.addButton)
-      if (this.clickCallback) {
-        this.clickCallback()
-        this.clickCallback = null
-      }
+      this.setupRow(newRow)
+
+      if (this.clickCallback) this.clickCallback()
     })
   }
 
@@ -671,15 +608,13 @@ class MoveableRowsElement {
    * @param {HTMLDivElement} row
    */
   setupRow (row) {
-    const deleteButton = row.querySelector('.' + this.delClass)
-    deleteButton.addEventListener('click', () => {
+    // delete row
+    selectElement(this.delClass, row).addEventListener('click', () => {
       this.rowsDiv.removeChild(row)
     })
 
-    const moveButton = row.querySelector('.' + this.moveClass)
-
     // start dragging
-    moveButton.addEventListener('mousedown', () => {
+    selectElement(this.moveClass, row).addEventListener('mousedown', () => {
       const index = indexOfChild(this.rowsDiv, row)
       this.rowsDiv.dataset.currentRow = index
       this.rowsDiv.dataset.isMoving = '1'
@@ -691,10 +626,7 @@ class MoveableRowsElement {
       this.rowsDiv.dataset.hoveringRow = index
     })
 
-    if (this.controlCallback) {
-      this.controlCallback(this)
-      this.controlCallback = null
-    }
+    if (this.controlCallback) this.controlCallback(this)
   }
 }
 
