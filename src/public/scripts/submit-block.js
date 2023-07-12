@@ -104,4 +104,20 @@ export class Blocker {
   unblock (variable) {
     this.toggleBlock(false, variable)
   }
+
+  /**
+   * Adds the blocked class to an element
+   * @param {HTMLElement} element
+   */
+  addBlockedClass (element) {
+    element.classList.add(this.blockedClass)
+  }
+
+  /**
+   * Removes the blocked class of an element
+   * @param {HTMLElement} element
+   */
+  removeBlockedClass (element) {
+    element.classList.remove(this.blockedClass)
+  }
 }

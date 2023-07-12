@@ -71,6 +71,15 @@ class Database {
           media_id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT
         )
+      `,
+      `
+        features (
+          feature_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          media_id INTEGER,
+          release_date TEXT,
+          is_date_estimate INTEGER
+        )
       `
     ]
 
@@ -150,6 +159,19 @@ class Database {
    */
   createFile (songId, collectionId, originalName, name) {
     this.runInsert('files (song_id, collection_id, original_name, file_name)', [songId, collectionId, originalName, name])
+  }
+
+  /**
+   * Adds a feature to the database given the data
+   * @param {object} data
+   * @param {string} data.name
+   * @param {string} data.mediaId
+   * @param {string} data.date
+   * @param {boolean} data.isEstimate
+   */
+  createFeature (data) {
+    const { name, mediaId, date, isEstimate } = data
+    this.runInsert('features (name, media_id, release_date, is_date_estimate)', [name, mediaId, date, Number(isEstimate)])
   }
 
   /**
@@ -413,6 +435,11 @@ class Database {
    */
   async getCollectionNames (keyword) {
     const rows = await this.selectLike('collections', 'name', keyword)
+    return rows
+  }
+
+  async getMediaNames (keyword) {
+    const rows = await this.selectLike('medias', 'name', keyword)
     return rows
   }
 

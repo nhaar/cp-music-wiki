@@ -140,6 +140,17 @@ router.post('/submit-file', upload.single('file'), (req, res) => {
 })
 
 /**
+ * @route POST /api/submit-feature
+ *
+ * Submits feature data and add it to the database
+ * @param {object} body - Contains all the data for creation
+ */
+router.post('/submit-feature', (req, res) => {
+  db.createFeature(req.body)
+  res.sendStatus(200)
+})
+
+/**
  * @route POST /api/get-author-names
  *
  * Gives all the author rows filtered by a keyword
@@ -175,6 +186,12 @@ router.post('/get-main-names', async (req, res) => {
 router.post('/get-collection-names', async (req, res) => {
   const { keyword } = req.body
   const rows = await db.getCollectionNames(keyword)
+  res.status(200).send(rows)
+})
+
+router.post('/get-media-names', async (req, res) => {
+  const { keyword } = req.body
+  const rows = await db.getMediaNames(keyword)
   res.status(200).send(rows)
 })
 

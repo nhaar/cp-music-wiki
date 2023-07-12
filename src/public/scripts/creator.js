@@ -22,6 +22,15 @@ class Model {
   }
 
   /**
+   * Gets the taken media for the feature
+   * @param {HTMLInputElement} input - Media name input
+   * @returns {import('./query-options.js').TakenInfo}
+   */
+  getTakenMedia (input) {
+    return this.getTakenVariable(input, 'mediaId')
+  }
+
+  /**
    * Gets all songs based on a keyword
    * @param {string} keyword
    * @returns {import('./editor.js').Row[]}
@@ -42,6 +51,16 @@ class Model {
   }
 
   /**
+   * Gets all medias filtered by a keyword
+   * @param {string} keyword
+   * @returns {import('./editor.js').Row[]}
+   */
+  async getMediaNames (keyword) {
+    const rows = await postAndGetJSON('api/get-media-names', { keyword })
+    return rows
+  }
+
+  /**
    * Gets the taken data for one of the inputs
    * @param {HTMLInputElement} element - Reference to the input
    * @param {string} variable - Name of data variable
@@ -58,7 +77,7 @@ class Model {
     postJSON(route, { name })
   }
 
-  createFile (songId, collectionId, file) {    
+  createFile (songId, collectionId, file) {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('songId', songId)
@@ -68,6 +87,14 @@ class Model {
       method: 'POST',
       body: formData
     })
+  }
+
+  /**
+   * Submits a create feature request based on an object containing the data needed to create it
+   * @param {object} data
+   */
+  createFeature (data) {
+    postJSON('api/submit-feature', data)
   }
 }
 
@@ -123,10 +150,25 @@ class View {
     this.uploadButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Upload file' })
   }
 
+  /**
+   * Renders the media creator
+   */
   renderMediaCreator () {
     this.clearCreator()
     this.mediaName = createElement({ parent: this.createSection, tag: 'input' })
     this.mediaButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Add media' })
+  }
+
+  /**
+   * Renders the feature creator
+   */
+  renderFeatureCreator () {
+    this.clearCreator()
+    this.featureName = createElement({ parent: this.createSection, tag: 'input' })
+    this.featureMedia = createElement({ parent: this.createSection, tag: 'input' })
+    this.featureDate = createElement({ parent: this.createSection, tag: 'input', type: 'date' })
+    this.featureCheck = createElement({ parent: this.createSection, tag: 'input', type: 'checkbox' })
+    this.featureButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Add feature' })
   }
 
   clearCreator () {
@@ -158,6 +200,10 @@ class Controller {
       Media: () => {
         view.renderMediaCreator()
         this.setupMediaCreator()
+      },
+      Feature: () => {
+        view.renderFeatureCreator()
+        this.setupFeatureCreator()
       }
     }
   }
@@ -248,8 +294,45 @@ class Controller {
     )
   }
 
-  setupMediaCreator() {
+  setupMediaCreator () {
     this.setupNameCreator(this.view.mediaName, this.view.mediaButton, 'api/create-media')
+  }
+
+  /**
+   * Add controls to the feature creator
+   */
+  setupFeatureCreator () {
+    const mediaVar = 'mediaId'
+    const nameVar = 'name'
+    const dateVar = 'date'
+
+    const mediaBlocker = new Blocker(this.view.featureButton, () => {
+      const name = this.view.featureName.value
+      const mediaId = this.view.featureMedia.dataset[mediaVar]
+      const date = this.view.featureDate.value
+      const isEstimate = this.view.featureCheck.checked
+
+      this.model.createFeature({ name, mediaId, date, isEstimate })
+    })
+
+    const vars = [mediaVar, nameVar, dateVar]
+    const elements = [this.view.featureName, this.view.featureMedia, this.view.featureDate]
+    vars.forEach(variable => mediaBlocker.block(variable))
+    elements.forEach(element => mediaBlocker.addBlockedClass(element))
+
+    setupMustHaveInput(this.view.featureName, mediaBlocker, nameVar)
+
+    createSearchQuery(
+      this.view.featureMedia,
+      mediaVar,
+      'media_id',
+      'name',
+      a => this.model.getMediaNames(a),
+      a => this.model.getTakenMedia(a),
+      mediaBlocker
+    )
+
+    setupMustHaveInput(this.view.featureDate, mediaBlocker, dateVar)
   }
 
   /**
@@ -270,3 +353,22 @@ const model = new Model()
 const view = new View()
 const controller = new Controller(model, view)
 controller.initializePage()
+
+/**
+ * Makes it so that an input always blocks if there is no data in the input
+ * and unblocks whenever data is inputed
+ * @param {HTMLInputElement} input
+ * @param {Blocker} blocker
+ * @param {string} blockVar
+ */
+function setupMustHaveInput (input, blocker, blockVar) {
+  input.addEventListener('input', () => {
+    if (input.value === '') {
+      blocker.blockedClass(input)
+      blocker.block(blockVar)
+    } else {
+      blocker.removeBlockedClass(input)
+      blocker.unblock(blockVar)
+    }
+  })
+}
