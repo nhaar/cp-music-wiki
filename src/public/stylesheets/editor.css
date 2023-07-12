@@ -6,11 +6,11 @@
 
 .editor {
   display: grid;
-  grid-template-columns: var(--author-row-width);
+  grid-template-columns: 100px 800px;
   row-gap: 10px;
 }
 
-.authors-div {
+.authors-div, .name-div {
   display: flex;
   flex-direction: column;
 }
@@ -20,4 +20,16 @@
   display: grid;
   grid-template-columns: calc(var(--author-input-ratio) * 100%) 10% 10%;
   height: var(--author-row-height)
+}
+
+.hq-sources {
+  display: grid;
+  grid-template-columns: 800px;
+  row-gap: 50px;
+}
+
+.hq-source {
+
+  display: grid;
+  grid-template-columns: 50px 600px 150px;
 }

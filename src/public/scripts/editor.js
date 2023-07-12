@@ -141,7 +141,7 @@ class View {
       this.renderSongNames()
       this.renderSongAuthors()
       this.renderLinkInput()
-      this.renderFileCheckmarks()
+      this.renderFileCheckboxes()
       this.renderSubmitButton()
     } else {
       this.editor.innerHTML = 'NO SONG FOUND'
@@ -181,7 +181,7 @@ class View {
    * Renders the submit data button at the end of the page
    */
   renderSubmitButton () {
-    this.submitButton = createElement({ parent: this.editor, tag: 'button', innerHTML: 'Submit' })
+    this.submitButton = createElement({ parent: document.body, tag: 'button', innerHTML: 'Submit' })
   }
 
   /**
@@ -194,6 +194,7 @@ class View {
       row => this.authorRowCallback(row)
     )
 
+    this.renderHeader('Authors')
     this.authorsDiv.renderElement(this.editor)
   }
 
@@ -207,6 +208,7 @@ class View {
       row => this.nameRowCallback(row)
     )
 
+    this.renderHeader('Nuthors')
     this.namesDiv.renderElement(this.editor)
   }
 
@@ -214,24 +216,30 @@ class View {
    * Renders the element with the youtube link input
    */
   renderLinkInput () {
+    this.renderHeader('Link')
     this.linkInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: this.link })
   }
 
   /**
    * Renders the element with the HQ source checkboxes
    */
-  renderFileCheckmarks () {
-    this.filesDiv = createElement({ parent: this.editor })
+  renderFileCheckboxes () {
+    this.renderHeader('HQ Sources')
+    this.filesDiv = createElement({ parent: this.editor, className: 'hq-sources' })
 
     this.files.forEach(file => {
       const checkProperty = file.is_hq ? 'checked' : ''
       const innerHTML = `
+        <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
         ${file.original_name}
         ${this.generateFileAudio(file)}
-        <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
       `
-      createElement({ parent: this.filesDiv, innerHTML })
+      createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
     })
+  }
+
+  renderHeader (name) {
+    createElement({ parent: this.editor, innerHTML: name })
   }
 
   /**
@@ -258,7 +266,7 @@ class View {
         <audio src="../music/${file.file_name}" controls></audio>
       `
     }
-    return ''
+    return '<div>Could not load</div>'
   }
 
   /**
