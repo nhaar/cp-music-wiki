@@ -480,7 +480,7 @@ async function deconstructRows (rowCallback, column) {
  * @returns {string} Shortened link
  */
 function youtubify (videoCode) {
-  return 'youtube.be/' + videoCode
+  return 'youtu.be/' + videoCode
 }
 
 /**
