@@ -53,6 +53,22 @@ class Model {
     const takenIds = [value]
     return { hasUntakenId, takenIds }
   }
+
+  createNameOnly (route, name) {
+    postJSON(route, { name })
+  }
+
+  createFile (songId, collectionId, file) {    
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('songId', songId)
+    formData.append('collectionId', collectionId)
+
+    fetch('api/submit-file', {
+      method: 'POST',
+      body: formData
+    })
+  }
 }
 
 class View {
@@ -180,15 +196,7 @@ class Controller {
       const collectionId = this.view.collectionInput.dataset[collectionVar]
       const file = this.view.fileInput.files[0]
 
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('songId', songId)
-      formData.append('collectionId', collectionId)
-
-      fetch('api/submit-file', {
-        method: 'POST',
-        body: formData
-      })
+      this.model.createFile(songId, collectionId, file)
     })
 
     const vars = [fileVar, songVar, collectionVar]
@@ -231,7 +239,7 @@ class Controller {
   setupNameCreator (inputElement, buttonElement, route) {
     buttonElement.addEventListener('click', () => {
       const name = inputElement.value
-      postJSON(route, { name })
+      this.model.createNameOnly(route, name)
     })
   }
 }
