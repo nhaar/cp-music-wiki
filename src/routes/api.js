@@ -46,6 +46,13 @@ router.post('/create-collection', (req, res) => {
   res.sendStatus(200)
 })
 
+router.post('/create-media', (req, res) => {
+  const { name } = req.body
+  db.createMedia(name)
+
+  res.sendStatus(200)
+})
+
 /**
  * @route POST /api/get-song
  *

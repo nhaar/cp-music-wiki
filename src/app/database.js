@@ -65,6 +65,12 @@ class Database {
           original_name TEXT,
           is_hq INTEGER
         )
+      `,
+      `
+        medias (
+          media_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT
+        )
       `
     ]
 
@@ -129,6 +135,10 @@ class Database {
    */
   createCollection (name) {
     this.createByName('collections', name)
+  }
+
+  createMedia (name) {
+    this.createByName('medias', name)
   }
 
   /**

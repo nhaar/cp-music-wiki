@@ -89,6 +89,7 @@ class View {
    * Renders the song creator
    */
   renderSongCreate () {
+    this.clearCreator()
     this.songName = createElement({ parent: this.createSection, tag: 'input' })
     this.createButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Create song' })
   }
@@ -97,6 +98,7 @@ class View {
    * Renders the author creator
    */
   renderAuthorCreate () {
+    this.clearCreator()
     this.authorName = createElement({ parent: this.createSection, tag: 'input' })
     this.authorButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Add author' })
   }
@@ -105,6 +107,7 @@ class View {
    * Renders the collection creator
    */
   renderCollectionCreate () {
+    this.clearCreator()
     this.collectionName = createElement({ parent: this.createSection, tag: 'input' })
     this.collectionButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Add collection' })
   }
@@ -113,10 +116,21 @@ class View {
    * Renders the file creator
    */
   renderFileCreate () {
+    this.clearCreator()
     this.songInput = createElement({ parent: this.createSection, tag: 'input' })
     this.collectionInput = createElement({ parent: this.createSection, tag: 'input' })
     this.fileInput = createElement({ parent: this.createSection, tag: 'input' })
     this.uploadButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Upload file' })
+  }
+
+  renderMediaCreator () {
+    this.clearCreator()
+    this.mediaName = createElement({ parent: this.createSection, tag: 'input' })
+    this.mediaButton = createElement({ parent: this.createSection, tag: 'button', innerHTML: 'Add media' })
+  }
+
+  clearCreator () {
+    this.createSection.innerHTML = ''
   }
 }
 
@@ -140,6 +154,10 @@ class Controller {
       File: () => {
         view.renderFileCreate()
         this.setupFileCreator()
+      },
+      Media: () => {
+        view.renderMediaCreator()
+        this.setupMediaCreator()
       }
     }
   }
@@ -228,6 +246,10 @@ class Controller {
       a => this.model.getTakenCollection(a),
       uploadBlocker
     )
+  }
+
+  setupMediaCreator() {
+    this.setupNameCreator(this.view.mediaName, this.view.mediaButton, 'api/create-media')
   }
 
   /**
