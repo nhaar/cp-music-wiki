@@ -342,8 +342,8 @@ class Controller {
         const files = await model.getFileData()
         view.renderSongEditor(song, authorInfo, files)
         this.setupSubmitSong()
-        view.namesDiv.setupRowControls('')
-        view.authorsDiv.setupRowControls({ author_id: '', name: '' }, obj => this.authorControllCallback(obj), () => this.submitBlocker.block('authorId'))
+        view.namesDiv.setupRows('')
+        view.authorsDiv.setupRows({ author_id: '', name: '' }, obj => this.setupAuthorQuery(obj), () => this.submitBlocker.block('authorId'))
         this.setupLinkControls()
         break
       }
@@ -406,7 +406,7 @@ class Controller {
   /**
    * Setup controls for the youtube link input
    */
-  setupLinkControls () {
+  setupLink () {
     const blockVar = 'link'
 
     const blockToggle = () => {
@@ -525,7 +525,7 @@ class Controller {
    * Callback which adds the search queries to the authors
    * @param {MoveableRowsElement} moveableRows
    */
-  authorControllCallback (moveableRows) {
+  setupAuthorQuery (moveableRows) {
     const input = moveableRows.rowsDiv.querySelector('.' + moveableRows.inputClass)
     createSearchQuery(
       input,
@@ -565,7 +565,7 @@ class MoveableRowsElement {
     let html = ''
     rows.forEach(row => {
       const rowData = rowCallback(row)
-      html += `<div class=${this.rowClass}>${this.generateMoveableRow(rowData)}</div>`
+      html += `<div class=${this.rowClass}>${this.generateRow(rowData)}</div>`
     })
 
     this.rowsDiv.innerHTML = html + `
@@ -582,7 +582,6 @@ class MoveableRowsElement {
    * @param {HTMLElement} parent
    */
   renderElement (parent) {
-    console.log(this.rowsDiv)
     parent.appendChild(this.rowsDiv)
   }
 
@@ -591,7 +590,7 @@ class MoveableRowsElement {
    * @param {RowData} rowData
    * @returns {string}
    */
-  generateMoveableRow (rowData) {
+  generateRow (rowData) {
     let dataset = ''
     for (const data in rowData.dataset) {
       dataset += `data-${data}="${rowData.dataset[data]}"`
@@ -605,26 +604,26 @@ class MoveableRowsElement {
   }
 
   /**
-   * Setup the control to all the rows that currently are present
+   * Setup the control to everything in the div
    * @param {*} defaultValue Default value for the row data
    * @param {function(MoveableRowsElement) : void} controlCallback Function to run after adding control to a row
    * @param {function() : void} clickCallback Extra function to run after clicking
    */
-  setupRowControls (defaultValue, controlCallback, clickCallback) {
+  setupControls (defaultValue, controlCallback, clickCallback) {
     this.controlCallback = controlCallback
     this.clickCallback = clickCallback
-    this.addMoveableRowControls()
-    this.setupAddMoveableRowButton(defaultValue)
+    this.setupRows()
+    this.setupAddButton(defaultValue)
   }
 
   /**
    * Adds control to all the current moveable rows
    */
-  addMoveableRowControls () {
+  setupRows () {
     const rows = this.rowsDiv.querySelectorAll('.' + this.rowClass)
 
     rows.forEach(row => {
-      this.addMoveableRowControl(row)
+      this.setupRow(row)
     })
 
     // to move rows
@@ -652,15 +651,14 @@ class MoveableRowsElement {
    * Adds control to the add row button
    * @param {*} blankRow "Default value" argument of the rowCallback
    */
-  setupAddMoveableRowButton (blankRow) {
+  setupAddButton (blankRow) {
     console.log(this.addButton)
     this.addButton.addEventListener('click', () => {
       const newRow = document.createElement('div')
       newRow.classList.add(this.rowClass)
-      newRow.innerHTML = this.generateMoveableRow(this.rowCallback(blankRow))
-      this.addMoveableRowControl(newRow)
+      newRow.innerHTML = this.generateRow(this.rowCallback(blankRow))
+      this.setupRow(newRow)
       this.addButton.parentElement.insertBefore(newRow, this.addButton)
-      // controlCallback(newRow, classes)
       if (this.clickCallback) {
         this.clickCallback()
         this.clickCallback = null
@@ -672,7 +670,7 @@ class MoveableRowsElement {
    * Adds control to a moveable row
    * @param {HTMLDivElement} row
    */
-  addMoveableRowControl (row) {
+  setupRow (row) {
     const deleteButton = row.querySelector('.' + this.delClass)
     deleteButton.addEventListener('click', () => {
       this.rowsDiv.removeChild(row)
