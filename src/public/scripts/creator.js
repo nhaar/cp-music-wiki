@@ -223,7 +223,6 @@ class Controller {
   setupFileCreator () {
     const { view } = this
     const { fileInput, uploadButton, songInput, collectionInput } = view
-    const { getSongNames, getTakenSong, getCollectionNames, getTakenCollection } = model
 
     const songVar = 'songId'
     const collectionVar = 'collectionId'
@@ -260,8 +259,8 @@ class Controller {
       songVar,
       'song_id',
       'name_text',
-      getSongNames,
-      getTakenSong,
+      a => this.model.getSongNames(a),
+      a => this.model.getTakenSong(a),
       uploadBlocker
     )
 
@@ -270,8 +269,8 @@ class Controller {
       collectionVar,
       'collection_id',
       'name',
-      getCollectionNames,
-      getTakenCollection,
+      a => this.model.getCollectionNames(a),
+      a => this.model.getTakenCollection(a),
       uploadBlocker
     )
   }
