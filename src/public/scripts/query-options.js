@@ -1,3 +1,5 @@
+import { createElement } from "./utils.js"
+
 /**
  * Object with information about the
  * current use of data for the query
@@ -21,14 +23,11 @@
  */
 export function createSearchQuery (input, dataVar, databaseVar, databaseValue, fetchDataFunction, checkTakenFunction, blocker) {
   // element to have the available options
-  const queryOptions = document.createElement('div')
-  queryOptions.className = 'query-options'
+  const queryOptions = createElement({ parent: input.parentElement, className: 'query-options' })
 
   queryOptions.style.top = input.offsetHeight + input.offsetTop + 'px'
   queryOptions.style.width = input.offsetWidth + 'px'
   queryOptions.style.left = input.offsetLeft + 'px'
-
-  input.parentElement.appendChild(queryOptions)
 
   // flag for hovering options or not
   const listenerRel = { mouseover: '1', mouseout: '' }
@@ -47,23 +46,20 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
 
       queryOptions.innerHTML = ''
       data.forEach(option => {
-        const optionElement = document.createElement('div')
-        optionElement.innerHTML = option[databaseValue]
-        optionElement.addEventListener('click', () => {
-          queryOptions.innerHTML = ''
-          input.dataset[dataVar] = option[databaseVar]
-          input.value = option[databaseValue]
-          input.classList.remove(blocker.blockedClass)
-
-          if (blocker) {
-            const { hasUntakenId } = checkTakenFunction(input)
-            if (!hasUntakenId) blocker.unblock(dataVar)
-          }
-        })
-
         // filtering taken options
         if (!takenIds.includes(option[databaseVar] + '')) {
-          queryOptions.appendChild(optionElement)
+          const optionElement = createElement({ parent: queryOptions, innerHTML: option[databaseValue ]})
+          optionElement.addEventListener('click', () => {
+            queryOptions.innerHTML = ''
+            input.dataset[dataVar] = option[databaseVar]
+            input.value = option[databaseValue]
+            input.classList.remove(blocker.blockedClass)
+  
+            if (blocker) {
+              const { hasUntakenId } = checkTakenFunction(input)
+              if (!hasUntakenId) blocker.unblock(dataVar)
+            }
+          })  
         }
       })
     })
