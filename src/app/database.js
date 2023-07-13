@@ -409,47 +409,14 @@ class Database {
   }
 
   /**
-   * Get all authors that contains a keyword
+   * Gets rows for a table based on filtering names by keyword
+   * @param {string} table
    * @param {string} keyword
    * @returns {Row[]}
    */
-  async getAuthorNames (keyword) {
-    const rows = await this.selectLike('authors', 'name', keyword)
-    return rows
-  }
-
-  /**
-   * Get all songs that contain a keyword in the main name
-   * @param {string} keyword
-   * @returns {Row[]}
-   */
-  async getSongMainNames (keyword) {
-    const rows = await this.selectLike('song_names', 'name_text', keyword)
-    return rows
-  }
-
-  /**
-   * Get all collections that contain a keyword in the name
-   * @param {string} keyword
-   * @returns {Row[]}
-   */
-  async getCollectionNames (keyword) {
-    const rows = await this.selectLike('collections', 'name', keyword)
-    return rows
-  }
-
-  async getMediaNames (keyword) {
-    const rows = await this.selectLike('medias', 'name', keyword)
-    return rows
-  }
-
-  /**
-   * Get all features that contain a keyword in the name
-   * @param {string} keyword
-   * @returns {Row[]}
-   */
-  async getFeatureNames (keyword) {
-    const rows = await this.selectLike('features', 'name', keyword)
+  async getByKeyword (table, keyword) {
+    const column = table === 'song_names' ? 'name_text' : 'name'
+    const rows = await this.selectLike(table, column, keyword)
     return rows
   }
 

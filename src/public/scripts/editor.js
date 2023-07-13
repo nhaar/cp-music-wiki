@@ -1,6 +1,7 @@
 import { selectElement, selectElements, createElement, postAndGetJSON, postJSON } from './utils.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
+import { DatabaseModel } from './database-model.js'
 
 /**
  * Object containing information from a row in a table
@@ -33,8 +34,9 @@ import { Blocker } from './submit-block.js'
  * @property {object} dataset
  */
 
-class Model {
+class Model extends DatabaseModel {
   constructor () {
+    super()
     const urlParams = new URLSearchParams(window.location.search)
     const params = this.paramsToObject(urlParams)
     const type = params.t
@@ -90,36 +92,6 @@ class Model {
     } else {
       return null
     }
-  }
-
-  /**
-   * Get all authors that contains a keyword
-   * @param {string} keyword
-   * @returns {Row[]}
-   */
-  async getAuthorNames (keyword) {
-    const rows = await postAndGetJSON('api/get-author-names', { keyword })
-    return rows
-  }
-
-  /**
-   * Gets all medias filtered by a keyword
-   * @param {string} keyword
-   * @returns {Row[]}
-   */
-  async getMediaNames (keyword) {
-    const rows = await postAndGetJSON('api/get-media-names', { keyword })
-    return rows
-  }
-
-  /**
-   * Gets all features filtered by a kerword
-   * @param {string} keyword
-   * @returns {Row[]}
-   */
-  async getFeatureNames (keyword) {
-    const rows = await postAndGetJSON('api/get-feature-names', { keyword })
-    return rows
   }
 
   /**
@@ -617,20 +589,10 @@ class Controller {
       'authorId',
       'author_id',
       'name',
-      this.getAuthorNames,
+      a => this.model.getAuthorNames(a),
       () => this.getAllTakenAuthors(),
       this.submitBlocker
     )
-  }
-
-  /**
-   * Gets all authors in the database filtering name by a keyword
-   * @param {string} keyword
-   * @returns {Row[]}
-   */
-  async getAuthorNames (keyword) {
-    const rows = await postAndGetJSON('api/get-author-names', { keyword })
-    return rows
   }
 }
 

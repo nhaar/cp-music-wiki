@@ -1,8 +1,10 @@
-import { createElement, postAndGetJSON, postJSON, selectElement } from './utils.js'
+import { createElement, postJSON, selectElement } from './utils.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
+import { DatabaseModel } from './database-model.js'
 
-class Model {
+class Model extends DatabaseModel {
+  constructor () { super(undefined) }
   /**
    * Gets the taken data for the song name
    * @param {HTMLInputElement} input - The song name input
@@ -28,36 +30,6 @@ class Model {
    */
   getTakenMedia (input) {
     return this.getTakenVariable(input, 'mediaId')
-  }
-
-  /**
-   * Gets all songs based on a keyword
-   * @param {string} keyword
-   * @returns {import('./editor.js').Row[]}
-   */
-  async getSongNames (keyword) {
-    const rows = await postAndGetJSON('api/get-main-names', { keyword })
-    return rows
-  }
-
-  /**
-   * Gets all collections based on a keyword
-   * @param {string} keyword
-   * @returns {import('./editor.js').Row[]}
-   */
-  async getCollectionNames (keyword) {
-    const rows = await postAndGetJSON('api/get-collection-names', { keyword })
-    return rows
-  }
-
-  /**
-   * Gets all medias filtered by a keyword
-   * @param {string} keyword
-   * @returns {import('./editor.js').Row[]}
-   */
-  async getMediaNames (keyword) {
-    const rows = await postAndGetJSON('api/get-media-names', { keyword })
-    return rows
   }
 
   /**

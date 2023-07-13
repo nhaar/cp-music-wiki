@@ -151,67 +151,16 @@ router.post('/submit-feature', (req, res) => {
 })
 
 /**
- * @route POST /api/get-author-names
+ * @route POST /api/get-by-name
  *
- * Gives all the author rows filtered by a keyword
+ * Gives all the rows of a table filtered by a keyword
  * @param {object} body.keyword
+ * @param {object} body.table
  * @returns {import('../app/database').Row[]}
  */
-router.post('/get-author-names', async (req, res) => {
-  const { keyword } = req.body
-  const rows = await db.getAuthorNames(keyword)
-  res.status(200).send(rows)
-})
-
-/**
- * @route POST /api/get-main-names
- *
- * Gives all the song names filtered by a keyword
- * @param {string} body.keyword
- * @returns {import('../app/database').Row[]}
- */
-router.post('/get-main-names', async (req, res) => {
-  const { keyword } = req.body
-  const rows = await db.getSongMainNames(keyword)
-  res.status(200).send(rows)
-})
-
-/**
- * @route POST /api/get-collection-names
- *
- * Gives all the collection names filtered by a keyword
- * @param {string} body.keyword
- * @returns {import('../app/database').Row[]}
- */
-router.post('/get-collection-names', async (req, res) => {
-  const { keyword } = req.body
-  const rows = await db.getCollectionNames(keyword)
-  res.status(200).send(rows)
-})
-
-/**
- * @route POST /api/get-media-names
- *
- * Gives all the media names filtered by a keyword
- * @param {string} body.keyword
- * @returns {import('../app/database').Row[]}
- */
-router.post('/get-media-names', async (req, res) => {
-  const { keyword } = req.body
-  const rows = await db.getMediaNames(keyword)
-  res.status(200).send(rows)
-})
-
-/**
- * @route POST /api/get-feature-names
- *
- * Gives all the feature names filtered by a keyword
- * @param {string} body.keyword
- * @returns {import('../app/database').Row[]}
- */
-router.post('/get-feature-names', async (req, res) => {
-  const { keyword } = req.body
-  const rows = await db.getFeatureNames(keyword)
+router.post('/get-by-name', async (req, res) => {
+  const { keyword, table } = req.body
+  const rows = await db.getByKeyword(table, keyword)
   res.status(200).send(rows)
 })
 
