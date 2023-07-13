@@ -235,14 +235,13 @@ class Controller {
       this.model.createFile(songId, collectionId, file)
     })
 
-    const vars = [fileVar, songVar, collectionVar]
-    vars.forEach(variable => uploadBlocker.block(variable))
+    uploadBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput,  this.view.songInput,  this.view.collectionInput])
+
     this.view.fileInput.addEventListener('change', e => {
-      if (e.target.files.length === 0) {
-        uploadBlocker.block(fileVar)
-      } else {
-        uploadBlocker.unblock(fileVar)
-      }
+      uploadBlocker.ternaryBlock(
+        e.target.files.length === 0,
+        fileVar, this.view.fileInput
+      )
     })
 
     createSearchQuery(
@@ -287,10 +286,7 @@ class Controller {
       this.model.createFeature({ name, mediaId, date, isEstimate })
     })
 
-    const vars = [mediaVar, nameVar, dateVar]
-    const elements = [this.view.featureName, this.view.featureMedia, this.view.featureDate]
-    vars.forEach(variable => mediaBlocker.block(variable))
-    elements.forEach(element => mediaBlocker.addBlockedClass(element))
+    mediaBlocker.blockVarElements([mediaVar, nameVar, dateVar],  [this.view.featureMedia, this.view.featureName, this.view.featureDate])
 
     setupMustHaveInput(this.view.featureName, mediaBlocker, nameVar)
 
@@ -335,12 +331,9 @@ controller.initializePage()
  */
 function setupMustHaveInput (input, blocker, blockVar) {
   input.addEventListener('input', () => {
-    if (input.value === '') {
-      blocker.blockedClass(input)
-      blocker.block(blockVar)
-    } else {
-      blocker.removeBlockedClass(input)
-      blocker.unblock(blockVar)
-    }
+    blocker.ternaryBlock(
+      input.value === '',
+      blockVar, input
+    )
   })
 }

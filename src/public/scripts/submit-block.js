@@ -24,7 +24,7 @@ export class Blocker {
     this.eventName = 'block'
     this.blockedClass = 'blocked-button'
 
-    if (this.button && this.clickCallback) {
+    if (button && clickCallback) {
       this.addListeners()
     }
   }
@@ -38,11 +38,8 @@ export class Blocker {
     })
 
     this.button.addEventListener(this.eventName, () => {
-      if (!this.isBlocked()) {
-        this.button.classList.remove(this.blockedClass)
-      } else {
-        this.button.classList.add(this.blockedClass)
-      }
+      if (!this.isBlocked()) this.removeBlockedClass(this.button)
+      else this.addBlockedClass(this.button)
     })
   }
 
@@ -106,6 +103,26 @@ export class Blocker {
   }
 
   /**
+   * Blocks a variable and adds the blocked class to an element
+   * @param {variable} variable 
+   * @param {HTMLElement} element 
+   */
+  blockElement (variable, element) {
+    this.block(variable)
+    this.addBlockedClass(element)
+  }
+
+  /**
+   * Unlocks a variable and removes the blocked class to an element
+   * @param {variable} variable 
+   * @param {HTMLElement} element 
+   */
+  unblockElement (variable, element) {
+    this.unblock(variable)
+    this.removeBlockedClass(element)
+  }
+
+  /**
    * Adds the blocked class to an element
    * @param {HTMLElement} element
    */
@@ -119,5 +136,35 @@ export class Blocker {
    */
   removeBlockedClass (element) {
     element.classList.remove(this.blockedClass)
+  }
+
+  /**
+   * Runs a ternary based on a condition that if is true, will block a variable and add the blocked class to an element, otherwise, unblock and remove the class
+   * 
+   * Further actions can be supplied with the callbacks
+   * @param {boolean} condition 
+   * @param {string} variable 
+   * @param {HTMLElement} element 
+   * @param {function() : void} trueCallback 
+   * @param {function() : void} falseCallback 
+   */
+  ternaryBlock (condition, variable, element, trueCallback, falseCallback) {
+    if (condition) {
+      this.blockElement(variable, element)
+      if (trueCallback) trueCallback()
+    } else {
+      this.unblockElement(variable, element)
+      if (falseCallback) falseCallback()
+    }
+  }
+
+  /**
+   * Blocks all variables in the array of variables and adds the blocked class to all elements in the array of elements
+   * @param {string[]} vars
+   * @param {HTMLElement[]} elements
+   */
+  blockVarElements (varElements) {
+    vars.forEach(variable => this.block(variable))
+    elements.forEach(element => this.addBlockedClass(element))
   }
 }

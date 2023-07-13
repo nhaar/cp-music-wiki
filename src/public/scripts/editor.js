@@ -400,12 +400,12 @@ class Controller {
   setupLink () {
     const blockVar = 'link'
 
-    const blockToggle = () => {
-      if (!isValidLink(this.view.linkInput.value)) this.submitBlocker.block(blockVar)
-      else this.submitBlocker.unblock(blockVar)
-    }
-
-    this.view.linkInput.addEventListener('input', blockToggle)
+    this.view.linkInput.addEventListener('input', () => {
+      this.submitBlocker.ternaryBlock(
+        !isValidLink(this.view.linkInput.value),
+        blockVar, this.view.linkInput
+      )
+    })
   }
 
   /**
@@ -447,17 +447,17 @@ class Controller {
   setupSongFeature (parent) {
     const checkbox = parent.querySelector('input')
     const innerDiv = parent.querySelector('div')
+
     checkbox.addEventListener('change', () => {
-      if (checkbox.checked) {
-        innerDiv.innerHTML = ''
-        this.submitBlocker.unblock(this.dateVar)
-        this.submitBlocker.removeBlockedClass(parent)
-      } else {
-        this.view.renderFeatureDate(innerDiv)
-        this.submitBlocker.block(this.dateVar)
-        this.submitBlocker.addBlockedClass(parent)
-        this.setupFeatureDate(innerDiv)
-      }
+      this.submitBlocker.ternaryBlock(
+        !checkbox.checked,
+        this.dateVar, parent,
+        () => {
+          this.view.renderFeatureDate(innerDiv)
+          this.setupFeatureDate(innerDiv)
+        },
+        () => (innerDiv.innerHTML = '')
+      )
     })
   }
 
@@ -468,13 +468,10 @@ class Controller {
   setupFeatureDate (parent) {
     const checkbox = parent.querySelector('input')
     checkbox.addEventListener('change', () => {
-      if (checkbox.value === '') {
-        this.submitBlocker.block(this.dateVar)
-        this.submitBlocker.addBlockedClass(parent.parentElement)
-      } else {
-        this.submitBlocker.unblock(this.dateVar)
-        this.submitBlocker.removeBlockedClass(parent.parentElement)
-      }
+      this.submitBlocker.ternaryBlock(
+        checkbox.value === '',
+        this.dateVar, parent.parentElement
+      )
     })
   }
 
@@ -486,13 +483,11 @@ class Controller {
    */
   addRowCallback (orderedRows, variable) {
     const headers = orderedRows.div.querySelectorAll(`.${orderedRows.headerClass}.${orderedRows.identifierClass}`)
-    if (headers.length === 0) {
-      this.submitBlocker.block(variable)
-      this.submitBlocker.addBlockedClass(orderedRows.div)
-    } else {
-      this.submitBlocker.unblock(variable)
-      this.submitBlocker.removeBlockedClass(orderedRows.div)
-    }
+
+    this.submitBlocker.ternaryBlock(
+      headers.length === 0,
+      variable, orderedRows.div
+    )
   }
 
   /**
@@ -654,7 +649,7 @@ class MoveableRowsElement {
    * Setup the control to everything in the div
    * @param {*} defaultValue Default value for the row data
    * @param {function(MoveableRowsElement) : void} controlCallback Function to run after adding control to a row
-   * @param {function() : void} clickCallback Extra function to run after clicking
+   * @param {function() : void} clickCallback Extra function to run after clicking the add button
    */
   setupControls (defaultValue, controlCallback, clickCallback) {
     this.controlCallback = controlCallback
@@ -790,8 +785,7 @@ class OrderedRowsELement {
       const mediaName = this.addInput.value
 
       // reset input
-      this.addBlocker.block(dataVar)
-      this.addBlocker.addBlockedClass(this.addInput)
+      this.addBlocker.blockElement(dataVar, this.addInput)
       this.addInput.value = ''
       this.addInput.dataset.mediaId = ''
 
@@ -807,8 +801,7 @@ class OrderedRowsELement {
       if (addCallback) addCallback(this)
     })
 
-    this.addBlocker.block(dataVar)
-    this.addBlocker.addBlockedClass(this.addInput)
+    this.addBlocker.blockElement(dataVar, this.addInput)
 
     createSearchQuery(
       this.addInput,

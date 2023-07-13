@@ -1,4 +1,4 @@
-import { createElement } from "./utils.js"
+import { createElement } from './utils.js'
 
 /**
  * Object with information about the
@@ -41,25 +41,24 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
       // fetching all taken data
       const { hasUntakenId, takenIds } = checkTakenFunction(input)
       if (blocker) {
-        if (hasUntakenId) blocker.block(dataVar)
+        if (hasUntakenId) blocker.blockElement(dataVar, input)
       }
 
       queryOptions.innerHTML = ''
       data.forEach(option => {
         // filtering taken options
         if (!takenIds.includes(option[databaseVar] + '')) {
-          const optionElement = createElement({ parent: queryOptions, innerHTML: option[databaseValue ]})
+          const optionElement = createElement({ parent: queryOptions, innerHTML: option[databaseValue] })
           optionElement.addEventListener('click', () => {
             queryOptions.innerHTML = ''
             input.dataset[dataVar] = option[databaseVar]
             input.value = option[databaseValue]
-            input.classList.remove(blocker.blockedClass)
-  
+
             if (blocker) {
               const { hasUntakenId } = checkTakenFunction(input)
-              if (!hasUntakenId) blocker.unblock(dataVar)
+              if (!hasUntakenId) blocker.unblockElement(dataVar, input)
             }
-          })  
+          })
         }
       })
     })
@@ -69,7 +68,7 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
     updateQuery()
     // reset ID if altered anything
     input.dataset[dataVar] = ''
-    if (blocker) input.classList.add(blocker.blockedClass)
+    if (blocker) blocker.addBlockedClass(input)
   })
   input.addEventListener('focus', () => updateQuery())
   input.addEventListener('blur', () => {
