@@ -104,8 +104,8 @@ export class Blocker {
 
   /**
    * Blocks a variable and adds the blocked class to an element
-   * @param {variable} variable 
-   * @param {HTMLElement} element 
+   * @param {variable} variable
+   * @param {HTMLElement} element
    */
   blockElement (variable, element) {
     this.block(variable)
@@ -114,8 +114,8 @@ export class Blocker {
 
   /**
    * Unlocks a variable and removes the blocked class to an element
-   * @param {variable} variable 
-   * @param {HTMLElement} element 
+   * @param {variable} variable
+   * @param {HTMLElement} element
    */
   unblockElement (variable, element) {
     this.unblock(variable)
@@ -140,13 +140,13 @@ export class Blocker {
 
   /**
    * Runs a ternary based on a condition that if is true, will block a variable and add the blocked class to an element, otherwise, unblock and remove the class
-   * 
+   *
    * Further actions can be supplied with the callbacks
-   * @param {boolean} condition 
-   * @param {string} variable 
-   * @param {HTMLElement} element 
-   * @param {function() : void} trueCallback 
-   * @param {function() : void} falseCallback 
+   * @param {boolean} condition
+   * @param {string} variable
+   * @param {HTMLElement} element
+   * @param {function() : void} trueCallback
+   * @param {function() : void} falseCallback
    */
   ternaryBlock (condition, variable, element, trueCallback, falseCallback) {
     if (condition) {
@@ -163,7 +163,7 @@ export class Blocker {
    * @param {string[]} vars
    * @param {HTMLElement[]} elements
    */
-  blockVarElements (varElements) {
+  blockVarElements (vars, elements) {
     vars.forEach(variable => this.block(variable))
     elements.forEach(element => this.addBlockedClass(element))
   }

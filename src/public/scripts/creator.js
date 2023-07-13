@@ -235,7 +235,7 @@ class Controller {
       this.model.createFile(songId, collectionId, file)
     })
 
-    uploadBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput,  this.view.songInput,  this.view.collectionInput])
+    uploadBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput, this.view.songInput, this.view.collectionInput])
 
     this.view.fileInput.addEventListener('change', e => {
       uploadBlocker.ternaryBlock(
@@ -286,7 +286,7 @@ class Controller {
       this.model.createFeature({ name, mediaId, date, isEstimate })
     })
 
-    mediaBlocker.blockVarElements([mediaVar, nameVar, dateVar],  [this.view.featureMedia, this.view.featureName, this.view.featureDate])
+    mediaBlocker.blockVarElements([mediaVar, nameVar, dateVar], [this.view.featureMedia, this.view.featureName, this.view.featureDate])
 
     setupMustHaveInput(this.view.featureName, mediaBlocker, nameVar)
 

@@ -1,4 +1,5 @@
 const path = require('path')
+const { compareObjects } = require('./utils')
 const sqlite3 = require('sqlite3').verbose()
 
 /**
@@ -80,7 +81,18 @@ class Database {
           release_date TEXT,
           is_date_estimate INTEGER
         )
+      `,
       `
+        song_feature (
+          feature_id,
+          media_id INTEGER,
+          song_id INTEGER,
+          use_release_date INTEGER,
+          date TEXT,
+          is_date_estimate INTEGER
+        )
+      `
+
     ]
 
     tables.forEach(table => this.createTable(table))
@@ -227,7 +239,10 @@ class Database {
     fileRows.forEach(row => {
       files[row.file_id] = Boolean(row.is_hq)
     })
-    const song = { names, authors, link, files }
+
+    const medias = await this.getSongMedias(songId)
+
+    const song = { names, authors, link, files, medias }
     return song
   }
 
@@ -256,7 +271,7 @@ class Database {
    * @param {import('../public/scripts/editor').Song} data - Song object with new data to be used
    */
   async updateSong (data) {
-    const { names, songId, link, files } = data
+    const { names, songId, link, files, medias } = data
     const authors = data.authors.map(n => Number(n))
 
     // authors
@@ -279,6 +294,42 @@ class Database {
       const isHQ = files[fileId] ? 1 : 0
       this.db.run('UPDATE files SET is_hq = ? WHERE song_id = ? AND file_id = ?', [isHQ, songId, fileId])
     }
+
+    // media info
+    // compare previous and current to find differences
+    const oldMedias = await this.getSongMedias(songId)
+    const oldFeatures = this.getAllFeatures(oldMedias)
+    const features = this.getAllFeatures(medias)
+    const onlyOld = []
+    const onlyNew = []
+    const intersection = []
+    oldFeatures.forEach(feature => {
+      if (features.includes(feature)) intersection.push(feature)
+      else onlyOld.push(feature)
+    })
+    features.forEach(feature => {
+      if (!oldFeatures.includes(feature)) onlyNew.push(feature)
+    })
+
+    onlyOld.forEach(featureId => {
+      this.db.run('DELETE FROM song_feature WHERE feature_id = ? AND song_id = ?', [featureId, songId])
+    })
+    const inverted = this.invertMedias(medias)
+    const getFeature = (featureId, medias) => medias[inverted[featureId]][featureId]
+    intersection.forEach(featureId => {
+      const oldFeature = getFeature(featureId, oldMedias)
+      const newFeature = getFeature(featureId, medias)
+      const { releaseDate, date, isEstimate } = newFeature
+      if (!compareObjects(oldFeature, newFeature)) {
+        this.db.run('UPDATE song_feature SET use_release_date = ?, date = ?, is_date_estimate = ? WHERE feature_id = ? AND song_id = ?', [Number(releaseDate), date, Number(isEstimate), featureId, songId])
+      }
+    })
+    onlyNew.forEach(featureId => {
+      const mediaId = inverted[featureId]
+      const feature = medias[mediaId][featureId]
+      const { releaseDate, date, isEstimate } = feature
+      this.db.run('INSERT INTO song_feature (media_id, feature_id, song_id, use_release_date, date, is_date_estimate) VALUES (?, ?, ?, ?, ?, ?)', [mediaId, featureId, songId, Number(releaseDate), date, Number(isEstimate)])
+    })
   }
 
   /**
@@ -369,6 +420,61 @@ class Database {
   async getSongNames (songId) {
     const names = await this.getSongPositionalValues(songId, 'song_names')
     return names
+  }
+
+  /**
+   * Gets the medias object for a song
+   * @param {string} songId
+   * @returns {import('../public/scripts/editor').Medias}
+   */
+  async getSongMedias (songId) {
+    const medias = {}
+    const rows = await this.runSelectMethod(callback => {
+      this.db.all('SELECT * FROM song_feature WHERE song_id = ?', [songId], callback)
+    })
+
+    rows.forEach(row => {
+      if (!medias[row.media_id]) medias[row.media_id] = {}
+      medias[row.media_id][row.feature_id] = {
+        releaseDate: row.use_release_date,
+        date: row.date,
+        isEstimate: row.is_date_estimate
+      }
+    })
+
+    return medias
+  }
+
+  /**
+   * Gets all the features that are being used inside a medias object
+   * @param {import('../public/scripts/editor').Medias} medias
+   * @returns {string} List of feature ids
+   */
+  getAllFeatures (medias) {
+    const features = []
+    for (const mediaId in medias) {
+      for (const featureId in medias[mediaId]) {
+        features.push(featureId)
+      }
+    }
+
+    return features
+  }
+
+  /**
+   * Convert a medias into an object that maps feature id to its media
+   * @param {import('../public/scripts/editor').Medias} medias
+   * @returns {object}
+   */
+  invertMedias (medias) {
+    const inverted = {}
+    for (const mediaId in medias) {
+      for (const featureId in medias[mediaId]) {
+        inverted[featureId] = mediaId
+      }
+    }
+
+    return inverted
   }
 
   /**

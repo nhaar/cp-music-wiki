@@ -1,4 +1,4 @@
-import { selectElement, selectElements, createElement, postAndGetJSON, postJSON } from './utils.js'
+import { selectElement, selectElements, createElement, postAndGetJSON, postJSON, findInObject } from './utils.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 import { DatabaseModel } from './database-model.js'
@@ -15,12 +15,31 @@ import { DatabaseModel } from './database-model.js'
  * @property {string[]} names
  * @property {string[]} authors
  * @property {Files} files
+ * @property {Medias}
  */
 
 /**
  * Each property is a file id and it maps to a boolean representing whether or not
  * it is a high quality source
  * @typedef {object} Files
+ */
+
+/**
+ * Each property is a media id and it maps to a Features object
+ * @typedef {object} Medias
+ */
+
+/**
+ * Each property is a feature id and it maps to a Feature object
+ * @typedef {object} Features
+ */
+
+/**
+ * Details for a feature data
+ * @typedef {object} Feature
+ * @property {boolean} releaseDate
+ * @property {string} date
+ * @property {boolean} isEstimate
  */
 
 /**
@@ -326,10 +345,12 @@ class Controller {
   async initializePage () {
     switch (this.model.type) {
       case '0': {
-        const song = await this.model.getSong()
+        this.song = await this.model.getSong()
         const authorInfo = await this.model.getAuthorNames('')
         const files = await this.model.getFileData()
-        this.view.renderSongEditor(song, authorInfo, files)
+        this.mediaNames = await this.model.getMediaNames('')
+        this.featureNames = await this.model.getFeatureNames('')
+        this.view.renderSongEditor(this.song, authorInfo, files)
         this.setupSubmitSong()
         this.view.namesDiv.setupControls('')
         this.view.authorsDiv.setupControls({ author_id: '', name: '' },
@@ -338,6 +359,7 @@ class Controller {
         )
         this.setupLink()
         this.setupMedias()
+        this.updateMediasRow()
         break
       }
       case '1': {
@@ -419,6 +441,9 @@ class Controller {
       a => this.model.getMediaNames(a),
       parent => {
         const featureRows = new OrderedRowsELement('feature-row', 'feature-element')
+
+        if (!this.view.mediaRows.featureRows) this.view.mediaRows.featureRows = []
+        this.view.mediaRows.featureRows.push(featureRows)
         featureRows.renderElement(parent)
 
         featureRows.setupAddRow(
@@ -500,8 +525,9 @@ class Controller {
     const authors = this.collectInputData(this.view.authorsDiv.rowsDiv, true, 'authorId')
     const link = this.view.linkInput.value
     const files = this.collectHQCheckData()
+    const medias = this.collectMediaData()
 
-    return { songId: this.model.id, names, authors, link, files }
+    return { songId: this.model.id, names, authors, link, files, medias }
   }
 
   /**
@@ -534,6 +560,39 @@ class Controller {
     })
 
     return files
+  }
+
+  /**
+   * Gathers the page media data as a medias object
+   * @returns {Medias}
+   */
+  collectMediaData () {
+    const data = {}
+    const mediaRows = this.view.mediaRows.getRows()
+    mediaRows.forEach(mediaRow => {
+      const mediaId = mediaRow.children[0].dataset.mediaId
+      data[mediaId] = {}
+      const featureRows = selectElements(this.view.mediaRows.rowClass, mediaRow.children[1])
+      featureRows.forEach(featureRow => {
+        const contentDiv = featureRow.children[1].children[0]
+
+        const featureId = featureRow.children[0].dataset.featureId
+
+        const releaseDate = contentDiv.children[0].checked
+        let date
+        let isEstimate
+
+        if (!releaseDate) {
+          const dateDiv = contentDiv.children[1]
+          date = dateDiv.children[0].value
+          isEstimate = dateDiv.children[1].checked
+        }
+
+        data[mediaId][featureId] = { releaseDate, date, isEstimate }
+      })
+    })
+
+    return data
   }
 
   /**
@@ -570,6 +629,38 @@ class Controller {
     return {
       takenIds,
       hasUntakenId
+    }
+  }
+
+  /**
+   * Adds all the media information retrieved from the database
+   * into the page
+   */
+  updateMediasRow () {
+    const { medias } = this.song
+    let currentMedia = 0
+    for (const mediaId in medias) {
+      const name = findInObject(this.mediaNames, 'media_id', Number(mediaId)).name
+      this.view.mediaRows.createNewRow(name, mediaId)
+      const featureRows = this.view.mediaRows.featureRows[currentMedia]
+      let currentFeature = 0
+      for (const featureId in medias[mediaId]) {
+        const featureName = findInObject(this.featureNames, 'feature_id', Number(featureId)).name
+        featureRows.createNewRow(featureName, featureId)
+        const { releaseDate, date, isEstimate } = medias[mediaId][featureId]
+        const featureElement = featureRows.getRows()[currentFeature]
+        const contentDiv = featureElement.children[1].children[0]
+        contentDiv.children[0].checked = releaseDate
+        if (!releaseDate) {
+          const dateDiv = contentDiv.children[1]
+          this.view.renderFeatureDate(dateDiv)
+          this.setupFeatureDate(dateDiv)
+          dateDiv.children[0].value = date
+          dateDiv.children[1].checked = isEstimate
+        }
+        currentFeature++
+      }
+      currentMedia++
     }
   }
 
@@ -778,28 +869,12 @@ class OrderedRowsELement {
     addCallback
   ) {
     this.dataVar = dataVar
+    this.contentFunction = contentFunction
+    this.addCallback = addCallback
+
     if (addCallback) addCallback(this)
 
-    this.addBlocker = new Blocker(this.addButton, () => {
-      const mediaId = this.addInput.dataset.mediaId
-      const mediaName = this.addInput.value
-
-      // reset input
-      this.addBlocker.blockElement(dataVar, this.addInput)
-      this.addInput.value = ''
-      this.addInput.dataset.mediaId = ''
-
-      const rowHTML = `
-        <div class="${this.headerClass} ${this.identifierClass}" data-media-id="${mediaId}"> ${mediaName} </div>
-      `
-      const newRow = createElement({ className: this.rowClass, innerHTML: rowHTML })
-      this.div.insertBefore(newRow, this.newRowDiv)
-
-      const contentDiv = createElement({ parent: newRow })
-      contentFunction(contentDiv)
-
-      if (addCallback) addCallback(this)
-    })
+    this.addBlocker = new Blocker(this.addButton, () => this.createNewRow(this.addInput.value, this.addInput.dataset[dataVar]))
 
     this.addBlocker.blockElement(dataVar, this.addInput)
 
@@ -812,6 +887,27 @@ class OrderedRowsELement {
       a => this.checkTakenIds(a),
       this.addBlocker
     )
+  }
+
+  /**
+   * Creates a new row where the header is the name and adds the data variable as the id
+   * @param {string} name
+   * @param {string} id
+   */
+  createNewRow (name, id) {
+    // reset input
+    this.addBlocker.blockElement(this.dataVar, this.addInput)
+    this.addInput.value = ''
+    this.addInput.dataset[this.dataVar] = ''
+    const newRow = createElement({ classes: [this.rowClass, this.identifierClass] })
+    createElement({ parent: newRow, classes: [this.headerClass, this.identifierClass], dataset: { [this.dataVar]: id }, innerHTML: name })
+
+    this.div.insertBefore(newRow, this.newRowDiv)
+
+    const contentDiv = createElement({ parent: newRow })
+    this.contentFunction(contentDiv)
+
+    if (this.addCallback) this.addCallback(this)
   }
 
   /**
@@ -839,6 +935,22 @@ class OrderedRowsELement {
     })
 
     return { hasUntakenId, takenIds }
+  }
+
+  /**
+   * Gives a string that can be used to select a row
+   * @returns
+   */
+  getRowSelector () {
+    return `.${this.rowClass}.${this.identifierClass}`
+  }
+
+  /**
+   * Gets all the rows inside this element
+   * @returns
+   */
+  getRows () {
+    return this.div.querySelectorAll(this.getRowSelector())
   }
 }
 

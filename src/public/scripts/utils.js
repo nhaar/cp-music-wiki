@@ -100,3 +100,21 @@ export async function postAndGetJSON (route, object) {
   const data = await response.json()
   return data
 }
+
+/**
+ * Checks inside an array of object each object until it finds one where the named property is equal to the given value, and returns the object
+ * @param {object[]} object- Array of objects
+ * @param {string} property
+ * @param {*} value
+ * @returns {object}
+ */
+export function findInObject (object, property, value) {
+  console.log(object)
+  for (let i = 0; i < object.length; i++) {
+    const element = object[i]
+    if (element[property] === value) { console.log(element); return element }
+  }
+  object.forEach(element => {
+    console.log(element)
+  })
+}
