@@ -103,6 +103,26 @@ class Model {
   }
 
   /**
+   * Gets all medias filtered by a keyword
+   * @param {string} keyword
+   * @returns {Row[]}
+   */
+  async getMediaNames (keyword) {
+    const rows = await postAndGetJSON('api/get-media-names', { keyword })
+    return rows
+  }
+
+  /**
+   * Gets all features filtered by a kerword
+   * @param {string} keyword
+   * @returns {Row[]}
+   */
+  async getFeatureNames (keyword) {
+    const rows = await postAndGetJSON('api/get-feature-names', { keyword })
+    return rows
+  }
+
+  /**
    * Gets the file data for a song
    * @returns {Row[]}
    */
@@ -142,6 +162,7 @@ class View {
       this.renderSongAuthors()
       this.renderLinkInput()
       this.renderFileCheckboxes()
+      this.renderMediaEditor()
       this.renderSubmitButton()
     } else {
       this.editor.innerHTML = 'NO SONG FOUND'
@@ -221,6 +242,24 @@ class View {
   }
 
   /**
+   * Renders a song feature editor inside a media row
+   * @param {HTMLDivElement} parent
+   */
+  renderSongFeature (parent) {
+    createElement({ parent, tag: 'input', type: 'checkbox', checked: true })
+    createElement({ parent })
+  }
+
+  /**
+   * Render the feature date picker inside a feature editor
+   * @param {HTMLDivElement} parent
+   */
+  renderFeatureDate (parent) {
+    createElement({ parent, tag: 'input', type: 'date' })
+    createElement({ parent, tag: 'input', type: 'checkbox' })
+  }
+
+  /**
    * Renders the element with the HQ source checkboxes
    */
   renderFileCheckboxes () {
@@ -236,6 +275,15 @@ class View {
       `
       createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
     })
+  }
+
+  /**
+   * Renders the media editor
+   */
+  renderMediaEditor () {
+    this.renderHeader('medias')
+    this.mediaRows = new OrderedRowsELement('media-rows', 'media-element')
+    this.mediaRows.renderElement(this.editor)
   }
 
   renderHeader (name) {
@@ -298,6 +346,7 @@ class View {
 class Controller {
   constructor (model, view) {
     this.submitBlocker = new Blocker()
+    this.dateVar = 'dateBlock'
 
     Object.assign(this, { model, view })
   }
@@ -316,6 +365,7 @@ class Controller {
           () => this.submitBlocker.block('authorId')
         )
         this.setupLink()
+        this.setupMedias()
         break
       }
       case '1': {
@@ -384,6 +434,93 @@ class Controller {
     }
 
     this.view.linkInput.addEventListener('input', blockToggle)
+  }
+
+  /**
+   * Adds control to the media rows
+   */
+  setupMedias () {
+    this.view.mediaRows.setupAddRow(
+      'mediaId',
+      'media_id',
+      'name',
+      a => this.model.getMediaNames(a),
+      parent => {
+        const featureRows = new OrderedRowsELement('feature-row', 'feature-element')
+        featureRows.renderElement(parent)
+
+        featureRows.setupAddRow(
+          'featureId',
+          'feature_id',
+          'name',
+          a => this.model.getFeatureNames(a),
+          parent => {
+            const rowContent = createElement({ parent })
+            this.view.renderSongFeature(rowContent)
+            this.setupSongFeature(rowContent)
+          },
+          featureRows => this.addRowCallback(featureRows, 'featureBlock')
+        )
+
+        return featureRows.div
+      },
+      mediaRows => this.addRowCallback(mediaRows, 'mediaBlock')
+    )
+  }
+
+  /**
+   * Adds controls to the feature editor inside a media row
+   * @param {HTMLDivElement} parent
+   */
+  setupSongFeature (parent) {
+    const checkbox = parent.querySelector('input')
+    const innerDiv = parent.querySelector('div')
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        innerDiv.innerHTML = ''
+        this.submitBlocker.unblock(this.dateVar)
+        this.submitBlocker.removeBlockedClass(parent)
+      } else {
+        this.view.renderFeatureDate(innerDiv)
+        this.submitBlocker.block(this.dateVar)
+        this.submitBlocker.addBlockedClass(parent)
+        this.setupFeatureDate(innerDiv)
+      }
+    })
+  }
+
+  /**
+   * Adds control to the date picker inside a feature editor in a media row
+   * @param {HTMLDivElement} parent
+   */
+  setupFeatureDate (parent) {
+    const checkbox = parent.querySelector('input')
+    checkbox.addEventListener('change', () => {
+      if (checkbox.value === '') {
+        this.submitBlocker.block(this.dateVar)
+        this.submitBlocker.addBlockedClass(parent.parentElement)
+      } else {
+        this.submitBlocker.unblock(this.dateVar)
+        this.submitBlocker.removeBlockedClass(parent.parentElement)
+      }
+    })
+  }
+
+  /**
+   * Base function for the addCallback to run
+   * in the ordered rows which block/unblock the submit button
+   * @param {OrderedRowsELement} orderedRows
+   * @param {string} variable - Blocking variable
+   */
+  addRowCallback (orderedRows, variable) {
+    const headers = orderedRows.div.querySelectorAll(`.${orderedRows.headerClass}.${orderedRows.identifierClass}`)
+    if (headers.length === 0) {
+      this.submitBlocker.block(variable)
+      this.submitBlocker.addBlockedClass(orderedRows.div)
+    } else {
+      this.submitBlocker.unblock(variable)
+      this.submitBlocker.removeBlockedClass(orderedRows.div)
+    }
   }
 
   /**
@@ -634,6 +771,119 @@ class MoveableRowsElement {
     })
 
     if (this.controlCallback) this.controlCallback(this)
+  }
+}
+
+class OrderedRowsELement {
+  /**
+   * Creates the element using divClass as the element class,
+   * and idClass are assigned to all row headers
+   * @param {string} divClass
+   * @param {string} idClass
+   */
+  constructor (divClass, idClass) {
+    this.rowClass = 'ordered-row'
+    this.headerClass = 'row-header'
+    this.identifierClass = idClass
+
+    this.div = createElement({ className: divClass })
+    this.newRowDiv = createElement({ parent: this.div })
+    this.addButton = createElement({ parent: this.newRowDiv, tag: 'button', innerHTML: 'ADD' })
+    this.addInput = createElement({ parent: this.newRowDiv, tag: 'input' })
+  }
+
+  /**
+   * Appends the ordered rows element to a parent element
+   * @param {HTMLElement} parent
+   */
+  renderElement (parent) {
+    parent.appendChild(this.div)
+  }
+
+  /**
+   * Adds control to the add row button
+   *
+   * The first four arguments are related to the arguments for the search query
+   * @param {string} dataVar
+   * @param {string} databaseVar
+   * @param {string} databaseValue
+   * @param {function(string) : Row} fetchDataFunction
+   *
+   * @param {function(HTMLDivElement) : void} contentFunction - A function that adds to the given div argument the element that will be displayed next to the header
+   * @param {function(OrderedRowsELement) : void} addCallback - A function to row every time a row is added (also runs when the element is created)
+   */
+  setupAddRow (
+    dataVar,
+    databaseVar,
+    databaseValue,
+    fetchDataFunction,
+    contentFunction,
+    addCallback
+  ) {
+    this.dataVar = dataVar
+    if (addCallback) addCallback(this)
+
+    this.addBlocker = new Blocker(this.addButton, () => {
+      const mediaId = this.addInput.dataset.mediaId
+      const mediaName = this.addInput.value
+
+      // reset input
+      this.addBlocker.block(dataVar)
+      this.addBlocker.addBlockedClass(this.addInput)
+      this.addInput.value = ''
+      this.addInput.dataset.mediaId = ''
+
+      const rowHTML = `
+        <div class="${this.headerClass} ${this.identifierClass}" data-media-id="${mediaId}"> ${mediaName} </div>
+      `
+      const newRow = createElement({ className: this.rowClass, innerHTML: rowHTML })
+      this.div.insertBefore(newRow, this.newRowDiv)
+
+      const contentDiv = createElement({ parent: newRow })
+      contentFunction(contentDiv)
+
+      if (addCallback) addCallback(this)
+    })
+
+    this.addBlocker.block(dataVar)
+    this.addBlocker.addBlockedClass(this.addInput)
+
+    createSearchQuery(
+      this.addInput,
+      dataVar,
+      databaseVar,
+      databaseValue,
+      fetchDataFunction,
+      a => this.checkTakenIds(a),
+      this.addBlocker
+    )
+  }
+
+  /**
+   * Function that checkds which of the ids are taken for the query
+   * @param {HTMLInputElement} input
+   * @returns {import('./query-options.js').TakenInfo}
+   */
+  checkTakenIds (input) {
+    const id = input.dataset[this.dataVar]
+    const headers = this.div.querySelectorAll(`.${this.headerClass}.${this.identifierClass}`)
+
+    const takenIds = []
+    let hasUntakenId = false
+
+    const check = id => {
+      if (id) takenIds.push(id)
+      else hasUntakenId = true
+    }
+
+    check(id)
+
+    headers.forEach(header => {
+      const id = header.dataset[this.dataVar]
+      check(id)
+    })
+
+    return { hasUntakenId, takenIds }
   }
 }
 

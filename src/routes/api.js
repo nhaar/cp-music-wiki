@@ -189,9 +189,29 @@ router.post('/get-collection-names', async (req, res) => {
   res.status(200).send(rows)
 })
 
+/**
+ * @route POST /api/get-media-names
+ *
+ * Gives all the media names filtered by a keyword
+ * @param {string} body.keyword
+ * @returns {import('../app/database').Row[]}
+ */
 router.post('/get-media-names', async (req, res) => {
   const { keyword } = req.body
   const rows = await db.getMediaNames(keyword)
+  res.status(200).send(rows)
+})
+
+/**
+ * @route POST /api/get-feature-names
+ *
+ * Gives all the feature names filtered by a keyword
+ * @param {string} body.keyword
+ * @returns {import('../app/database').Row[]}
+ */
+router.post('/get-feature-names', async (req, res) => {
+  const { keyword } = req.body
+  const rows = await db.getFeatureNames(keyword)
   res.status(200).send(rows)
 })
 

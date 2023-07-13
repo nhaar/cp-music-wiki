@@ -29,7 +29,16 @@
 }
 
 .hq-source {
-
   display: grid;
   grid-template-columns: 50px 600px 150px;
+}
+
+.media-rows, .feature-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.ordered-row {
+  display: grid;
+  grid-template-columns: 1fr 5fr;
 }

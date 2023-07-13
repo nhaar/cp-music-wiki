@@ -444,6 +444,16 @@ class Database {
   }
 
   /**
+   * Get all features that contain a keyword in the name
+   * @param {string} keyword
+   * @returns {Row[]}
+   */
+  async getFeatureNames (keyword) {
+    const rows = await this.selectLike('features', 'name', keyword)
+    return rows
+  }
+
+  /**
    * Get all file rows linked to a song
    * @param {string} songId
    * @returns {Row[]}

@@ -55,7 +55,7 @@ export function createElement (options) {
 
     if (type) newElement.setAttribute('type', type)
 
-    if (checked) newElement.setAttribute('checked')
+    if (checked) newElement.setAttribute('checked', checked)
 
     if (value) newElement.value = value
 
