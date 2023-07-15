@@ -23,6 +23,10 @@ export class EditorModel {
       return null
     }
   }
+
+  createNameOnly (route, name) {
+    postJSON(route, { name })
+  }
 }
 
 /**
@@ -65,6 +69,32 @@ export class EditorController {
       postJSON(route, data)
     }
     this.submitBlocker.addListeners()
+  }
+
+  /**
+   * Gets the taken data for one of the inputs
+   * @param {HTMLInputElement} element - Reference to the input
+   * @param {string} variable - Name of data variable
+   * @returns {import('./query-options.js').TakenInfo}
+   */
+  getTakenVariable (element, variable) {
+    const value = element.dataset[variable]
+    const hasUntakenId = !value
+    const takenIds = [value]
+    return { hasUntakenId, takenIds }
+  }
+
+  /**
+   * Sets up a creator which works only on inputing an arbitrary name
+   * @param {HTMLInputElement} inputElement - Element the name is being typed in
+   * @param {HTMLButtonElement} buttonElement - Element that is responsible for creating
+   * @param {string} route - The specific route that needs to be reached
+   */
+  setupNameCreator (inputElement, buttonElement, route) {
+    buttonElement.addEventListener('click', () => {
+      const name = inputElement.value
+      this.model.createNameOnly(route, name)
+    })
   }
 }
 
