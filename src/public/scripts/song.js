@@ -69,10 +69,6 @@ class SongView extends EditorView {
     }
   }
 
-  renderEditor (parent) {
-    parent.appendChild(this.editor)
-  }
-
   /**
    * Renders the element with the song authors
    */

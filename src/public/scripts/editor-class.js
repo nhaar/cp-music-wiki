@@ -6,6 +6,14 @@ import { createElement, postJSON } from './utils.js'
  */
 export class EditorView {
   /**
+   * Renders the editor inside an element
+   * @param {HTMLElement} parent 
+   */
+  renderEditor (parent) {
+    parent.appendChild(this.editor)
+  }
+
+  /**
    * Renders the submit data button at the end of the page
    */
   renderSubmitButton () {

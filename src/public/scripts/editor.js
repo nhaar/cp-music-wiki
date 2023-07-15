@@ -2,6 +2,7 @@ import { selectElement, createElement } from './utils.js'
 import { DatabaseModel } from './database-model.js'
 import { Song } from './song.js'
 import { EditorController, EditorView } from './editor-class.js'
+import { Author } from './author.js'
 
 /**
  * Object containing information from a row in a table
@@ -79,11 +80,6 @@ class Model extends DatabaseModel {
     return params
   }
 
-  async getAuthor () {
-    const data = await this.getFromDatabase('api/get-author')
-    return data
-  }
-
   async getCollection () {
     const data = await this.getFromDatabase('api/get-collection')
     return data
@@ -94,20 +90,6 @@ class View extends EditorView {
   constructor () {
     super()
     this.editor = selectElement('js-editor')
-  }
-
-  /**
-   * Renders the author editor for an author
-   * @param {Row} author
-   */
-  renderAuthorEditor (author) {
-    if (author) {
-      const { name } = author
-      this.nameInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: name })
-      this.renderSubmitButton()
-    } else {
-      this.editor.innerHTML = 'NO AUTHOR FOUND'
-    }
   }
 
   /**
@@ -140,9 +122,8 @@ class Controller extends EditorController {
         break
       }
       case '1': {
-        const author = await this.model.getAuthor()
-        this.view.renderAuthorEditor(author)
-        this.setupSubmitAuthor()
+        const author = new Author(this.model.id)
+        author.initializeEditor(this.view.editor)
         break
       }
       case '2': {
@@ -159,25 +140,10 @@ class Controller extends EditorController {
   }
 
   /**
-   * Sets up the submit button for the author editor
-   */
-  setupSubmitAuthor () {
-    this.setupSubmitButton('api/submit-author', () => this.getAuthorData())
-  }
-
-  /**
    * Sets up the submit button for the collection editor
    */
   setupSubmitCollection () {
     this.setupSubmitButton('api/submit-collection', () => this.getCollectionData())
-  }
-
-  /**
-   * Gets the user inputed author data to send to the database
-   * @returns {Row}
-   */
-  getAuthorData () {
-    return { authorId: this.model.id, name: this.view.nameInput.value }
   }
 
   /**
