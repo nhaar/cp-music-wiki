@@ -10,7 +10,7 @@ body {
   align-items: center;
 }
 
-.editor {
+.song-editor {
   width: 95vw;
   height: 95vh;
 
@@ -20,7 +20,7 @@ body {
   grid-gap: 10px;
 }
 
-.editor > div {
+.song-editor > div {
   border: 2px solid black;
 }
 
