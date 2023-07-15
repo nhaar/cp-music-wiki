@@ -220,7 +220,7 @@ class View {
       row => this.nameRowCallback(row)
     )
 
-    this.renderHeader('Nuthors')
+    this.renderHeader('Names')
     this.namesDiv.renderElement(this.editor)
   }
 
@@ -246,6 +246,7 @@ class View {
    * @param {HTMLDivElement} parent
    */
   renderFeatureDate (parent) {
+    parent.classList.add('feature-date')
     createElement({ parent, tag: 'input', type: 'date' })
     createElement({ parent, tag: 'input', type: 'checkbox' })
   }
@@ -261,8 +262,8 @@ class View {
       const checkProperty = file.is_hq ? 'checked' : ''
       const innerHTML = `
         <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
-        ${file.original_name}
-        ${this.generateFileAudio(file)}
+        <div>${file.original_name}</div>
+        <div>${this.generateFileAudio(file)}</div>
       `
       createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
     })
@@ -272,13 +273,13 @@ class View {
    * Renders the media editor
    */
   renderMediaEditor () {
-    this.renderHeader('medias')
+    this.renderHeader('Medias')
     this.mediaRows = new OrderedRowsELement('media-rows', 'media-element')
     this.mediaRows.renderElement(this.editor)
   }
 
   renderHeader (name) {
-    createElement({ parent: this.editor, innerHTML: name })
+    createElement({ parent: this.editor, className: 'editor-header', innerHTML: name })
   }
 
   /**
@@ -452,7 +453,7 @@ class Controller {
           'name',
           a => this.model.getFeatureNames(a),
           parent => {
-            const rowContent = createElement({ parent })
+            const rowContent = createElement({ parent, className: 'feature-content' })
             this.view.renderSongFeature(rowContent)
             this.setupSongFeature(rowContent)
           },
@@ -835,7 +836,7 @@ class OrderedRowsELement {
     this.identifierClass = idClass
 
     this.div = createElement({ className: divClass })
-    this.newRowDiv = createElement({ parent: this.div })
+    this.newRowDiv = createElement({ parent: this.div, className: 'add-ordered-row' })
     this.addButton = createElement({ parent: this.newRowDiv, tag: 'button', innerHTML: 'ADD' })
     this.addInput = createElement({ parent: this.newRowDiv, tag: 'input' })
   }
