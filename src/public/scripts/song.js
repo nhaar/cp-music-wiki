@@ -58,11 +58,11 @@ class SongView extends EditorView {
       Object.assign(this, { names, authors, link, files })
 
       // draw editor elements
-      this.renderSongNames()
-      this.renderSongAuthors()
-      this.renderLinkInput()
-      this.renderFileCheckboxes()
-      this.renderMediaEditor()
+      this.renderNames()
+      this.renderAuthors()
+      this.renderLink()
+      this.renderFiles()
+      this.renderMedia()
       this.renderSubmitButton()
     } else {
       this.editor.innerHTML = 'NO SONG FOUND'
@@ -76,7 +76,7 @@ class SongView extends EditorView {
   /**
    * Renders the element with the song authors
    */
-  renderSongAuthors () {
+  renderAuthors () {
     this.authorsDiv = new MoveableRowsElement(
       'authors-div',
       this.authors,
@@ -90,7 +90,7 @@ class SongView extends EditorView {
   /**
    * Renders the element with the song names
    */
-  renderSongNames () {
+  renderNames () {
     this.namesDiv = new MoveableRowsElement(
       'name-div',
       this.names,
@@ -104,7 +104,7 @@ class SongView extends EditorView {
   /**
    * Renders the element with the youtube link input
    */
-  renderLinkInput () {
+  renderLink () {
     this.renderHeader('Link')
     this.linkInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: this.link })
   }
@@ -113,7 +113,7 @@ class SongView extends EditorView {
    * Renders a song feature editor inside a media row
    * @param {HTMLDivElement} parent
    */
-  renderSongFeature (parent) {
+  renderFeature (parent) {
     createElement({ parent, tag: 'input', type: 'checkbox', checked: true })
     createElement({ parent })
   }
@@ -131,7 +131,7 @@ class SongView extends EditorView {
   /**
    * Renders the element with the HQ source checkboxes
    */
-  renderFileCheckboxes () {
+  renderFiles () {
     this.renderHeader('HQ Sources')
     this.filesDiv = createElement({ parent: this.editor, className: 'hq-sources' })
 
@@ -140,7 +140,7 @@ class SongView extends EditorView {
       const innerHTML = `
         <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
         <div>${file.original_name}</div>
-        <div>${this.generateFileAudio(file)}</div>
+        <div>${this.generateAudio(file)}</div>
       `
       createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
     })
@@ -149,7 +149,7 @@ class SongView extends EditorView {
   /**
    * Renders the media editor
    */
-  renderMediaEditor () {
+  renderMedia () {
     this.renderHeader('Medias')
     this.mediaRows = new OrderedRowsELement('media-rows', 'media-element')
     this.mediaRows.renderElement(this.editor)
@@ -164,7 +164,7 @@ class SongView extends EditorView {
    * @param {Row} file
    * @returns {string}
    */
-  generateFileAudio (file) {
+  generateAudio (file) {
     const name = file.original_name
     let extension = name.match(/\.(.*?)$/)
     // in case there is no match
@@ -288,8 +288,8 @@ class SongController extends EditorController {
           a => this.model.getFeatureNames(a),
           parent => {
             const rowContent = createElement({ parent, className: 'feature-content' })
-            this.view.renderSongFeature(rowContent)
-            this.setupSongFeature(rowContent)
+            this.view.renderFeature(rowContent)
+            this.setupFeature(rowContent)
           },
           featureRows => this.addRowCallback(featureRows, 'featureBlock')
         )
@@ -304,7 +304,7 @@ class SongController extends EditorController {
    * Adds controls to the feature editor inside a media row
    * @param {HTMLDivElement} parent
    */
-  setupSongFeature (parent) {
+  setupFeature (parent) {
     const checkbox = parent.querySelector('input')
     const innerDiv = parent.querySelector('div')
 
