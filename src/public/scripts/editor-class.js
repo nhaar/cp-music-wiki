@@ -1,5 +1,29 @@
 import { Blocker } from './submit-block.js'
-import { createElement, postJSON } from './utils.js'
+import { createElement, postJSON, postAndGetJSON } from './utils.js'
+
+export class EditorModel {
+  getByName = async (keyword, table) => postAndGetJSON('api/get-by-name', { keyword, table })
+  getSongNames = async keyword => this.getByName(keyword, 'song_names')
+  getCollectionNames = async keyword => this.getByName(keyword, 'collections')
+  getMediaNames = async keyword => this.getByName(keyword, 'medias')
+  getAuthorNames = async keyword => this.getByName(keyword, 'authors')
+  getFeatureNames = async keyword => this.getByName(keyword, 'features')
+
+  /**
+   * Get an item from the database
+   * @param {string} route - Route to get
+   */
+  async getFromDatabase (route) {
+    const { id } = this
+    const response = await postJSON(route, { id })
+    if (response.status === 200) {
+      const data = await response.json()
+      return data
+    } else {
+      return null
+    }
+  }
+}
 
 /**
  * Base for the View classes for the editor related objects
@@ -7,7 +31,7 @@ import { createElement, postJSON } from './utils.js'
 export class EditorView {
   /**
    * Renders the editor inside an element
-   * @param {HTMLElement} parent 
+   * @param {HTMLElement} parent
    */
   renderEditor (parent) {
     parent.appendChild(this.editor)
@@ -42,4 +66,8 @@ export class EditorController {
     }
     this.submitBlocker.addListeners()
   }
+}
+
+export class EditorType {
+  initializeEditor = async parent => await this.controller.initializeEditor(parent)
 }

@@ -1,8 +1,7 @@
-import { DatabaseModel } from './database-model.js'
-import { EditorController, EditorView } from './editor-class.js'
+import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createElement } from './utils.js'
 
-class AuthorModel extends DatabaseModel {
+class AuthorModel extends EditorModel {
   constructor (authorId) {
     super()
     this.id = authorId
@@ -64,12 +63,12 @@ class AuthorController extends EditorController {
   }
 }
 
-export class Author {
+export class Author extends EditorType {
   constructor (authorId) {
+    super()
+
     const model = new AuthorModel(authorId)
     const view = new AuthorView()
     this.controller = new AuthorController(model, view)
   }
-
-  initializeEditor = async parent => await this.controller.initializeEditor(parent)
 }

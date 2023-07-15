@@ -1,9 +1,9 @@
 import { createElement, postJSON, selectElement } from './utils.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
-import { DatabaseModel } from './database-model.js'
+import { EditorModel } from './editor-class.js'
 
-class Model extends DatabaseModel {
+class Model extends EditorModel {
   constructor () { super(undefined) }
   /**
    * Gets the taken data for the song name

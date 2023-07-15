@@ -1,8 +1,8 @@
-import { selectElement, createElement } from './utils.js'
-import { DatabaseModel } from './database-model.js'
+import { selectElement } from './utils.js'
+import { EditorModel, EditorController, EditorView } from './editor-class.js'
 import { Song } from './song.js'
-import { EditorController, EditorView } from './editor-class.js'
 import { Author } from './author.js'
+import { Collection } from './collection.js'
 
 /**
  * Object containing information from a row in a table
@@ -54,7 +54,7 @@ import { Author } from './author.js'
  * @property {object} dataset
  */
 
-class Model extends DatabaseModel {
+class Model extends EditorModel {
   constructor () {
     super()
     const urlParams = new URLSearchParams(window.location.search)
@@ -79,32 +79,12 @@ class Model extends DatabaseModel {
     })
     return params
   }
-
-  async getCollection () {
-    const data = await this.getFromDatabase('api/get-collection')
-    return data
-  }
 }
 
 class View extends EditorView {
   constructor () {
     super()
     this.editor = selectElement('js-editor')
-  }
-
-  /**
-   * Renders the collection editor for a collection
-   * @param {Row} collection
-   */
-  renderCollectionEditor (collection) {
-    const { editor } = this
-    if (collection) {
-      const { name } = collection
-      this.nameInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: name })
-      this.renderSubmitButton()
-    } else {
-      editor.innerHTML = 'NO AUTHOR FOUND'
-    }
   }
 }
 
@@ -115,43 +95,42 @@ class Controller extends EditorController {
   }
 
   async initializePage () {
-    switch (this.model.type) {
-      case '0': {
-        const song = new Song(this.model.id)
-        song.initializeEditor(this.view.editor)
-        break
-      }
-      case '1': {
-        const author = new Author(this.model.id)
-        author.initializeEditor(this.view.editor)
-        break
-      }
-      case '2': {
-        const collection = await this.model.getCollection()
-        this.view.renderCollectionEditor(collection)
-        this.setupSubmitCollection()
-        break
-      }
-      default: {
-        this.view.editor.innerHTML = 'ERROR'
-        break
+    const typeRelation = {
+      0: Song,
+      1: Author,
+      2: Collection
+    }
+
+    for (const t in typeRelation) {
+      if (t === this.model.type) {
+        const type = new typeRelation[t](this.model.id)
+        type.initializeEditor(this.view.editor)
+        return
       }
     }
-  }
+    this.view.editor.innerHTML = 'ERROR'
 
-  /**
-   * Sets up the submit button for the collection editor
-   */
-  setupSubmitCollection () {
-    this.setupSubmitButton('api/submit-collection', () => this.getCollectionData())
-  }
-
-  /**
-   * Gets the user inputed collection data to send to the database
-   * @returns {Row}
-   */
-  getCollectionData () {
-    return { collectionId: this.model.id, name: this.view.nameInput.value }
+    // // switch (this.model.type) {
+    // //   case '0': {
+    // //     const song = new Song(this.model.id)
+    // //     song.initializeEditor(this.view.editor)
+    // //     break
+    // //   }
+    // //   case '1': {
+    // //     const author = new Author(this.model.id)
+    // //     author.initializeEditor(this.view.editor)
+    // //     break
+    // //   }
+    // //   case '2': {
+    // //     const collection = new Collection(this.model.id)
+    // //     collection.initializeEditor(this.view.editor)
+    // //     break
+    // //   }
+    // //   default: {
+    // //     this.view.editor.innerHTML = 'ERROR'
+    // //     break
+    // //   }
+    // }
   }
 }
 

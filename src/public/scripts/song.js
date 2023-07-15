@@ -1,10 +1,9 @@
-import { DatabaseModel } from './database-model.js'
-import { EditorView, EditorController } from './editor-class.js'
+import { EditorModel, EditorView, EditorController, EditorType } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 import { createElement, findInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
 
-class SongModel extends DatabaseModel {
+class SongModel extends EditorModel {
   constructor (songId) {
     super()
 
@@ -497,16 +496,16 @@ class SongController extends EditorController {
   }
 }
 
-export class Song {
+export class Song extends EditorType {
   constructor (songId) {
+    super()
+
     this.model = new SongModel(songId)
     this.view = new SongView()
     this.controller = new SongController(this.model, this.view)
 
     this.songId = songId
   }
-
-  initializeEditor = async parent => await this.controller.initializeEditor(parent)
 }
 
 class MoveableRowsElement {
