@@ -4,13 +4,21 @@ import { Blocker } from './submit-block.js'
 import { createElement } from './utils.js'
 
 class FileModel extends EditorModel {
-  constructor () {
-    super(undefined)
+  constructor (fileId) {
+    super()
+    this.id = fileId
   }
 
-  createFile (songId, collectionId, file) {
+  createFile (data) {
+    const { fileId, songId, collectionId, file, filename, originalname } = data
     const formData = new FormData()
-    formData.append('file', file)
+    if (file) {
+      formData.append('file', file)
+    } else {
+      formData.append('filename', filename)
+      formData.append('originalname', originalname)
+    }
+    formData.append('fileId', fileId)
     formData.append('songId', songId)
     formData.append('collectionId', collectionId)
 
@@ -19,6 +27,8 @@ class FileModel extends EditorModel {
       body: formData
     })
   }
+
+  getFile = async () => await this.getData('file', { })
 }
 
 class FileView extends EditorView {
@@ -30,11 +40,23 @@ class FileView extends EditorView {
   /**
    * Renders the file creator
    */
-  buildEditor () {
-    this.songInput = createElement({ parent: this.editor, tag: 'input' })
-    this.collectionInput = createElement({ parent: this.editor, tag: 'input' })
+  buildEditor (file, songInfo, collectionInfo) {
+    let songName
+    let collectionName
+    const { songId, collectionId } = file
+    songInfo.forEach(row => {
+      if (row.song_id === songId) songName = row.name_text
+    })
+
+    collectionInfo.forEach(row => {
+      if (row.collection_id === collectionId) collectionName = row.name
+    })
+
+    this.songInput = createElement({ parent: this.editor, tag: 'input', value: songName, dataset: { songId } })
+    this.collectionInput = createElement({ parent: this.editor, tag: 'input', value: collectionName, dataset: { collectionId } })
     this.fileInput = createElement({ parent: this.editor, tag: 'input', type: 'file' })
-    this.uploadButton = createElement({ parent: this.editor, tag: 'button', innerHTML: 'Upload file' })
+    this.filePreview = createElement({ parent: this.editor, innerHTML: generateAudio(file) })
+    this.renderSubmitButton()
   }
 }
 
@@ -44,8 +66,12 @@ class FileController extends EditorController {
     Object.assign(this, { model, view })
   }
 
-  initializeEditor (parent) {
-    this.view.buildEditor()
+  async initializeEditor (parent) {
+    const file = await this.model.getFile()
+    const songInfo = await this.model.getSongNames('')
+    const collectionInfo = await this.model.getCollectionNames('')
+
+    this.view.buildEditor(file, songInfo, collectionInfo)
     this.view.renderEditor(parent)
     this.setupFileCreator()
   }
@@ -58,19 +84,29 @@ class FileController extends EditorController {
     const collectionVar = 'collectionId'
     const fileVar = 'file'
 
-    const uploadBlocker = new Blocker(this.view.uploadButton, () => {
+    const uploadBlocker = new Blocker(this.view.submitButton, () => {
       const songId = this.view.songInput.dataset[songVar]
       const collectionId = this.view.collectionInput.dataset[collectionVar]
       const file = this.view.fileInput.files[0]
+      let originalname
+      let filename
 
-      this.model.createFile(songId, collectionId, file)
+      if (!file) {
+        const audioElement = this.view.filePreview.children[0]
+        originalname = audioElement.dataset.name
+        filename = audioElement.src.match(/\/([^/]+)$/)[1]
+      }
+
+      this.model.createFile({ fileId: this.model.id, songId, collectionId, file, originalname, filename })
     })
 
-    uploadBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput, this.view.songInput, this.view.collectionInput])
+    if (!this.model.id) {
+      uploadBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput, this.view.songInput, this.view.collectionInput])
+    }
 
     this.view.fileInput.addEventListener('change', e => {
       uploadBlocker.ternaryBlock(
-        e.target.files.length === 0,
+        e.target.files.length === 0 && !this.model.id,
         fileVar, this.view.fileInput
       )
     })
@@ -116,10 +152,38 @@ class FileController extends EditorController {
 }
 
 export class File extends EditorType {
-  constructor () {
+  constructor (fileId) {
     super()
-    const model = new FileModel()
+    const model = new FileModel(fileId)
     const view = new FileView()
     this.controller = new FileController(model, view)
   }
+}
+
+/**
+   * Generates HTML for an audio element based on a file
+   * @param {Row} file
+   * @returns {string}
+   */
+export function generateAudio (file) {
+  const name = file.original_name || file.originalname || ''
+  const filePath = file.file_name || file.filename || ''
+  let extension = name.match(/\.(.*?)$/)
+  // in case there is no match
+  if (extension) extension = extension[1]
+
+  const validExtensions = [
+    'mp3',
+    'wav',
+    'flac',
+    'm4a',
+    'ogg'
+  ]
+
+  if (extension && validExtensions.includes(extension)) {
+    return `
+        <audio src="../music/${filePath}" controls data-name="${name}"></audio>
+      `
+  }
+  return '<div>Could not load</div>'
 }

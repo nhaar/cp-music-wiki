@@ -13,9 +13,10 @@ export class EditorModel {
    * Get an item from the database
    * @param {string} route - Route to get
    */
-  async getFromDatabase (route) {
+  async getFromDatabase (type) {
     const { id } = this
-    const response = await postJSON(route, { id })
+    console.log(type, id)
+    const response = await postJSON('api/get', { type, id })
     if (response.status === 200) {
       const data = await response.json()
       return data
@@ -26,6 +27,19 @@ export class EditorModel {
 
   createNameOnly (route, name) {
     postJSON(route, { name })
+  }
+
+  async getData (type, defaultData) {
+    if (this.id) {
+      const data = await this.getFromDatabase(type)
+      return data
+    } else {
+      return defaultData
+    }
+  }
+
+  update (type, data) {
+    postJSON('api/update', { type, data })
   }
 }
 
@@ -62,11 +76,12 @@ export class EditorController {
    * @param {string} route - Route to push the data to
    * @param {function() : object} dataFunction - Function that returns the data to be sent
    */
-  setupSubmitButton (route, dataFunction) {
+  setupSubmitButton (type, dataFunction) {
     this.submitBlocker.button = this.view.submitButton
+    console.log(this.view.submitButton)
     this.submitBlocker.clickCallback = () => {
       const data = dataFunction()
-      postJSON(route, data)
+      this.model.update(type, data)
     }
     this.submitBlocker.addListeners()
   }

@@ -126,40 +126,21 @@ class Database {
     this.runInsert(`${table} (name)`, [name])
   }
 
-  /**
-   * Create a new song
-   * @param {string} name - Name of the song
-   */
-  async createSong (name) {
+  async insertBlankGetId (table) {
     await this.runDatabaseMethod(callback => {
-      this.db.run('INSERT INTO songs DEFAULT VALUES', [], callback)
+      this.db.run(`INSERT INTO ${table} DEFAULT VALUES`, [], callback)
     })
-    // get automatically created song id from the sequence
-    const seq = await this.getFromTable('sqlite_sequence', 'name', 'songs')
 
-    const songId = seq.seq
-    // insert default user-picked name
-    this.runInsert('song_names (song_id, pos, name_text)', [songId, 1, name])
+    const seq = await this.getFromTable('sqlite_sequence', 'name', table)
+
+    return seq.seq
   }
 
-  /**
-   * Create a new author
-   * @param {string} name - Name of the author
-   */
-  createAuthor (name) {
-    this.createByName('authors', name)
-  }
-
-  /**
-   * Create a new collection
-   * @param {string} name
-   */
-  createCollection (name) {
-    this.createByName('collections', name)
-  }
-
-  createMedia (name) {
-    this.createByName('medias', name)
+  updateMedia (data) {
+    this.updateBase(data, 'medias', 'mediaId', data => {
+      const { mediaId, name } = data
+      this.db.run('UPDATE medias SET name = ? WHERE media_id = ?', [name, mediaId])
+    })
   }
 
   /**
@@ -169,8 +150,12 @@ class Database {
    * @param {string} originalName - Original file name from the user upload
    * @param {string} name - File name as is stored in the database
    */
-  createFile (songId, collectionId, originalName, name) {
-    this.runInsert('files (song_id, collection_id, original_name, file_name)', [songId, collectionId, originalName, name])
+  async updateFile (data) {
+    console.log(data)
+    await this.updateBase(data, 'files', 'fileId', async data => {
+      const { songId, collectionId, originalname, filename, fileId } = data
+      this.db.run('UPDATE files SET song_id = ?, collection_id = ?, original_name = ?, file_name = ? WHERE file_id = ?', [songId, collectionId, originalname, filename, fileId])
+    })
   }
 
   /**
@@ -181,9 +166,11 @@ class Database {
    * @param {string} data.date
    * @param {boolean} data.isEstimate
    */
-  createFeature (data) {
-    const { name, mediaId, date, isEstimate } = data
-    this.runInsert('features (name, media_id, release_date, is_date_estimate)', [name, mediaId, date, Number(isEstimate)])
+  async updateFeature (data) {
+    await this.updateBase(data, 'features', 'featureId', async data => {
+      const { featureId, name, mediaId, releaseDate, isEstimate } = data
+      this.db.run('UPDATE features SET name = ?, media_id = ?, release_date = ?, is_date_estimate = ? WHERE feature_id = ?', [name, mediaId, releaseDate, isEstimate, featureId])
+    })
   }
 
   /**
@@ -266,69 +253,135 @@ class Database {
     return row
   }
 
+  async getFileById (fileId) {
+    const row = await this.getFromTable('files', 'file_id', fileId)
+
+    return {
+      songId: row.song_id,
+      collectionId: row.collection_id,
+      filename: row.file_name,
+      originalname: row.original_name
+    }
+  }
+
+  getMediaById = async mediaId => await this.getFromTable('medias', 'media_id', mediaId)
+
+  async getFeatureById (featureId) {
+    const row = await this.getFromTable('features', 'feature_id', featureId)
+
+    return {
+      featureId,
+      name: row.name,
+      mediaId: row.media_id,
+      releaseDate: row.release_date,
+      isEstimate: Boolean(row.is_date_estimate)
+    }
+  }
+
+  async update (type, data) {
+    let callback
+
+    switch (type) {
+      case 'song': {
+        callback = a => this.updateSong(a)
+        break
+      }
+      case 'author': {
+        callback = a => this.updateAuthor(a)
+        break
+      }
+      case 'collection': {
+        callback = a => this.updateCollection(a)
+        break
+      }
+      case 'media': {
+        callback = a => this.updateMedia(a)
+        break
+      }
+      case 'feature': {
+        callback = a => this.updateFeature(a)
+        break
+      }
+    }
+    console.log(type, data)
+    const response = await callback(data)
+    return response
+  }
+
+  async updateBase (data, table, idName, callback) {
+    const id = data[idName]
+    if (!id || id === 'undefined') {
+      console.log(table)
+      data[idName] = await this.insertBlankGetId(table)
+    }
+    await callback(data)
+  }
+
   /**
    * Updates a song
    * @param {import('../public/scripts/editor').Song} data - Song object with new data to be used
    */
   async updateSong (data) {
-    const { names, songId, link, files, medias } = data
-    const authors = data.authors.map(n => Number(n))
+    await this.updateBase(data, 'songs', 'songId', async data => {
+      const { songId, names, link, files, medias } = data
+      const authors = data.authors.map(n => Number(n))
 
-    // authors
-    this.updatePositionalTable('song_author', 'author_id', songId, authors, async songId => {
-      const oldData = await this.getSongAuthors(songId)
-      return oldData
-    })
+      // authors
+      this.updatePositionalTable('song_author', 'author_id', songId, authors, async songId => {
+        const oldData = await this.getSongAuthors(songId)
+        return oldData
+      })
 
-    // names
-    this.updatePositionalTable('song_names', 'name_text', songId, names, async songId => {
-      const oldData = await this.getSongNames(songId)
-      return oldData
-    })
+      // names
+      this.updatePositionalTable('song_names', 'name_text', songId, names, async songId => {
+        const oldData = await this.getSongNames(songId)
+        return oldData
+      })
 
-    // link
-    this.db.run(`UPDATE songs SET link = ? WHERE song_id = ${songId}`, [extractVideoCode(link)])
+      // link
+      this.db.run(`UPDATE songs SET link = ? WHERE song_id = ${songId}`, [extractVideoCode(link)])
 
-    // file hq info
-    for (const fileId in files) {
-      const isHQ = files[fileId] ? 1 : 0
-      this.db.run('UPDATE files SET is_hq = ? WHERE song_id = ? AND file_id = ?', [isHQ, songId, fileId])
-    }
-
-    // media info
-    // compare previous and current to find differences
-    const oldMedias = await this.getSongMedias(songId)
-    const oldFeatures = this.getAllFeatures(oldMedias)
-    const features = this.getAllFeatures(medias)
-    const onlyOld = []
-    const onlyNew = []
-    const intersection = []
-    oldFeatures.forEach(feature => {
-      if (features.includes(feature)) intersection.push(feature)
-      else onlyOld.push(feature)
-    })
-    features.forEach(feature => {
-      if (!oldFeatures.includes(feature)) onlyNew.push(feature)
-    })
-
-    onlyOld.forEach(featureId => {
-      this.db.run('DELETE FROM song_feature WHERE feature_id = ? AND song_id = ?', [featureId, songId])
-    })
-    const inverted = this.invertMedias(medias)
-    const getFeature = (featureId, medias) => medias[inverted[featureId]][featureId]
-    intersection.forEach(featureId => {
-      const oldFeature = getFeature(featureId, oldMedias)
-      const newFeature = getFeature(featureId, medias)
-      const { releaseDate, date, isEstimate } = newFeature
-      if (!compareObjects(oldFeature, newFeature)) {
-        this.db.run('UPDATE song_feature SET use_release_date = ?, date = ?, is_date_estimate = ? WHERE feature_id = ? AND song_id = ?', [Number(releaseDate), date, Number(isEstimate), featureId, songId])
+      // file hq info
+      for (const fileId in files) {
+        const isHQ = files[fileId] ? 1 : 0
+        this.db.run('UPDATE files SET is_hq = ? WHERE song_id = ? AND file_id = ?', [isHQ, songId, fileId])
       }
-    })
-    onlyNew.forEach(featureId => {
-      const mediaId = inverted[featureId]
-      const feature = medias[mediaId][featureId]
-      const { releaseDate, date, isEstimate } = feature
-      this.db.run('INSERT INTO song_feature (media_id, feature_id, song_id, use_release_date, date, is_date_estimate) VALUES (?, ?, ?, ?, ?, ?)', [mediaId, featureId, songId, Number(releaseDate), date, Number(isEstimate)])
+
+      // media info
+      // compare previous and current to find differences
+      const oldMedias = await this.getSongMedias(songId)
+      const oldFeatures = this.getAllFeatures(oldMedias)
+      const features = this.getAllFeatures(medias)
+      const onlyOld = []
+      const onlyNew = []
+      const intersection = []
+      oldFeatures.forEach(feature => {
+        if (features.includes(feature)) intersection.push(feature)
+        else onlyOld.push(feature)
+      })
+      features.forEach(feature => {
+        if (!oldFeatures.includes(feature)) onlyNew.push(feature)
+      })
+
+      onlyOld.forEach(featureId => {
+        this.db.run('DELETE FROM song_feature WHERE feature_id = ? AND song_id = ?', [featureId, songId])
+      })
+      const inverted = this.invertMedias(medias)
+      const getFeature = (featureId, medias) => medias[inverted[featureId]][featureId]
+      intersection.forEach(featureId => {
+        const oldFeature = getFeature(featureId, oldMedias)
+        const newFeature = getFeature(featureId, medias)
+        const { releaseDate, date, isEstimate } = newFeature
+        if (!compareObjects(oldFeature, newFeature)) {
+          this.db.run('UPDATE song_feature SET use_release_date = ?, date = ?, is_date_estimate = ? WHERE feature_id = ? AND song_id = ?', [Number(releaseDate), date, Number(isEstimate), featureId, songId])
+        }
+      })
+      onlyNew.forEach(featureId => {
+        const mediaId = inverted[featureId]
+        const feature = medias[mediaId][featureId]
+        const { releaseDate, date, isEstimate } = feature
+        this.db.run('INSERT INTO song_feature (media_id, feature_id, song_id, use_release_date, date, is_date_estimate) VALUES (?, ?, ?, ?, ?, ?)', [mediaId, featureId, songId, Number(releaseDate), date, Number(isEstimate)])
+      })
     })
   }
 
@@ -370,11 +423,10 @@ class Database {
    * @param {Row} data - Row info with new data to be used
    */
   async updateAuthor (data) {
-    const { name, authorId } = data
-    const row = await this.getAuthorById(authorId)
-    if (row.name !== name) {
+    await this.updateBase(data, 'authors', 'authorId', async data => {
+      const { authorId, name } = data
       this.db.run('UPDATE authors SET name = ? WHERE author_id = ?', [name, authorId])
-    }
+    })
   }
 
   /**
@@ -382,11 +434,10 @@ class Database {
    * @param {Row} data - New row info
    */
   async updateCollection (data) {
-    const { name, collectionId } = data
-    const row = await this.getCollectionById(collectionId)
-    if (row.name !== name) {
+    await this.updateBase(data, 'collections', 'collectionId', async data => {
+      const { name, collectionId } = data
       this.db.run('UPDATE collections SET name = ? WHERE collection_id = ?', [name, collectionId])
-    }
+    })
   }
 
   /**
@@ -484,20 +535,18 @@ class Database {
    * @returns {object} - Object representing the data type
    */
   async getDataById (type, id) {
-    switch (type) {
-      case 'songs': {
-        const response = await this.getSongById(id)
-        return response
-      }
-      case 'authors': {
-        const response = await this.getAuthorById(id)
-        return response
-      }
-      case 'collections': {
-        const response = await this.getCollectionById(id)
-        return response
-      }
+    const relation = {
+      song: async a => await this.getSongById(a),
+      author: async a => await this.getAuthorById(a),
+      collection: async a => await this.getCollectionById(a),
+      file: async a => await this.getFileById(a),
+      media: async a => await this.getMediaById(a),
+      feature: async a => await this.getFeatureById(a)
     }
+
+    const response = await relation[type](id)
+    console.log(response)
+    return response
   }
 
   /**

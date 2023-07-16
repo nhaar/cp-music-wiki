@@ -7,10 +7,7 @@ class AuthorModel extends EditorModel {
     this.id = authorId
   }
 
-  async getAuthor () {
-    const data = await this.getFromDatabase('api/get-author')
-    return data
-  }
+  getAuthor = async () => await this.getData('author', { name: '' })
 }
 
 class AuthorView extends EditorView {
@@ -51,7 +48,7 @@ class AuthorController extends EditorController {
    * Sets up the submit button for the author editor
    */
   setupSubmitAuthor () {
-    this.setupSubmitButton('api/submit-author', () => this.getAuthorData())
+    this.setupSubmitButton('author', () => this.getAuthorData())
   }
 
   /**

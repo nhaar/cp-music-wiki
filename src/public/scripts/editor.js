@@ -3,6 +3,9 @@ import { EditorModel, EditorController, EditorView } from './editor-class.js'
 import { Song } from './song.js'
 import { Author } from './author.js'
 import { Collection } from './collection.js'
+import { File } from './file.js'
+import { Media } from './media.js'
+import { Feature } from './feature.js'
 
 /**
  * Object containing information from a row in a table
@@ -98,7 +101,10 @@ class Controller extends EditorController {
     const typeRelation = {
       0: Song,
       1: Author,
-      2: Collection
+      2: Collection,
+      3: File,
+      4: Media,
+      5: Feature
     }
 
     for (const t in typeRelation) {

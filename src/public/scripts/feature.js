@@ -1,20 +1,15 @@
 import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
-import { createElement, postJSON } from './utils.js'
+import { createElement } from './utils.js'
 
 class FeatureModel extends EditorModel {
-  constructor () {
-    super(undefined)
+  constructor (featureId) {
+    super()
+    this.id = featureId
   }
 
-  /**
-   * Submits a create feature request based on an object containing the data needed to create it
-   * @param {object} data
-   */
-  createFeature (data) {
-    postJSON('api/submit-feature', data)
-  }
+  getFeature = async () => await this.getData('feature', { })
 }
 
 class FeatureView extends EditorView {
@@ -26,11 +21,17 @@ class FeatureView extends EditorView {
   /**
    * Renders the feature creator
    */
-  buildEditor () {
-    this.featureName = createElement({ parent: this.editor, tag: 'input' })
-    this.featureMedia = createElement({ parent: this.editor, tag: 'input' })
-    this.featureDate = createElement({ parent: this.editor, tag: 'input', type: 'date' })
-    this.featureCheck = createElement({ parent: this.editor, tag: 'input', type: 'checkbox' })
+  buildEditor (feature, mediaInfo) {
+    const { name, mediaId, releaseDate, isEstimate } = feature
+    let mediaName
+    mediaInfo.forEach(row => {
+      if (row.media_id === mediaId) mediaName = row.name
+    })
+
+    this.featureName = createElement({ parent: this.editor, tag: 'input', value: name })
+    this.featureMedia = createElement({ parent: this.editor, tag: 'input', value: mediaName, dataset: { mediaId } })
+    this.featureDate = createElement({ parent: this.editor, tag: 'input', type: 'date', value: releaseDate })
+    this.featureCheck = createElement({ parent: this.editor, tag: 'input', type: 'checkbox', checked: isEstimate })
     this.featureButton = createElement({ parent: this.editor, tag: 'button', innerHTML: 'Add feature' })
   }
 }
@@ -64,10 +65,10 @@ class FeatureController extends EditorController {
       const date = this.view.featureDate.value
       const isEstimate = this.view.featureCheck.checked
 
-      this.model.createFeature({ name, mediaId, date, isEstimate })
+      this.model.update('feature', { featureId: this.model.id, name, mediaId, date, isEstimate })
     })
 
-    mediaBlocker.blockVarElements([mediaVar, nameVar, dateVar], [this.view.featureMedia, this.view.featureName, this.view.featureDate])
+    if (!this.model.id) mediaBlocker.blockVarElements([mediaVar, nameVar, dateVar], [this.view.featureMedia, this.view.featureName, this.view.featureDate])
 
     setupMustHaveInput(this.view.featureName, mediaBlocker, nameVar)
 
@@ -84,17 +85,19 @@ class FeatureController extends EditorController {
     setupMustHaveInput(this.view.featureDate, mediaBlocker, dateVar)
   }
 
-  initializeEditor (parent) {
-    this.view.buildEditor()
+  async initializeEditor (parent) {
+    const feature = await this.model.getFeature()
+    const mediaInfo = await this.model.getMediaNames('')
+    this.view.buildEditor(feature, mediaInfo)
     this.view.renderEditor(parent)
     this.setupFeatureCreator()
   }
 }
 
 export class Feature extends EditorType {
-  constructor () {
+  constructor (featureId) {
     super()
-    const model = new FeatureModel()
+    const model = new FeatureModel(featureId)
     const view = new FeatureView()
     this.controller = new FeatureController(model, view)
   }

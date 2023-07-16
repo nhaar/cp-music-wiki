@@ -7,10 +7,7 @@ class CollectionModel extends EditorModel {
     this.id = authorId
   }
 
-  async getCollection () {
-    const data = await this.getFromDatabase('api/get-collection')
-    return data
-  }
+  getCollection = async () => await this.getData('collection', { name: '' })
 }
 
 class CollectionView extends EditorView {
@@ -51,7 +48,7 @@ class CollectionController extends EditorController {
    * Sets up the submit button for the collection editor
    */
   setupSubmitCollection () {
-    this.setupSubmitButton('api/submit-collection', () => this.getCollectionData())
+    this.setupSubmitButton('collection', () => this.getCollectionData())
   }
 
   /**

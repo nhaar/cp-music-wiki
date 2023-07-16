@@ -1,4 +1,5 @@
 import { EditorModel, EditorView, EditorController, EditorType } from './editor-class.js'
+import { generateAudio } from './file.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 import { createElement, findInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
@@ -10,22 +11,25 @@ class SongModel extends EditorModel {
     this.id = songId
   }
 
-  /**
-   * Gets the database song object for the target song
-   * @returns {Song}
-   */
-  async getSong () {
-    const data = await this.getFromDatabase('api/get-song')
-    return data
-  }
+  getSong = async () => await this.getData('song', {
+    names: [],
+    authors: [],
+    link: '',
+    files: {},
+    medias: {}
+  })
 
   /**
    * Gets the file data for a song
    * @returns {Row[]}
    */
   async getFileData () {
-    const rows = await postAndGetJSON('api/get-file-data', { songId: this.id })
-    return rows
+    if (this.id) {
+      const rows = await postAndGetJSON('api/get-file-data', { songId: this.id })
+      return rows
+    } else {
+      return []
+    }
   }
 }
 
@@ -135,7 +139,7 @@ class SongView extends EditorView {
       const innerHTML = `
         <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
         <div>${file.original_name}</div>
-        <div>${this.generateAudio(file)}</div>
+        <div>${generateAudio(file)}</div>
       `
       createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
     })
@@ -152,33 +156,6 @@ class SongView extends EditorView {
 
   renderHeader (name) {
     createElement({ parent: this.editor, className: 'editor-header', innerHTML: name })
-  }
-
-  /**
-   * Generates HTML for an audio element based on a file
-   * @param {Row} file
-   * @returns {string}
-   */
-  generateAudio (file) {
-    const name = file.original_name
-    let extension = name.match(/\.(.*?)$/)
-    // in case there is no match
-    if (extension) extension = extension[1]
-
-    const validExtensions = [
-      'mp3',
-      'wav',
-      'flac',
-      'm4a',
-      'ogg'
-    ]
-
-    if (extension && validExtensions.includes(extension)) {
-      return `
-        <audio src="../music/${file.file_name}" controls></audio>
-      `
-    }
-    return '<div>Could not load</div>'
   }
 
   /**
@@ -243,7 +220,7 @@ class SongController extends EditorController {
    * Sets up the submit button for the song editor
    */
   setupSubmitSong () {
-    this.setupSubmitButton('api/submit-data', () => this.getSongData())
+    this.setupSubmitButton('song', () => this.getSongData())
   }
 
   /**
@@ -350,6 +327,7 @@ class SongController extends EditorController {
    * @returns {Song}
    */
   getSongData () {
+    console.log('rza')
     // author ids are saved as data variables in inputs
     const names = this.collectInputData(this.view.namesDiv.rowsDiv, false)
     const authors = this.collectInputData(this.view.authorsDiv.rowsDiv, true, 'authorId')
