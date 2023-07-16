@@ -278,7 +278,6 @@ class Database {
   async updateBase (data, table, idName, callback) {
     const id = data[idName]
     if (!id || id === 'undefined') {
-      console.log(table)
       data[idName] = await this.insertBlankGetId(table)
     }
     await callback(data)
@@ -384,7 +383,6 @@ class Database {
    * @param {string} name - File name as is stored in the database
    */
   async updateFile (data) {
-    console.log(data)
     await this.updateBase(data, 'files', 'fileId', async data => {
       const { songId, collectionId, originalname, filename, fileId } = data
       this.db.run('UPDATE files SET song_id = ?, collection_id = ?, original_name = ?, file_name = ? WHERE file_id = ?', [songId, collectionId, originalname, filename, fileId])

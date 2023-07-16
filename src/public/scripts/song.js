@@ -188,7 +188,7 @@ class SongController extends EditorController {
   async initializeEditor (parent) {
     await this.initializeBase(async song => {
       this.song = song
-      
+
       const authorInfo = await this.model.getAuthorNames('')
       const files = await this.model.getFileData()
       this.mediaNames = await this.model.getMediaNames('')
@@ -315,7 +315,6 @@ class SongController extends EditorController {
    * @returns {Song}
    */
   getUserData () {
-    console.log('rza')
     // author ids are saved as data variables in inputs
     const names = this.collectInputData(this.view.namesDiv.rowsDiv, false)
     const authors = this.collectInputData(this.view.authorsDiv.rowsDiv, true, 'authorId')

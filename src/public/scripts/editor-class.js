@@ -83,9 +83,7 @@ export class EditorController {
    * @param {function() : object} dataFunction - Function that returns the data to be sent
    */
   setupSubmitButton () {
-    console.log(this.view.submitButton)
     this.submitBlocker.button = this.view.submitButton
-    console.log(this.view.submitButton)
     this.submitBlocker.clickCallback = () => {
       const data = this.getUserData()
       this.model.update(data)

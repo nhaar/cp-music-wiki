@@ -31,7 +31,6 @@ router.post('/submit-file', upload.single('file'), (req, res) => {
   else ({ originalname, filename } = req.body)
   const { songId, collectionId, fileId } = req.body
   const data = { fileId, songId, collectionId, originalname, filename }
-  console.log(data)
   db.updateFile(data)
   res.sendStatus(200)
 })
