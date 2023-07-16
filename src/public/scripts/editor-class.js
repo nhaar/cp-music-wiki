@@ -2,6 +2,11 @@ import { Blocker } from './submit-block.js'
 import { createElement, postJSON, postAndGetJSON } from './utils.js'
 
 export class EditorModel {
+  constructor (id) {
+    this.id = id
+    this.defaultData = {}
+  }
+
   getByName = async (keyword, table) => postAndGetJSON('api/get-by-name', { keyword, table })
   getSongNames = async keyword => this.getByName(keyword, 'song_names')
   getCollectionNames = async keyword => this.getByName(keyword, 'collections')
@@ -13,10 +18,8 @@ export class EditorModel {
    * Get an item from the database
    * @param {string} route - Route to get
    */
-  async getFromDatabase (type) {
-    const { id } = this
-    console.log(type, id)
-    const response = await postJSON('api/get', { type, id })
+  async getFromDatabase () {
+    const response = await postJSON('api/get', { type: this.type, id: this.id })
     if (response.status === 200) {
       const data = await response.json()
       return data
@@ -25,21 +28,19 @@ export class EditorModel {
     }
   }
 
-  createNameOnly (route, name) {
-    postJSON(route, { name })
-  }
-
-  async getData (type, defaultData) {
+  async getData () {
     if (this.id) {
-      const data = await this.getFromDatabase(type)
-      return data
+      this.data = await this.getFromDatabase()
     } else {
-      return defaultData
+      this.data = this.defaultData
     }
+    return this.data
   }
 
-  update (type, data) {
-    postJSON('api/update', { type, data })
+  getNameFromId = async (table, id) => (await postAndGetJSON('api/get-name', { table, id })).name
+
+  update (data) {
+    postJSON('api/update', { type: this.type, data })
   }
 }
 
@@ -71,17 +72,23 @@ export class EditorController {
     this.submitBlocker = new Blocker()
   }
 
+  async initializeBase (callback) {
+    const data = await this.model.getData()
+    await callback(data)
+  }
+
   /**
    * Sets up the submit button controls
    * @param {string} route - Route to push the data to
    * @param {function() : object} dataFunction - Function that returns the data to be sent
    */
-  setupSubmitButton (type, dataFunction) {
+  setupSubmitButton () {
+    console.log(this.view.submitButton)
     this.submitBlocker.button = this.view.submitButton
     console.log(this.view.submitButton)
     this.submitBlocker.clickCallback = () => {
-      const data = dataFunction()
-      this.model.update(type, data)
+      const data = this.getUserData()
+      this.model.update(data)
     }
     this.submitBlocker.addListeners()
   }
@@ -97,19 +104,6 @@ export class EditorController {
     const hasUntakenId = !value
     const takenIds = [value]
     return { hasUntakenId, takenIds }
-  }
-
-  /**
-   * Sets up a creator which works only on inputing an arbitrary name
-   * @param {HTMLInputElement} inputElement - Element the name is being typed in
-   * @param {HTMLButtonElement} buttonElement - Element that is responsible for creating
-   * @param {string} route - The specific route that needs to be reached
-   */
-  setupNameCreator (inputElement, buttonElement, route) {
-    buttonElement.addEventListener('click', () => {
-      const name = inputElement.value
-      this.model.createNameOnly(route, name)
-    })
   }
 }
 

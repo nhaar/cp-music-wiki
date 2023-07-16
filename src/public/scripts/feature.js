@@ -4,12 +4,12 @@ import { Blocker } from './submit-block.js'
 import { createElement } from './utils.js'
 
 class FeatureModel extends EditorModel {
-  constructor (featureId) {
-    super()
-    this.id = featureId
+  constructor (featureId) { 
+    super(featureId)
+    this.type = 'feature'
   }
 
-  getFeature = async () => await this.getData('feature', { })
+  getMediaName = async () => await this.getNameFromId('medias', this.data.mediaId)
 }
 
 class FeatureView extends EditorView {
@@ -21,12 +21,8 @@ class FeatureView extends EditorView {
   /**
    * Renders the feature creator
    */
-  buildEditor (feature, mediaInfo) {
+  buildEditor (feature, mediaName) {
     const { name, mediaId, releaseDate, isEstimate } = feature
-    let mediaName
-    mediaInfo.forEach(row => {
-      if (row.media_id === mediaId) mediaName = row.name
-    })
 
     this.featureName = createElement({ parent: this.editor, tag: 'input', value: name })
     this.featureMedia = createElement({ parent: this.editor, tag: 'input', value: mediaName, dataset: { mediaId } })
@@ -65,7 +61,7 @@ class FeatureController extends EditorController {
       const date = this.view.featureDate.value
       const isEstimate = this.view.featureCheck.checked
 
-      this.model.update('feature', { featureId: this.model.id, name, mediaId, date, isEstimate })
+      this.model.update({ featureId: this.model.id, name, mediaId, date, isEstimate })
     })
 
     if (!this.model.id) mediaBlocker.blockVarElements([mediaVar, nameVar, dateVar], [this.view.featureMedia, this.view.featureName, this.view.featureDate])
@@ -86,11 +82,12 @@ class FeatureController extends EditorController {
   }
 
   async initializeEditor (parent) {
-    const feature = await this.model.getFeature()
-    const mediaInfo = await this.model.getMediaNames('')
-    this.view.buildEditor(feature, mediaInfo)
-    this.view.renderEditor(parent)
-    this.setupFeatureCreator()
+    await this.initializeBase(async feature => {
+      const mediaName = await this.model.getMediaName()
+      this.view.buildEditor(feature, mediaName)
+      this.view.renderEditor(parent)
+      this.setupFeatureCreator()
+    })
   }
 }
 

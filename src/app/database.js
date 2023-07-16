@@ -136,42 +136,7 @@ class Database {
     return seq.seq
   }
 
-  updateMedia (data) {
-    this.updateBase(data, 'medias', 'mediaId', data => {
-      const { mediaId, name } = data
-      this.db.run('UPDATE medias SET name = ? WHERE media_id = ?', [name, mediaId])
-    })
-  }
 
-  /**
-   * Create a new (music) file
-   * @param {string} songId - Song the file belongs to
-   * @param {string} collectionId - Collection the file belongs to
-   * @param {string} originalName - Original file name from the user upload
-   * @param {string} name - File name as is stored in the database
-   */
-  async updateFile (data) {
-    console.log(data)
-    await this.updateBase(data, 'files', 'fileId', async data => {
-      const { songId, collectionId, originalname, filename, fileId } = data
-      this.db.run('UPDATE files SET song_id = ?, collection_id = ?, original_name = ?, file_name = ? WHERE file_id = ?', [songId, collectionId, originalname, filename, fileId])
-    })
-  }
-
-  /**
-   * Adds a feature to the database given the data
-   * @param {object} data
-   * @param {string} data.name
-   * @param {string} data.mediaId
-   * @param {string} data.date
-   * @param {boolean} data.isEstimate
-   */
-  async updateFeature (data) {
-    await this.updateBase(data, 'features', 'featureId', async data => {
-      const { featureId, name, mediaId, releaseDate, isEstimate } = data
-      this.db.run('UPDATE features SET name = ?, media_id = ?, release_date = ?, is_date_estimate = ? WHERE feature_id = ?', [name, mediaId, releaseDate, isEstimate, featureId])
-    })
-  }
 
   /**
    * Asynchronously get the row in a table based on a property
@@ -185,6 +150,25 @@ class Database {
       this.db.get(`SELECT * FROM ${table} WHERE ${column} = ?`, [value], callback)
     })
     return row
+  }
+
+  async getPropertyFromTable (table, property, column, value) {
+    const row = await this.getFromTable(table, column, value)
+    return row[property]
+  }
+
+  async getNameFromId (table, id) {
+    const idName = {
+      song_names: 'song_id',
+      authors: 'author_id',
+      collections: 'collection_id',
+      medias: 'media_id',
+      features: 'feature_id'
+    }[table]
+
+    const name = getNameColumn(table)
+    const response = await this.getPropertyFromTable(table, name, idName, id)
+    return response
   }
 
   /**
@@ -279,32 +263,15 @@ class Database {
   }
 
   async update (type, data) {
-    let callback
-
-    switch (type) {
-      case 'song': {
-        callback = a => this.updateSong(a)
-        break
-      }
-      case 'author': {
-        callback = a => this.updateAuthor(a)
-        break
-      }
-      case 'collection': {
-        callback = a => this.updateCollection(a)
-        break
-      }
-      case 'media': {
-        callback = a => this.updateMedia(a)
-        break
-      }
-      case 'feature': {
-        callback = a => this.updateFeature(a)
-        break
-      }
+    const relation = {
+      song: a => this.updateSong(a),
+      author: a => this.updateAuthor(a),
+      collection: a => this.updateCollection(a),
+      media: a => this.updateMedia(a),
+      feature: a => this.updateFeature(a)
     }
-    console.log(type, data)
-    const response = await callback(data)
+
+    const response = await relation[type](data)
     return response
   }
 
@@ -385,6 +352,68 @@ class Database {
     })
   }
 
+
+  /**
+   * Updates an author with a new row info
+   * @param {Row} data - Row info with new data to be used
+   */
+  async updateAuthor (data) {
+    await this.updateBase(data, 'authors', 'authorId', async data => {
+      const { authorId, name } = data
+      this.db.run('UPDATE authors SET name = ? WHERE author_id = ?', [name, authorId])
+    })
+  }
+
+  /**
+   * Update a collection with new info
+   * @param {Row} data - New row info
+   */
+  async updateCollection (data) {
+    await this.updateBase(data, 'collections', 'collectionId', async data => {
+      const { name, collectionId } = data
+      this.db.run('UPDATE collections SET name = ? WHERE collection_id = ?', [name, collectionId])
+    })
+  }
+
+  
+  /**
+   * Create a new (music) file
+   * @param {string} songId - Song the file belongs to
+   * @param {string} collectionId - Collection the file belongs to
+   * @param {string} originalName - Original file name from the user upload
+   * @param {string} name - File name as is stored in the database
+   */
+  async updateFile (data) {
+    console.log(data)
+    await this.updateBase(data, 'files', 'fileId', async data => {
+      const { songId, collectionId, originalname, filename, fileId } = data
+      this.db.run('UPDATE files SET song_id = ?, collection_id = ?, original_name = ?, file_name = ? WHERE file_id = ?', [songId, collectionId, originalname, filename, fileId])
+    })
+  }
+  
+  async updateMedia (data) {
+    await this.updateBase(data, 'medias', 'mediaId', data => {
+      const { mediaId, name } = data
+      this.db.run('UPDATE medias SET name = ? WHERE media_id = ?', [name, mediaId])
+    })
+  }
+
+  /**
+   * Adds a feature to the database given the data
+   * @param {object} data
+   * @param {string} data.name
+   * @param {string} data.mediaId
+   * @param {string} data.date
+   * @param {boolean} data.isEstimate
+   */
+  async updateFeature (data) {
+    await this.updateBase(data, 'features', 'featureId', async data => {
+      const { featureId, name, mediaId, releaseDate, isEstimate } = data
+      this.db.run('UPDATE features SET name = ?, media_id = ?, release_date = ?, is_date_estimate = ? WHERE feature_id = ?', [name, mediaId, releaseDate, isEstimate, featureId])
+    })
+  }
+
+  
   /**
    * Helper function that updates a SQL table based on position
    * (containing song_id, pos, and another column)
@@ -416,28 +445,6 @@ class Database {
         this.db.run(`UPDATE ${table} SET ${dataColumn} = ? WHERE song_id = ? AND pos = ?`, [newData[i], songId, i + 1])
       }
     }
-  }
-
-  /**
-   * Updates an author with a new row info
-   * @param {Row} data - Row info with new data to be used
-   */
-  async updateAuthor (data) {
-    await this.updateBase(data, 'authors', 'authorId', async data => {
-      const { authorId, name } = data
-      this.db.run('UPDATE authors SET name = ? WHERE author_id = ?', [name, authorId])
-    })
-  }
-
-  /**
-   * Update a collection with new info
-   * @param {Row} data - New row info
-   */
-  async updateCollection (data) {
-    await this.updateBase(data, 'collections', 'collectionId', async data => {
-      const { name, collectionId } = data
-      this.db.run('UPDATE collections SET name = ? WHERE collection_id = ?', [name, collectionId])
-    })
   }
 
   /**
@@ -545,7 +552,6 @@ class Database {
     }
 
     const response = await relation[type](id)
-    console.log(response)
     return response
   }
 
@@ -570,7 +576,7 @@ class Database {
    * @returns {Row[]}
    */
   async getByKeyword (table, keyword) {
-    const column = table === 'song_names' ? 'name_text' : 'name'
+    const column = getNameColumn(table)
     const rows = await this.selectLike(table, column, keyword)
     return rows
   }
@@ -663,6 +669,10 @@ function extractVideoCode (link) {
 
   if (link.includes('youtube')) return link.match('(?<=v=)[^&]+')[0]
   else return link.match('(?<=be/)[^&^?]+')[0]
+}
+
+function getNameColumn (table) {
+  return table === 'song_names' ? 'name_text' : 'name'
 }
 
 const db = new Database()

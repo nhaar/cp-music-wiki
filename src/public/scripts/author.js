@@ -2,12 +2,10 @@ import { EditorModel, EditorController, EditorView, EditorType } from './editor-
 import { createElement } from './utils.js'
 
 class AuthorModel extends EditorModel {
-  constructor (authorId) {
-    super()
-    this.id = authorId
+  constructor (authorId) { 
+    super(authorId)
+    this.type = 'author'
   }
-
-  getAuthor = async () => await this.getData('author', { name: '' })
 }
 
 class AuthorView extends EditorView {
@@ -38,24 +36,18 @@ class AuthorController extends EditorController {
   }
 
   async initializeEditor (parent) {
-    const author = await this.model.getAuthor()
-    this.view.buildEditor(author)
-    this.view.renderEditor(parent)
-    this.setupSubmitAuthor()
-  }
-
-  /**
-   * Sets up the submit button for the author editor
-   */
-  setupSubmitAuthor () {
-    this.setupSubmitButton('author', () => this.getAuthorData())
-  }
+    await this.initializeBase(author => {
+      this.view.buildEditor(author)
+      this.view.renderEditor(parent)
+      this.setupSubmitButton()    
+    })
+    }
 
   /**
    * Gets the user inputed author data to send to the database
    * @returns {Row}
    */
-  getAuthorData () {
+  getUserData () {
     return { authorId: this.model.id, name: this.view.nameInput.value }
   }
 }

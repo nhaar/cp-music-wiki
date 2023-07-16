@@ -6,18 +6,10 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
 
 class SongModel extends EditorModel {
   constructor (songId) {
-    super()
-
-    this.id = songId
+    super(songId)
+    this.type = 'song'
+    this.defaultData = { names: [], authors: [] }
   }
-
-  getSong = async () => await this.getData('song', {
-    names: [],
-    authors: [],
-    link: '',
-    files: {},
-    medias: {}
-  })
 
   /**
    * Gets the file data for a song
@@ -51,6 +43,7 @@ class SongView extends EditorView {
       const { names, authors, link } = song
 
       // filter and order author names
+      
       authorInfo.forEach(info => {
         const index = authors.indexOf(info.author_id)
         if (index > -1) {
@@ -193,34 +186,29 @@ class SongController extends EditorController {
   }
 
   async initializeEditor (parent) {
-    // get all relevant data
-    this.song = await this.model.getSong()
-    const authorInfo = await this.model.getAuthorNames('')
-    const files = await this.model.getFileData()
-    this.mediaNames = await this.model.getMediaNames('')
-    this.featureNames = await this.model.getFeatureNames('')
-
-    // Render
-    this.view.buildEditor(this.song, authorInfo, files)
-    this.view.renderEditor(parent)
-
-    // Add controls to everythinig
-    this.setupSubmitSong()
-    this.view.namesDiv.setupControls('')
-    this.view.authorsDiv.setupControls({ author_id: '', name: '' },
-      a => this.setupAuthorQuery(a),
-      () => this.submitBlocker.block('authorId')
-    )
-    this.setupLink()
-    this.setupMedias()
-    this.updateMediasRow()
-  }
-
-  /**
-   * Sets up the submit button for the song editor
-   */
-  setupSubmitSong () {
-    this.setupSubmitButton('song', () => this.getSongData())
+    await this.initializeBase(async song => {
+      this.song = song
+      
+      const authorInfo = await this.model.getAuthorNames('')
+      const files = await this.model.getFileData()
+      this.mediaNames = await this.model.getMediaNames('')
+      this.featureNames = await this.model.getFeatureNames('')
+  
+      // Render
+      this.view.buildEditor(song, authorInfo, files)
+      this.view.renderEditor(parent)
+  
+      // Add controls to everythinig
+      this.setupSubmitButton()
+      this.view.namesDiv.setupControls('')
+      this.view.authorsDiv.setupControls({ author_id: '', name: '' },
+        a => this.setupAuthorQuery(a),
+        () => this.submitBlocker.block('authorId')
+      )
+      this.setupLink()
+      this.setupMedias()
+      this.updateMediasRow()
+    })
   }
 
   /**
@@ -326,7 +314,7 @@ class SongController extends EditorController {
    * Gathers all the user data into a single song object to be sent to the database
    * @returns {Song}
    */
-  getSongData () {
+  getUserData () {
     console.log('rza')
     // author ids are saved as data variables in inputs
     const names = this.collectInputData(this.view.namesDiv.rowsDiv, false)

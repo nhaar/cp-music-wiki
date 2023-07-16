@@ -4,10 +4,13 @@ import { Blocker } from './submit-block.js'
 import { createElement } from './utils.js'
 
 class FileModel extends EditorModel {
-  constructor (fileId) {
-    super()
-    this.id = fileId
+  constructor (fileId) { 
+    super(fileId)
+    this.type = 'file'
   }
+
+  getSongName = async () => await this.getNameFromId('song_names', this.data.songId)
+  getCollectionName = async () => await this.getNameFromId('collections', this.data.collectionId)
 
   createFile (data) {
     const { fileId, songId, collectionId, file, filename, originalname } = data
@@ -27,8 +30,6 @@ class FileModel extends EditorModel {
       body: formData
     })
   }
-
-  getFile = async () => await this.getData('file', { })
 }
 
 class FileView extends EditorView {
@@ -40,17 +41,8 @@ class FileView extends EditorView {
   /**
    * Renders the file creator
    */
-  buildEditor (file, songInfo, collectionInfo) {
-    let songName
-    let collectionName
+  buildEditor (file, songName, collectionName) {
     const { songId, collectionId } = file
-    songInfo.forEach(row => {
-      if (row.song_id === songId) songName = row.name_text
-    })
-
-    collectionInfo.forEach(row => {
-      if (row.collection_id === collectionId) collectionName = row.name
-    })
 
     this.songInput = createElement({ parent: this.editor, tag: 'input', value: songName, dataset: { songId } })
     this.collectionInput = createElement({ parent: this.editor, tag: 'input', value: collectionName, dataset: { collectionId } })
@@ -67,13 +59,15 @@ class FileController extends EditorController {
   }
 
   async initializeEditor (parent) {
-    const file = await this.model.getFile()
-    const songInfo = await this.model.getSongNames('')
-    const collectionInfo = await this.model.getCollectionNames('')
+    await this.initializeBase(async file => {
+      const songName = await this.model.getSongName()
+      const collectionName = await this.model.getCollectionName()
 
-    this.view.buildEditor(file, songInfo, collectionInfo)
-    this.view.renderEditor(parent)
-    this.setupFileCreator()
+      this.view.buildEditor(file, songName, collectionName)
+      this.view.renderEditor(parent)
+      this.setupFileCreator()
+    })
+    
   }
 
   /**

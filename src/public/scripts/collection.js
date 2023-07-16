@@ -2,12 +2,12 @@ import { EditorModel, EditorController, EditorView, EditorType } from './editor-
 import { createElement } from './utils.js'
 
 class CollectionModel extends EditorModel {
-  constructor (authorId) {
-    super()
-    this.id = authorId
+  constructor (collectionId) {
+    super(collectionId)
+    this.type = 'collection'
   }
 
-  getCollection = async () => await this.getData('collection', { name: '' })
+  // getCollection = async () => await this.getData('collection', { name: '' })
 }
 
 class CollectionView extends EditorView {
@@ -38,24 +38,19 @@ class CollectionController extends EditorController {
   }
 
   async initializeEditor (parent) {
-    const collection = await this.model.getCollection()
-    this.view.buildEditor(collection)
-    this.view.renderEditor(parent)
-    this.setupSubmitCollection()
+    await this.initializeBase(collection => {
+      this.view.buildEditor(collection)
+      this.view.renderEditor(parent)
+      this.setupSubmitButton()  
+    })
   }
 
-  /**
-   * Sets up the submit button for the collection editor
-   */
-  setupSubmitCollection () {
-    this.setupSubmitButton('collection', () => this.getCollectionData())
-  }
 
   /**
    * Gets the user inputed collection data to send to the database
    * @returns {Row}
    */
-  getCollectionData () {
+  getUserData () {
     return { collectionId: this.model.id, name: this.view.nameInput.value }
   }
 }

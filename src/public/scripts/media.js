@@ -2,12 +2,12 @@ import { EditorModel, EditorController, EditorView, EditorType } from './editor-
 import { createElement } from './utils.js'
 
 class MediaModel extends EditorModel {
-  constructor (mediaId) {
-    super()
-    this.id = mediaId
+  constructor (mediaId) { 
+    super(mediaId)
+    this.type = 'media'
   }
 
-  getMedia = async () => await this.getData('media', { name: '' })
+  // getMedia = async () => await this.getData('media', { name: '' })
 }
 
 class MediaView extends EditorView {
@@ -36,20 +36,17 @@ class MediaController extends EditorController {
     Object.assign(this, { model, view })
   }
 
-  setupSubmitMedia () {
-    this.setupSubmitButton('media', () => this.getMediaData())
-  }
 
-  getMediaData () {
+  getUserData () {
     return { mediaId: this.model.id, name: this.view.nameInput.value }
   }
 
   async initializeEditor (parent) {
-    const media = await this.model.getMedia()
-    console.log(media)
-    this.view.buildEditor(media)
-    this.view.renderEditor(parent)
-    this.setupSubmitMedia()
+    await this.initializeBase(media => {
+      this.view.buildEditor(media)
+      this.view.renderEditor(parent)
+      this.setupSubmitButton()
+    })
   }
 }
 

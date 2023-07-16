@@ -56,6 +56,13 @@ router.post('/get-by-name', async (req, res) => {
   const rows = await db.getByKeyword(table, keyword)
   res.status(200).send(rows)
 })
+
+router.post('/get-name', async (req, res) => {
+  const { table, id } = req.body
+  const name = await db.getNameFromId(table, id)
+  res.status(200).send({name})
+})
+
 /**
  * @route POST /api/get-file-data
  *

@@ -47,57 +47,31 @@ import { Feature } from './feature.js'
  */
 
 /**
- * Object containing name for element classes
- * @typedef {object} Elements
- */
-
-/**
+ * Object used for storing data for a moveable row
  * @typedef {object} RowData
  * @property {string} value
  * @property {object} dataset
  */
 
-class Model extends EditorModel {
+class View {
   constructor () {
-    super()
-    const urlParams = new URLSearchParams(window.location.search)
-    const params = this.paramsToObject(urlParams)
-    const type = params.t
-    const id = params.id
-
-    Object.assign(this, { type, id })
-  }
-
-  /**
-   * Converts URL parameters into an object
-   * containing the values of each of the query parameters
-   * @param {URLSearchParams} urlParams - URL parameters to target
-   * @returns {object} Object for the query parameters
-   */
-  paramsToObject (urlParams) {
-    const params = {}
-    const paramsArray = [...urlParams.entries()]
-    paramsArray.forEach(array => {
-      params[array[0]] = array[1]
-    })
-    return params
-  }
-}
-
-class View extends EditorView {
-  constructor () {
-    super()
     this.editor = selectElement('js-editor')
   }
 }
 
-class Controller extends EditorController {
-  constructor (model, view) {
-    super()
-    Object.assign(this, { model, view })
-  }
+class Controller {
+  constructor (view) { this.view = view }
 
   async initializePage () {
+    // get URL params to choose the type
+    const urlParams = new URLSearchParams(window.location.search)
+    const params = this.paramsToObject(urlParams)
+
+    // t corresponds to the type, guide is below
+    // id is for the id of whatever type is being editted
+    const type = params.t
+    const id = params.id
+
     const typeRelation = {
       0: Song,
       1: Author,
@@ -108,39 +82,31 @@ class Controller extends EditorController {
     }
 
     for (const t in typeRelation) {
-      if (t === this.model.type) {
-        const type = new typeRelation[t](this.model.id)
+      if (t === type) {
+        const type = new typeRelation[t](id)
         type.initializeEditor(this.view.editor)
         return
       }
     }
     this.view.editor.innerHTML = 'ERROR'
-
-    // // switch (this.model.type) {
-    // //   case '0': {
-    // //     const song = new Song(this.model.id)
-    // //     song.initializeEditor(this.view.editor)
-    // //     break
-    // //   }
-    // //   case '1': {
-    // //     const author = new Author(this.model.id)
-    // //     author.initializeEditor(this.view.editor)
-    // //     break
-    // //   }
-    // //   case '2': {
-    // //     const collection = new Collection(this.model.id)
-    // //     collection.initializeEditor(this.view.editor)
-    // //     break
-    // //   }
-    // //   default: {
-    // //     this.view.editor.innerHTML = 'ERROR'
-    // //     break
-    // //   }
-    // }
   }
+
+    /**
+     * Converts URL parameters into an object
+     * containing the values of each of the query parameters
+     * @param {URLSearchParams} urlParams - URL parameters to target
+     * @returns {object} Object for the query parameters
+     */
+    paramsToObject (urlParams) {
+      const params = {}
+      const paramsArray = [...urlParams.entries()]
+      paramsArray.forEach(array => {
+        params[array[0]] = array[1]
+      })
+      return params
+    }
 }
 
-const model = new Model()
 const view = new View()
-const controller = new Controller(model, view)
+const controller = new Controller(view)
 controller.initializePage()
