@@ -15,7 +15,7 @@ class Generator {
 
   /**
    * Generates a two-dimensional array representing the list
-   * @returns 
+   * @returns
    */
   async generateSeriesList () {
     const rows = []
@@ -31,10 +31,10 @@ class Generator {
 
     const collections = await this.db.getAll('collections')
     const collectionNames = this.getIdToNameMap(collections, 'collection_id')
-   
+
     const files = await this.db.getAll('files')
     const songFiles = this.organizeBySongId(files)
-   
+
     const medias = await this.db.getAll('medias')
     const mediaNames = this.getIdToNameMap(medias, 'media_id')
     const songFeature = await this.db.getAll('song_feature')
@@ -113,7 +113,7 @@ class Generator {
 
   /**
    * Gives an object mapping id -> name/the whole row
-   * @param {Row[]} array 
+   * @param {Row[]} array
    * @param {string} idName - Name of the id column
    * @param {boolean} useElement If true, uses whole row instead of name
    * @returns {object}
@@ -131,7 +131,7 @@ class Generator {
 
   /**
    * Creates an object where each key is a song id, and the value is an array of all values in a certain column from a table that contain the song id
-   * 
+   *
    * Eg, song id -> list of author ids
    * @param {Row[]} array - All rows of the table to organize
    * @param {string} column - Name of the column to target (in the example it would be author_id)
@@ -151,7 +151,7 @@ class Generator {
 
   /**
    * Converts an array into a "comma list" (not a csv, meant for readability)
-   * @param {object} array 
+   * @param {object} array
    * @returns {string}
    */
   arrayToCommaSeparated (array) {
@@ -169,8 +169,8 @@ class Generator {
 
   /**
    * Creates a CSV from a two-dimensional array
-   * @param {*[][]} matrix 
-   * @returns 
+   * @param {*[][]} matrix
+   * @returns
    */
   generateCSV (matrix) {
     let csv = ''
@@ -198,7 +198,7 @@ class Generator {
 
   /**
    * Creates a table HTML for a two-dimensional series list
-   * @param {*[][]} matrix 
+   * @param {*[][]} matrix
    * @returns {string}
    */
   generateHTML (matrix) {

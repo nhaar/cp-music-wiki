@@ -115,3 +115,16 @@ export function findInObject (object, property, value) {
     if (element[property] === value) { return element }
   }
 }
+
+/**
+ * Gets the taken data for an input
+ * @param {HTMLInputElement} element - Reference to the input
+ * @param {string} variable - Name of data variable
+ * @returns {import('./query-options.js').TakenInfo}
+ */
+export function getTakenVariable (element, variable) {
+  const value = element.dataset[variable]
+  const hasUntakenId = !value
+  const takenIds = [value]
+  return { hasUntakenId, takenIds }
+}

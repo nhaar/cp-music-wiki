@@ -78,6 +78,7 @@ export class EditorModel {
   getMediaNames = async keyword => this.getByName(keyword, 'medias')
   getAuthorNames = async keyword => this.getByName(keyword, 'authors')
   getFeatureNames = async keyword => this.getByName(keyword, 'features')
+  getFileNames = async keyword => this.getByName(keyword, 'files')
 }
 
 /**
@@ -168,19 +169,6 @@ export class EditorController {
    * @returns {undefined}
    */
   setupEditor () { return undefined }
-
-  /**
-   * Gets the taken data for an input
-   * @param {HTMLInputElement} element - Reference to the input
-   * @param {string} variable - Name of data variable
-   * @returns {import('./query-options.js').TakenInfo}
-   */
-  getTakenVariable (element, variable) {
-    const value = element.dataset[variable]
-    const hasUntakenId = !value
-    const takenIds = [value]
-    return { hasUntakenId, takenIds }
-  }
 }
 
 /**

@@ -1,6 +1,6 @@
 import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
-import { createElement } from './utils.js'
+import { createElement, getTakenVariable } from './utils.js'
 
 /**
  * @typedef FileData
@@ -159,7 +159,7 @@ class FileController extends EditorController {
    * @returns {import('./query-options.js').TakenInfo}
    */
   getTakenSong (input) {
-    return this.getTakenVariable(input, 'songId')
+    return getTakenVariable(input, 'songId')
   }
 
   /**
@@ -168,7 +168,7 @@ class FileController extends EditorController {
    * @returns {import('./query-options.js').TakenInfo}
    */
   getTakenCollection (input) {
-    return this.getTakenVariable(input, 'collectionId')
+    return getTakenVariable(input, 'collectionId')
   }
 }
 

@@ -1,6 +1,6 @@
 import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
-import { createElement } from './utils.js'
+import { createElement, getTakenVariable } from './utils.js'
 
 /**
  * @typedef {object} FeatureData
@@ -51,7 +51,7 @@ class FeatureController extends EditorController {
    * @returns {import('./query-options.js').TakenInfo}
    */
   getTakenMedia (input) {
-    return this.getTakenVariable(input, 'mediaId')
+    return getTakenVariable(input, 'mediaId')
   }
 
   /**

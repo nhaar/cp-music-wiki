@@ -664,8 +664,23 @@ function extractVideoCode (link) {
   else return link.match('(?<=be/)[^&^?]+')[0]
 }
 
+/**
+ * Gets the name column for a table
+ * @param {string} table
+ * @returns {string}
+ */
 function getNameColumn (table) {
-  return table === 'song_names' ? 'name_text' : 'name'
+  switch (table) {
+    case 'song_names': {
+      return 'name_text'
+    }
+    case 'files': {
+      return 'original_name'
+    }
+    default: {
+      return 'name'
+    }
+  }
 }
 
 const db = new WikiDatabase()

@@ -13,12 +13,30 @@ router.get('/', (req, res) => {
 })
 
 /**
- * @route GET /creator
+ * @route GET /pre-editor
  *
- * Renders the creator page
+ * Renders the editor menu page
  */
-router.get('/creator', (req, res) => {
-  res.status(200).render('creator.html')
+router.get('/pre-editor', (req, res) => {
+  res.status(200).render('pre-editor.html')
+})
+
+/**
+ * @route GET /lists
+ *
+ * Renders the lists page
+ */
+router.get('/lists', (req, res) => {
+  res.status(200).render('lists.html')
+})
+
+/**
+ * @route GET /series-lists
+ *
+ * Renders the series list
+ */
+router.get('/series-list', (req, res) => {
+  res.status(200).render('generated/series-list.html')
 })
 
 /**
