@@ -1,3 +1,4 @@
 /node_modules
 /database
 /src/public/music
+/src/views/generated

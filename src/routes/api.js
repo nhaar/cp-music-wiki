@@ -6,10 +6,12 @@ const multer = require('multer')
 const path = require('path')
 
 const db = require('../app/database')
+const gen = require('../app/lists')
 
 router.post('/update', (req, res) => {
   const { data, type } = req.body
   db.update(type, data)
+  gen.updateLists()
 
   res.sendStatus(200)
 })
@@ -24,14 +26,15 @@ const upload = multer({ dest: path.join(__dirname, '../public/music/') })
  * @param {string} body.songId
  * @param {string} body.collectionId
  */
-router.post('/submit-file', upload.single('file'), (req, res) => {
+router.post('/submit-file', upload.single('file'), async (req, res) => {
   let originalname
   let filename
   if (req.file) ({ originalname, filename } = req.file)
   else ({ originalname, filename } = req.body)
   const { songId, collectionId, fileId } = req.body
   const data = { fileId, songId, collectionId, originalname, filename }
-  db.updateFile(data)
+  await db.updateFile(data)
+  gen.updateLists()
   res.sendStatus(200)
 })
 

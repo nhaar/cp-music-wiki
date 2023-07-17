@@ -1,5 +1,5 @@
 const path = require('path')
-const { compareObjects } = require('./utils')
+const { compareObjects, youtubify } = require('./utils')
 const sqlite3 = require('sqlite3').verbose()
 
 /**
@@ -10,7 +10,7 @@ const sqlite3 = require('sqlite3').verbose()
 /**
  * Class that handles the database
  */
-class Database {
+class WikiDatabase {
   constructor () {
     this.db = new sqlite3.Database(path.join(__dirname, '../../database/database.db'))
   }
@@ -149,6 +149,15 @@ class Database {
     })
     return row
   }
+
+  /**
+   * Get all rows from a table
+   * @param {string} table
+   * @returns {Row[]}
+   */
+  getAll = async table => this.runSelectMethod(callback => {
+    this.db.all(`SELECT * FROM ${table}`, [], callback)
+  })
 
   async getPropertyFromTable (table, property, column, value) {
     const row = await this.getFromTable(table, column, value)
@@ -403,8 +412,8 @@ class Database {
    */
   async updateFeature (data) {
     await this.updateBase(data, 'features', 'featureId', async data => {
-      const { featureId, name, mediaId, releaseDate, isEstimate } = data
-      this.db.run('UPDATE features SET name = ?, media_id = ?, release_date = ?, is_date_estimate = ? WHERE feature_id = ?', [name, mediaId, releaseDate, isEstimate, featureId])
+      const { featureId, name, mediaId, date, isEstimate } = data
+      this.db.run('UPDATE features SET name = ?, media_id = ?, release_date = ?, is_date_estimate = ? WHERE feature_id = ?', [name, mediaId, date, isEstimate, featureId])
     })
   }
 
@@ -643,16 +652,6 @@ async function deconstructRows (rowCallback, column) {
 }
 
 /**
- * Transforms a youtube video code
- * into a shortened link
- * @param {string} videoCode
- * @returns {string} Shortened link
- */
-function youtubify (videoCode) {
-  return 'youtu.be/' + videoCode
-}
-
-/**
  * Transforms a youtube link/blank string
  * and gets either the video code or nothing
  * @param {string} link - Link string
@@ -669,6 +668,6 @@ function getNameColumn (table) {
   return table === 'song_names' ? 'name_text' : 'name'
 }
 
-const db = new Database()
+const db = new WikiDatabase()
 
 module.exports = db
