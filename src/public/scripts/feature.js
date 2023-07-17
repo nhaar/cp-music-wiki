@@ -1,27 +1,34 @@
 import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
-import { Blocker } from './submit-block.js'
 import { createElement } from './utils.js'
 
+/**
+ * @typedef {object} FeatureData
+ */
+
+/**
+ * @typedef {object} FeatureBuildData
+ * @property {FeatureData} feature
+ * @property {string} mediaName
+ */
+
 class FeatureModel extends EditorModel {
-  constructor (featureId) { 
-    super(featureId)
-    this.type = 'feature'
+  constructor () {
+    super('feature')
   }
 
   getMediaName = async () => await this.getNameFromId('medias', this.data.mediaId)
 }
 
 class FeatureView extends EditorView {
-  constructor () {
-    super()
-    this.editor = createElement()
-  }
+  constructor () { super(undefined) }
 
   /**
-   * Renders the feature creator
+   * Feature buildeditor
+   * @param {FeatureBuildData} data
    */
-  buildEditor (feature, mediaName) {
+  buildEditor (data) {
+    const { feature, mediaName } = data
     const { name, mediaId, releaseDate, isEstimate } = feature
 
     this.featureName = createElement({ parent: this.editor, tag: 'input', value: name })
@@ -34,8 +41,8 @@ class FeatureView extends EditorView {
 
 class FeatureController extends EditorController {
   constructor (model, view) {
-    super()
-    Object.assign(this, { model, view })
+    super(model, view)
+    this.mediaVar = 'mediaId'
   }
 
   /**
@@ -48,25 +55,41 @@ class FeatureController extends EditorController {
   }
 
   /**
-   * Add controls to the feature creator
+   * Feature getUserData
+   * @returns {FeatureData}
    */
-  setupFeatureCreator () {
-    const mediaVar = 'mediaId'
+  getUserData () {
+    const mediaVar = this.mediaVar
+
+    const name = this.view.featureName.value
+    const mediaId = this.view.featureMedia.dataset[mediaVar]
+    const date = this.view.featureDate.value
+    const isEstimate = this.view.featureCheck.checked
+
+    return { featureId: this.model.id, name, mediaId, date, isEstimate }
+  }
+
+  /**
+   * Feature getBuildData
+   * @returns {FeatureBuildData}
+   */
+  async getBuildData () {
+    const feature = this.model.data
+    const mediaName = await this.model.getMediaName()
+    return { feature, mediaName }
+  }
+
+  /**
+   * Feature setupEditor
+   */
+  setupEditor () {
+    const mediaVar = this.mediaVar
     const nameVar = 'name'
     const dateVar = 'date'
 
-    const mediaBlocker = new Blocker(this.view.featureButton, () => {
-      const name = this.view.featureName.value
-      const mediaId = this.view.featureMedia.dataset[mediaVar]
-      const date = this.view.featureDate.value
-      const isEstimate = this.view.featureCheck.checked
+    if (!this.model.id) this.submitBlocker.blockVarElements([mediaVar, nameVar, dateVar], [this.view.featureMedia, this.view.featureName, this.view.featureDate])
 
-      this.model.update({ featureId: this.model.id, name, mediaId, date, isEstimate })
-    })
-
-    if (!this.model.id) mediaBlocker.blockVarElements([mediaVar, nameVar, dateVar], [this.view.featureMedia, this.view.featureName, this.view.featureDate])
-
-    setupMustHaveInput(this.view.featureName, mediaBlocker, nameVar)
+    setupMustHaveInput(this.view.featureName, this.submitBlocker, nameVar)
 
     createSearchQuery(
       this.view.featureMedia,
@@ -75,29 +98,15 @@ class FeatureController extends EditorController {
       'name',
       a => this.model.getMediaNames(a),
       a => this.getTakenMedia(a),
-      mediaBlocker
+      this.submitBlocker
     )
 
-    setupMustHaveInput(this.view.featureDate, mediaBlocker, dateVar)
-  }
-
-  async initializeEditor (parent) {
-    await this.initializeBase(async feature => {
-      const mediaName = await this.model.getMediaName()
-      this.view.buildEditor(feature, mediaName)
-      this.view.renderEditor(parent)
-      this.setupFeatureCreator()
-    })
+    setupMustHaveInput(this.view.featureDate, this.submitBlocker, dateVar)
   }
 }
 
 export class Feature extends EditorType {
-  constructor (featureId) {
-    super()
-    const model = new FeatureModel(featureId)
-    const view = new FeatureView()
-    this.controller = new FeatureController(model, view)
-  }
+  constructor (id) { super(id, FeatureModel, FeatureView, FeatureController) }
 }
 
 /**

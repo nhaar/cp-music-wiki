@@ -1,28 +1,29 @@
 import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createElement } from './utils.js'
 
+/**
+ * @typedef {object} AuthorData
+ * @property {string} authorId
+ * @property {string} name
+ */
+
 class AuthorModel extends EditorModel {
-  constructor (authorId) { 
-    super(authorId)
-    this.type = 'author'
+  constructor () {
+    super('author')
   }
 }
 
 class AuthorView extends EditorView {
-  constructor () {
-    super()
-    this.editor = createElement()
-  }
+  constructor () { super(undefined) }
 
   /**
-   * Renders the author editor for an author
-   * @param {Row} author
+   * Author buildEditor
+   * @param {Row} author - Database row
    */
   buildEditor (author) {
     if (author) {
       const { name } = author
       this.nameInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: name })
-      this.renderSubmitButton()
     } else {
       this.editor.innerHTML = 'NO AUTHOR FOUND'
     }
@@ -30,22 +31,9 @@ class AuthorView extends EditorView {
 }
 
 class AuthorController extends EditorController {
-  constructor (model, view) {
-    super()
-    Object.assign(this, { model, view })
-  }
-
-  async initializeEditor (parent) {
-    await this.initializeBase(author => {
-      this.view.buildEditor(author)
-      this.view.renderEditor(parent)
-      this.setupSubmitButton()    
-    })
-    }
-
   /**
-   * Gets the user inputed author data to send to the database
-   * @returns {Row}
+   * Author getUserData
+   * @returns {AuthorData}
    */
   getUserData () {
     return { authorId: this.model.id, name: this.view.nameInput.value }
@@ -53,11 +41,5 @@ class AuthorController extends EditorController {
 }
 
 export class Author extends EditorType {
-  constructor (authorId) {
-    super()
-
-    const model = new AuthorModel(authorId)
-    const view = new AuthorView()
-    this.controller = new AuthorController(model, view)
-  }
+  constructor (id) { super(id, AuthorModel, AuthorView, AuthorController) }
 }

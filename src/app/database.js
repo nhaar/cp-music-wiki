@@ -136,8 +136,6 @@ class Database {
     return seq.seq
   }
 
-
-
   /**
    * Asynchronously get the row in a table based on a property
    * @param {string} table - Name of the table
@@ -154,6 +152,7 @@ class Database {
 
   async getPropertyFromTable (table, property, column, value) {
     const row = await this.getFromTable(table, column, value)
+    console.log(table, property, column, value)
     return row[property]
   }
 
@@ -351,7 +350,6 @@ class Database {
     })
   }
 
-
   /**
    * Updates an author with a new row info
    * @param {Row} data - Row info with new data to be used
@@ -374,7 +372,6 @@ class Database {
     })
   }
 
-  
   /**
    * Create a new (music) file
    * @param {string} songId - Song the file belongs to
@@ -388,7 +385,7 @@ class Database {
       this.db.run('UPDATE files SET song_id = ?, collection_id = ?, original_name = ?, file_name = ? WHERE file_id = ?', [songId, collectionId, originalname, filename, fileId])
     })
   }
-  
+
   async updateMedia (data) {
     await this.updateBase(data, 'medias', 'mediaId', data => {
       const { mediaId, name } = data
@@ -411,7 +408,6 @@ class Database {
     })
   }
 
-  
   /**
    * Helper function that updates a SQL table based on position
    * (containing song_id, pos, and another column)

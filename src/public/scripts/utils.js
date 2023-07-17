@@ -78,6 +78,7 @@ export function createElement (options) {
  * @returns {response} Method response
  */
 export async function postJSON (route, object) {
+  console.log(route)
   const response = await fetch(route, {
     method: 'POST',
     body: JSON.stringify(object),

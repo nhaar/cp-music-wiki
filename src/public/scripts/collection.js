@@ -1,30 +1,29 @@
 import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createElement } from './utils.js'
 
-class CollectionModel extends EditorModel {
-  constructor (collectionId) {
-    super(collectionId)
-    this.type = 'collection'
-  }
+/**
+ * @typedef {object} CollectionData
+ * @property {string} collectionId
+ * @property {string} name
+ */
 
-  // getCollection = async () => await this.getData('collection', { name: '' })
+class CollectionModel extends EditorModel {
+  constructor () {
+    super('collection')
+  }
 }
 
 class CollectionView extends EditorView {
-  constructor () {
-    super()
-    this.editor = createElement()
-  }
+  constructor () { super(undefined) }
 
   /**
-   * Renders the collection editor for a collection
-   * @param {Row} collection
+   * Collection buildEditor
+   * @param {Row} collection Database row
    */
   buildEditor (collection) {
     if (collection) {
       const { name } = collection
       this.nameInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: name })
-      this.renderSubmitButton()
     } else {
       this.editor.innerHTML = 'NO COLLECTION FOUND'
     }
@@ -32,23 +31,9 @@ class CollectionView extends EditorView {
 }
 
 class CollectionController extends EditorController {
-  constructor (model, view) {
-    super()
-    Object.assign(this, { model, view })
-  }
-
-  async initializeEditor (parent) {
-    await this.initializeBase(collection => {
-      this.view.buildEditor(collection)
-      this.view.renderEditor(parent)
-      this.setupSubmitButton()  
-    })
-  }
-
-
   /**
    * Gets the user inputed collection data to send to the database
-   * @returns {Row}
+   * @returns {CollectionData}
    */
   getUserData () {
     return { collectionId: this.model.id, name: this.view.nameInput.value }
@@ -56,11 +41,5 @@ class CollectionController extends EditorController {
 }
 
 export class Collection extends EditorType {
-  constructor (collectionId) {
-    super()
-
-    const model = new CollectionModel(collectionId)
-    const view = new CollectionView()
-    this.controller = new CollectionController(model, view)
-  }
+  constructor (id) { super(id, CollectionModel, CollectionView, CollectionController) }
 }

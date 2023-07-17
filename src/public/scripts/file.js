@@ -1,18 +1,31 @@
 import { EditorModel, EditorController, EditorView, EditorType } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
-import { Blocker } from './submit-block.js'
 import { createElement } from './utils.js'
 
+/**
+ * @typedef FileData
+ * @property {string} fileId
+ * @property {string} songId
+ * @property {string} collectionId
+ * @property {string} filename
+ * @property {string} originalname
+ */
+
 class FileModel extends EditorModel {
-  constructor (fileId) { 
-    super(fileId)
-    this.type = 'file'
+  constructor () {
+    super('file')
   }
 
   getSongName = async () => await this.getNameFromId('song_names', this.data.songId)
   getCollectionName = async () => await this.getNameFromId('collections', this.data.collectionId)
 
-  createFile (data) {
+  /**
+   * File overwrite update method, needed because the data needs to be submitted as
+   * form data as opposed to a JSON
+   * @param {object} data - A FileData object with an extra file object
+   * @property {object} data.file - User file from the file input
+   */
+  update (data) {
     const { fileId, songId, collectionId, file, filename, originalname } = data
     const formData = new FormData()
     if (file) {
@@ -33,73 +46,87 @@ class FileModel extends EditorModel {
 }
 
 class FileView extends EditorView {
-  constructor () {
-    super()
-    this.editor = createElement()
-  }
+  constructor () { super(undefined) }
 
   /**
-   * Renders the file creator
+   * File buildEditor
+   * @param {object} data
+   * @param {FileData} data.file
+   * @param {string} data.songName
+   * @param {string} data.collectionName
    */
-  buildEditor (file, songName, collectionName) {
+  buildEditor (data) {
+    const { file, songName, collectionName } = data
     const { songId, collectionId } = file
 
     this.songInput = createElement({ parent: this.editor, tag: 'input', value: songName, dataset: { songId } })
     this.collectionInput = createElement({ parent: this.editor, tag: 'input', value: collectionName, dataset: { collectionId } })
     this.fileInput = createElement({ parent: this.editor, tag: 'input', type: 'file' })
     this.filePreview = createElement({ parent: this.editor, innerHTML: generateAudio(file) })
-    this.renderSubmitButton()
   }
 }
 
 class FileController extends EditorController {
   constructor (model, view) {
-    super()
-    Object.assign(this, { model, view })
-  }
+    super(model, view)
 
-  async initializeEditor (parent) {
-    await this.initializeBase(async file => {
-      const songName = await this.model.getSongName()
-      const collectionName = await this.model.getCollectionName()
+    /** Blocking variable for the song input */
+    this.songVar = 'songId'
 
-      this.view.buildEditor(file, songName, collectionName)
-      this.view.renderEditor(parent)
-      this.setupFileCreator()
-    })
-    
+    /** Blocking variable for the collection input */
+    this.collectionVar = 'collectionId'
   }
 
   /**
-   * Give controls to the file creator
+   * File getBuildData
+   * @returns {object}
    */
-  setupFileCreator () {
-    const songVar = 'songId'
-    const collectionVar = 'collectionId'
+  async getBuildData () {
+    const file = this.model.data
+    const songName = await this.model.getSongName()
+    console.log(songName)
+    const collectionName = await this.model.getCollectionName()
+
+    return { file, songName, collectionName }
+  }
+
+  /**
+   * File getUserData
+   * @returns {object}
+   */
+  getUserData () {
+    const songVar = this.songVar
+    const collectionVar = this.collectionVar
+
+    const songId = this.view.songInput.dataset[songVar]
+    const collectionId = this.view.collectionInput.dataset[collectionVar]
+    const file = this.view.fileInput.files[0]
+    let originalname
+    let filename
+
+    if (!file) {
+      const audioElement = this.view.filePreview.children[0]
+      originalname = audioElement.dataset.name
+      filename = audioElement.src.match(/\/([^/]+)$/)[1]
+    }
+
+    return { fileId: this.model.id, songId, collectionId, file, originalname, filename }
+  }
+
+  /**
+   * File setupEditor
+   */
+  setupEditor () {
+    const songVar = this.songVar
+    const collectionVar = this.collectionVar
     const fileVar = 'file'
 
-    const uploadBlocker = new Blocker(this.view.submitButton, () => {
-      const songId = this.view.songInput.dataset[songVar]
-      const collectionId = this.view.collectionInput.dataset[collectionVar]
-      const file = this.view.fileInput.files[0]
-      let originalname
-      let filename
-
-      if (!file) {
-        const audioElement = this.view.filePreview.children[0]
-        originalname = audioElement.dataset.name
-        filename = audioElement.src.match(/\/([^/]+)$/)[1]
-      }
-
-      this.model.createFile({ fileId: this.model.id, songId, collectionId, file, originalname, filename })
-    })
-
     if (!this.model.id) {
-      uploadBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput, this.view.songInput, this.view.collectionInput])
+      this.submitBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput, this.view.songInput, this.view.collectionInput])
     }
 
     this.view.fileInput.addEventListener('change', e => {
-      uploadBlocker.ternaryBlock(
+      this.submitBlocker.ternaryBlock(
         e.target.files.length === 0 && !this.model.id,
         fileVar, this.view.fileInput
       )
@@ -112,7 +139,7 @@ class FileController extends EditorController {
       'name_text',
       a => this.model.getSongNames(a),
       a => this.getTakenSong(a),
-      uploadBlocker
+      this.submitBlocker
     )
 
     createSearchQuery(
@@ -122,7 +149,7 @@ class FileController extends EditorController {
       'name',
       a => this.model.getCollectionNames(a),
       a => this.getTakenCollection(a),
-      uploadBlocker
+      this.submitBlocker
     )
   }
 
@@ -146,12 +173,7 @@ class FileController extends EditorController {
 }
 
 export class File extends EditorType {
-  constructor (fileId) {
-    super()
-    const model = new FileModel(fileId)
-    const view = new FileView()
-    this.controller = new FileController(model, view)
-  }
+  constructor (id) { super(id, FileModel, FileView, FileController) }
 }
 
 /**

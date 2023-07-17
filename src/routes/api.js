@@ -59,7 +59,7 @@ router.post('/get-by-name', async (req, res) => {
 router.post('/get-name', async (req, res) => {
   const { table, id } = req.body
   const name = await db.getNameFromId(table, id)
-  res.status(200).send({name})
+  res.status(200).send({ name })
 })
 
 /**

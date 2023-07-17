@@ -4,15 +4,54 @@ import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 import { createElement, findInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
 
+/**
+ * Data structure for a song
+ * @typedef {object} SongData
+ * @property {string} songId
+ * @property {string[]} names
+ * @property {string[]} authors
+ * @property {Files} files
+ * @property {Medias}
+ */
+
+/**
+ * Each property is a file id and it maps to a boolean representing whether or not
+ * it is a high quality source
+ * @typedef {object} Files
+ */
+
+/**
+ * Each property is a media id and it maps to a Features object
+ * @typedef {object} Medias
+ */
+
+/**
+ * Each property is a feature id and it maps to a Feature object
+ * @typedef {object} Features
+ */
+
+/**
+ * Data for a feature
+ * @typedef {object} Feature
+ * @property {boolean} releaseDate
+ * @property {string} date
+ * @property {boolean} isEstimate
+ */
+
+/**
+ * Object used for storing data for a moveable row
+ * @typedef {object} RowData
+ * @property {string} value
+ * @property {object} dataset
+ */
+
 class SongModel extends EditorModel {
-  constructor (songId) {
-    super(songId)
-    this.type = 'song'
-    this.defaultData = { names: [], authors: [] }
+  constructor () {
+    super('song', { names: [], authors: [] })
   }
 
   /**
-   * Gets the file data for a song
+   * Gets the music files data for a song
    * @returns {Row[]}
    */
   async getFileData () {
@@ -26,24 +65,22 @@ class SongModel extends EditorModel {
 }
 
 class SongView extends EditorView {
-  constructor () {
-    super()
-
-    this.editor = createElement({ className: 'song-editor' })
-  }
+  constructor () { super('song-editor') }
 
   /**
-   * Creates the song editor for a specific song
-   * @param {Song} song - Song object
-   * @param {Row[]} authorInfo - All the authors in the database
-   * @param {Row[]} files -
+   * Song buildEditor
+   * @param {object} data
+   * @param {SongData} data.song - The editted song
+   * @param {Row[]} data.authorInfo - All the authors in the database
+   * @param {Row[]} data.files - All the files belonging to this song
    */
-  buildEditor (song, authorInfo, files) {
+  buildEditor (data) {
+    const { song, authorInfo, files } = data
+
     if (song) {
       const { names, authors, link } = song
 
       // filter and order author names
-      
       authorInfo.forEach(info => {
         const index = authors.indexOf(info.author_id)
         if (index > -1) {
@@ -59,24 +96,9 @@ class SongView extends EditorView {
       this.renderLink()
       this.renderFiles()
       this.renderMedia()
-      this.renderSubmitButton()
     } else {
       this.editor.innerHTML = 'NO SONG FOUND'
     }
-  }
-
-  /**
-   * Renders the element with the song authors
-   */
-  renderAuthors () {
-    this.authorsDiv = new MoveableRowsElement(
-      'authors-div',
-      this.authors,
-      row => this.authorRowCallback(row)
-    )
-
-    this.renderHeader('Authors')
-    this.authorsDiv.renderElement(this.editor)
   }
 
   /**
@@ -94,30 +116,25 @@ class SongView extends EditorView {
   }
 
   /**
+   * Renders the element with the song authors
+   */
+  renderAuthors () {
+    this.authorsDiv = new MoveableRowsElement(
+      'authors-div',
+      this.authors,
+      row => this.authorRowCallback(row)
+    )
+
+    this.renderHeader('Authors')
+    this.authorsDiv.renderElement(this.editor)
+  }
+
+  /**
    * Renders the element with the youtube link input
    */
   renderLink () {
     this.renderHeader('Link')
     this.linkInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: this.link })
-  }
-
-  /**
-   * Renders a song feature editor inside a media row
-   * @param {HTMLDivElement} parent
-   */
-  renderFeature (parent) {
-    createElement({ parent, tag: 'input', type: 'checkbox', checked: true })
-    createElement({ parent })
-  }
-
-  /**
-   * Render the feature date picker inside a feature editor
-   * @param {HTMLDivElement} parent
-   */
-  renderFeatureDate (parent) {
-    parent.classList.add('feature-date')
-    createElement({ parent, tag: 'input', type: 'date' })
-    createElement({ parent, tag: 'input', type: 'checkbox' })
   }
 
   /**
@@ -147,8 +164,40 @@ class SongView extends EditorView {
     this.mediaRows.renderElement(this.editor)
   }
 
+  /**
+   * Renders a song feature editor inside a media row
+   * @param {HTMLDivElement} parent
+   */
+  renderFeature (parent) {
+    createElement({ parent, tag: 'input', type: 'checkbox', checked: true })
+    createElement({ parent })
+  }
+
+  /**
+   * Render the feature date picker inside a feature editor
+   * @param {HTMLDivElement} parent
+   */
+  renderFeatureDate (parent) {
+    parent.classList.add('feature-date')
+    createElement({ parent, tag: 'input', type: 'date' })
+    createElement({ parent, tag: 'input', type: 'checkbox' })
+  }
+
+  /**
+   * Render the 'header' for a row
+   * @param {string} name - Text inside the header
+   */
   renderHeader (name) {
     createElement({ parent: this.editor, className: 'editor-header', innerHTML: name })
+  }
+
+  /**
+   * Get the row data for a name
+   * @param {string} name
+   * @returns {RowData}
+   */
+  nameRowCallback (row) {
+    return { value: row }
   }
 
   /**
@@ -166,53 +215,48 @@ class SongView extends EditorView {
       }
     }
   }
-
-  /**
-   * Get the row data for a name
-   * @param {string} name
-   * @returns {RowData}
-   */
-  nameRowCallback (row) {
-    return { value: row }
-  }
 }
 
 class SongController extends EditorController {
   constructor (model, view) {
-    super()
+    super(model, view)
+
+    /** Variable for blocking the date picker */
     this.dateVar = 'dateBlock'
-
-    Object.assign(this, { model, view })
-  }
-
-  async initializeEditor (parent) {
-    await this.initializeBase(async song => {
-      this.song = song
-
-      const authorInfo = await this.model.getAuthorNames('')
-      const files = await this.model.getFileData()
-      this.mediaNames = await this.model.getMediaNames('')
-      this.featureNames = await this.model.getFeatureNames('')
-  
-      // Render
-      this.view.buildEditor(song, authorInfo, files)
-      this.view.renderEditor(parent)
-  
-      // Add controls to everythinig
-      this.setupSubmitButton()
-      this.view.namesDiv.setupControls('')
-      this.view.authorsDiv.setupControls({ author_id: '', name: '' },
-        a => this.setupAuthorQuery(a),
-        () => this.submitBlocker.block('authorId')
-      )
-      this.setupLink()
-      this.setupMedias()
-      this.updateMediasRow()
-    })
   }
 
   /**
-   * Setup controls for the youtube link input
+   * Song getBuildData
+   * @returns {object}
+   */
+  async getBuildData () {
+    const song = this.model.data
+    this.song = song
+
+    const authorInfo = await this.model.getAuthorNames('')
+    const files = await this.model.getFileData()
+    this.mediaNames = await this.model.getMediaNames('')
+    this.featureNames = await this.model.getFeatureNames('')
+
+    return { song, authorInfo, files }
+  }
+
+  /**
+   * Song setupEditor
+   */
+  async setupEditor () {
+    this.view.namesDiv.setupControls('')
+    this.view.authorsDiv.setupControls({ author_id: '', name: '' },
+      a => this.setupAuthorQuery(a),
+      () => this.submitBlocker.block('authorId')
+    )
+    this.setupLink()
+    this.setupMedias()
+    this.updateMediasRow()
+  }
+
+  /**
+   * Adds controls for the youtube link input
    */
   setupLink () {
     const blockVar = 'link'
@@ -237,6 +281,7 @@ class SongController extends EditorController {
       parent => {
         const featureRows = new OrderedRowsELement('feature-row', 'feature-element')
 
+        // save the featureRows variable to be read during page initialization
         if (!this.view.mediaRows.featureRows) this.view.mediaRows.featureRows = []
         this.view.mediaRows.featureRows.push(featureRows)
         featureRows.renderElement(parent)
@@ -311,8 +356,8 @@ class SongController extends EditorController {
   }
 
   /**
-   * Gathers all the user data into a single song object to be sent to the database
-   * @returns {Song}
+   * Song getUserData
+   * @returns {SongData}
    */
   getUserData () {
     // author ids are saved as data variables in inputs
@@ -326,10 +371,10 @@ class SongController extends EditorController {
   }
 
   /**
-   * Helper method thatreturns an ordered list of all the values
+   * Helper method that returns an ordered list of all the values
    * within inputs located inside an element
    *
-   * The value extract can be either the .value property or a datavariable, if isDataset is true, to which case dataProperty is the data variable name
+   * The value extracted can be either the .value property or a datavariable, if isDataset is true, to which case dataProperty is the data variable name
    * @param {HTMLElement} parent
    * @param {boolean} isDataset
    * @param {string} dataProperty
@@ -392,7 +437,6 @@ class SongController extends EditorController {
 
   /**
    * Get all the authors that have been picked by the user
-   * for the current song
    * @returns {import('./query-options.js').TakenInfo}
    */
   getAllTakenAuthors () {
@@ -462,22 +506,14 @@ class SongController extends EditorController {
 }
 
 export class Song extends EditorType {
-  constructor (songId) {
-    super()
-
-    this.model = new SongModel(songId)
-    this.view = new SongView()
-    this.controller = new SongController(this.model, this.view)
-
-    this.songId = songId
-  }
+  constructor (id) { super(id, SongModel, SongView, SongController) }
 }
 
 class MoveableRowsElement {
   /**
    * Creates the element
    *
-   * The data is used with rows and rowCallback, rows is an arbitrary data type that is handled
+   * The data is handled with rows and rowCallback, rows is an arbitrary data type that is handled
    * by a specific rowCallback that transforms it into a RowData object
    * @param {string} divClass - CSS class for the element
    * @param {*} rows
@@ -529,9 +565,9 @@ class MoveableRowsElement {
 
   /**
    * Setup the control to everything in the div
-   * @param {*} defaultValue Default value for the row data
-   * @param {function(MoveableRowsElement) : void} controlCallback Function to run after adding control to a row
-   * @param {function() : void} clickCallback Extra function to run after clicking the add button
+   * @param {*} defaultValue - Default value for the row data
+   * @param {function(MoveableRowsElement) : void} controlCallback - Function to run after adding control to a row
+   * @param {function() : void} clickCallback - Extra function to run after clicking the add button
    */
   setupControls (defaultValue, controlCallback, clickCallback) {
     this.controlCallback = controlCallback
@@ -648,7 +684,7 @@ class OrderedRowsELement {
    * @param {function(string) : Row} fetchDataFunction
    *
    * @param {function(HTMLDivElement) : void} contentFunction - A function that adds to the given div argument the element that will be displayed next to the header
-   * @param {function(OrderedRowsELement) : void} addCallback - A function to row every time a row is added (also runs when the element is created)
+   * @param {function(OrderedRowsELement) : void} addCallback - A function to call every time a row is added (also runs when the element is created)
    */
   setupAddRow (
     dataVar,
@@ -746,7 +782,7 @@ class OrderedRowsELement {
 
 /**
  * Helper function that checks if a link
- * is valid to submit to database
+ * is valid to submit to the database
  * @param {string} link
  * @returns {boolean} True if valid
  */
