@@ -18,7 +18,7 @@ class WikiDatabase {
   /**
    * Creates the tables if they don't exist
    */
-  initializeDatabase () {
+  async initializeDatabase () {
     const tables = [
       `
         songs (
@@ -91,11 +91,37 @@ class WikiDatabase {
           date TEXT,
           is_date_estimate INTEGER
         )
+      `,
+      `
+        text (
+          text_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          content TEXT
+        )
+      `,
+      `
+        lists (
+          list_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          media_id INTEGER,
+          latest_revision INTEGER
+        )
+      `,
+      `
+        list_revisions (
+          list_rev_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          text INTEGER
+        )
       `
 
     ]
 
-    tables.forEach(table => this.createTable(table))
+    for (let i = 0; i < tables.length; i++) {
+      await this.createTable(tables[i])
+    }
+
+    const lists = await this.getAll('lists')
+    if (lists.length === 0) {
+      this.runInsert('lists (media_id)', [0])
+    }
   }
 
   /**
@@ -103,8 +129,10 @@ class WikiDatabase {
    * @param {string} command
    * Must be of the format "table name (...everything that goes into creating a table)"
    */
-  createTable (command) {
-    this.db.run('CREATE TABLE IF NOT EXISTS ' + command)
+  async createTable (command) {
+    await this.runDatabaseMethod(callback => {
+      this.db.run('CREATE TABLE IF NOT EXISTS ' + command, [], callback)
+    })
   }
 
   /**
@@ -418,6 +446,19 @@ class WikiDatabase {
   }
 
   /**
+   * Updates a list
+   * @param {string} media - The media id for the list, or 0 if series list
+   * @param {string} csv - CSV content to save
+   */
+  async pushListUpdate (media, csv) {
+    const id = await this.insertBlankGetId('list_revisions')
+    this.db.run('UPDATE lists SET latest_revision = ? WHERE media_id = ?', [id, media])
+    const textId = await this.insertBlankGetId('text')
+    this.db.run('UPDATE list_revisions SET text = ? WHERE list_rev_id = ?', [textId, id])
+    this.db.run('UPDATE text SET content = ? WHERE text_id = ?', [csv, textId])
+  }
+
+  /**
    * Helper function that updates a SQL table based on position
    * (containing song_id, pos, and another column)
    * @param {string} table - Table name
@@ -586,13 +627,13 @@ class WikiDatabase {
 
   /**
    * Gets the rows for all features inside a media filtering the name by a keyword
-   * @param {string} keyword 
-   * @param {string} mediaId 
+   * @param {string} keyword
+   * @param {string} mediaId
    * @returns {Row[]}
    */
-   getFeatureInMedia = async (keyword, mediaId) => this.runDatabaseMethod(callback => {
+  getFeatureInMedia = async (keyword, mediaId) => this.runDatabaseMethod(callback => {
     this.db.all("SELECT * FROM features WHERE name LIKE '%' || ? || '%' AND media_id = ?", [keyword, mediaId], callback)
-   }) 
+  })
 
   /**
    * Get all file rows linked to a song

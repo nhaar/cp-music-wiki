@@ -237,19 +237,13 @@ class Generator {
   }
 
   /**
-   * Generate the HTML for the series list
-   * @returns {string}
-   */
-  async generateSeriesHTML () {
-    const list = await this.generateSeriesList()
-    return this.generateHTML(list)
-  }
-
-  /**
    * Update the list files
    */
   async updateLists () {
-    const seriesHTML = await this.generateSeriesHTML()
+    const list = await this.generateSeriesList()
+    const seriesHTML = await this.generateHTML(list)
+    const seriesCSV = await this.generateCSV(list)
+    this.db.pushListUpdate(0, seriesCSV)
     fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), seriesHTML)
   }
 }
