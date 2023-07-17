@@ -290,7 +290,7 @@ class SongController extends EditorController {
           'featureId',
           'feature_id',
           'name',
-          a => this.model.getFeatureNames(a),
+          a => this.model.getFeatureInMedias(a, parent.parentElement.children[0].dataset.mediaId),
           parent => {
             const rowContent = createElement({ parent, className: 'feature-content' })
             this.view.renderFeature(rowContent)

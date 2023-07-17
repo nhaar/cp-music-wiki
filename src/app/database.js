@@ -585,6 +585,16 @@ class WikiDatabase {
   }
 
   /**
+   * Gets the rows for all features inside a media filtering the name by a keyword
+   * @param {string} keyword 
+   * @param {string} mediaId 
+   * @returns {Row[]}
+   */
+   getFeatureInMedia = async (keyword, mediaId) => this.runDatabaseMethod(callback => {
+    this.db.all("SELECT * FROM features WHERE name LIKE '%' || ? || '%' AND media_id = ?", [keyword, mediaId], callback)
+   }) 
+
+  /**
    * Get all file rows linked to a song
    * @param {string} songId
    * @returns {Row[]}

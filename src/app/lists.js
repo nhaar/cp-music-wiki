@@ -27,7 +27,7 @@ class Generator {
     const authors = await this.db.getAll('authors')
     const songAuthor = await this.db.getAll('song_author')
     const authorNames = this.getIdToNameMap(authors, 'author_id')
-    const songAuthors = this.organizeSongAuthors(songAuthor)
+    const songAuthors = this.organizeBySongId(songAuthor, 'author_id')
 
     const collections = await this.db.getAll('collections')
     const collectionNames = this.getIdToNameMap(collections, 'collection_id')

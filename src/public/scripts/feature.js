@@ -35,7 +35,6 @@ class FeatureView extends EditorView {
     this.featureMedia = createElement({ parent: this.editor, tag: 'input', value: mediaName, dataset: { mediaId } })
     this.featureDate = createElement({ parent: this.editor, tag: 'input', type: 'date', value: releaseDate })
     this.featureCheck = createElement({ parent: this.editor, tag: 'input', type: 'checkbox', checked: isEstimate })
-    this.featureButton = createElement({ parent: this.editor, tag: 'button', innerHTML: 'Add feature' })
   }
 }
 

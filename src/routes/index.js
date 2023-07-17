@@ -1,6 +1,8 @@
 const express = require('express')
 const router = express.Router()
 
+const path = require('path')
+
 const apiRouter = require('./api')
 
 /**
@@ -36,7 +38,7 @@ router.get('/lists', (req, res) => {
  * Renders the series list
  */
 router.get('/series-list', (req, res) => {
-  res.status(200).render('generated/series-list.html')
+  res.status(200).sendFile(path.join(__dirname, '../views/generated/series-list.html'))
 })
 
 /**

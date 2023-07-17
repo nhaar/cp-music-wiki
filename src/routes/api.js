@@ -8,9 +8,9 @@ const path = require('path')
 const db = require('../app/database')
 const gen = require('../app/lists')
 
-router.post('/update', (req, res) => {
+router.post('/update', async (req, res) => {
   const { data, type } = req.body
-  db.update(type, data)
+  await db.update(type, data)
   gen.updateLists()
 
   res.sendStatus(200)
@@ -56,6 +56,12 @@ router.post('/get', async (req, res) => {
 router.post('/get-by-name', async (req, res) => {
   const { keyword, table } = req.body
   const rows = await db.getByKeyword(table, keyword)
+  res.status(200).send(rows)
+})
+
+router.post('/get-in-media', async (req, res) => {
+  const { keyword, mediaId } = req.body
+  const rows = await db.getFeatureInMedia(keyword, mediaId)
   res.status(200).send(rows)
 })
 
