@@ -558,8 +558,8 @@ class MoveableRowsElement {
 
     return `
       <input class="${this.inputClass}" type="text" value="${rowData.value}" ${dataset}>
-      <button class="${this.delClass}"> X </button>
-      <button class="${this.moveClass}"> M </button>
+      <button class="${this.delClass}"> DELETE </button>
+      <button class="${this.moveClass}"> MOVE </button>
     `
   }
 

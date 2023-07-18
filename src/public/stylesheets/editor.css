@@ -1,13 +1,45 @@
 :root {
-  --author-row-height: 20px;
+  --author-row-height: 30px;
   --author-input-ratio: 0.8;
   --author-row-width: 400px;
+  --cp-blue: #22a4f3;
+  --button-blue: #0058b7;
+  --hover-blue: #2a8cd8;
+  --login-blue: #2289cd;
 }
+
+* {
+  font-family: 'Burbank Big Regular';
+  font-size: 24px;
+  -webkit-text-stroke: 2px black;
+  -webkit-text-fill-color: white;
+}
+
+input {
+  font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  color: black;
+  -webkit-text-stroke: 0;
+  -webkit-text-fill-color: black;
+  height: 24px;
+}
+
 body {
+  background-color: var(--cp-blue);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+
+button { 
+  background-color: var(--button-blue);
+  border: 2px solid black;
+
+}
+
+button:hover {
+  cursor: pointer;
+  background-color: var(--hover-blue);
 }
 
 .song-editor {
@@ -16,18 +48,22 @@ body {
 
   display: grid;
   grid-template-columns: 100px 1fr;
-  grid-template-rows: repeat(2, 1fr) 20px repeat(2, 1fr);
-  grid-gap: 10px;
+  grid-template-rows: repeat(2, 1fr) 30px repeat(2, 1fr);
+  grid-gap: 5px;
+
+  background-color: black;
 }
 
 .song-editor > div {
-  border: 2px solid black;
+  background-color: var(--login-blue);
+  padding: 5px;
 }
 
 .editor-header {
   display: flex;
   justify-content: center;
   align-items: center;
+  text-align: center;
 }
 
 .authors-div, .name-div {
@@ -100,5 +136,5 @@ body {
 
 .feature-date {
   display: grid;
-  grid-template-columns: 100px 50px;
+  grid-template-columns: 200px 50px;
 }
