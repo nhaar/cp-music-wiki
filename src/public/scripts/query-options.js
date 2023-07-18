@@ -25,10 +25,12 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
   // element to have the available options
   const queryOptions = createElement({ parent: input.parentElement, className: 'query-options' })
 
-  queryOptions.style.top = input.offsetHeight + input.offsetTop + 'px'
-  queryOptions.style.width = input.offsetWidth + 'px'
-  queryOptions.style.left = input.offsetLeft + 'px'
-
+  const setPosition = () => {
+    queryOptions.style.top = input.offsetHeight + input.offsetTop + 'px'
+    queryOptions.style.width = input.offsetWidth + 'px'
+    queryOptions.style.left = input.offsetLeft + 'px'  
+  }
+  
   // flag for hovering options or not
   const listenerRel = { mouseover: '1', mouseout: '' }
   for (const event in listenerRel) {
@@ -37,6 +39,8 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
 
   // function too update options each time
   const updateQuery = () => {
+    setPosition()
+
     fetchDataFunction(input.value).then(data => {
       // fetching all taken data
       const { hasUntakenId, takenIds } = checkTakenFunction(input)
