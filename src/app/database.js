@@ -189,7 +189,6 @@ class WikiDatabase {
 
   async getPropertyFromTable (table, property, column, value) {
     const row = await this.getFromTable(table, column, value)
-    console.log(table, property, column, value)
     return row[property]
   }
 

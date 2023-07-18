@@ -84,7 +84,6 @@ class FileController extends EditorController {
   async getBuildData () {
     const file = this.model.data
     const songName = await this.model.getSongName()
-    console.log(songName)
     const collectionName = await this.model.getCollectionName()
 
     return { file, songName, collectionName }

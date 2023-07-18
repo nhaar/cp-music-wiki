@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 const db = require('./database')
-const { youtubify } = require('./utils')
+const { youtubify, deepcopy } = require('./utils')
 
 class Generator {
   /**
@@ -17,8 +17,11 @@ class Generator {
    * Generates a two-dimensional array representing the list
    * @returns
    */
-  async generateSeriesList () {
-    const rows = []
+  async generateLists (medias) {
+    const mediaRows = {}
+    medias.forEach(media => {
+      mediaRows[media] = []
+    })
 
     const songs = await this.db.getAll('songs')
     const names = await this.db.getAll('song_names')
@@ -35,11 +38,12 @@ class Generator {
     const files = await this.db.getAll('files')
     const songFiles = this.organizeBySongId(files)
 
-    const medias = await this.db.getAll('medias')
-    const mediaNames = this.getIdToNameMap(medias, 'media_id')
+    const mediaData = await this.db.getAll('medias')
+    const mediaNames = this.getIdToNameMap(mediaData, 'media_id')
     const songFeature = await this.db.getAll('song_feature')
     const songFeatureBySong = this.organizeBySongId(songFeature, 'media_id')
     const features = await this.db.getAll('features')
+    const featureNames = this.getIdToNameMap(features, 'feature_id')
     const featureInfo = this.getIdToNameMap(features, 'feature_id', true)
     const featureBySong = this.organizeBySongId(songFeature)
 
@@ -76,10 +80,27 @@ class Generator {
       alternateArray.splice(0, 1)
       const altNames = this.arrayToCommaSeparated(alternateArray)
 
-      // medias
-      let medias = [...new Set(songFeatureBySong[songId])]
-      medias = medias.map(id => mediaNames[id])
-      medias = this.arrayToCommaSeparated(medias)
+      // medias AND related to
+      let mediaAndRelatedTo = {}
+
+      const featuresContained = [...new Set(songFeatureBySong[songId])]
+      medias.forEach(media => {
+        if (media === 0) {
+          let mediasRelated = deepcopy(featuresContained)
+          mediasRelated = mediasRelated.map(id => mediaNames[id])
+          mediasRelated = this.arrayToCommaSeparated(mediasRelated)
+
+          mediaAndRelatedTo[0] = mediasRelated
+        } else {
+          const featuresInMedia = []
+          featuresContained.forEach(feature => {
+            if (mediaNames[feature] === Number(media)) featuresInMedia.push(featureNames[feature])
+          })
+          mediaAndRelatedTo[media] = this.arrayToCommaSeparated(featuresInMedia)
+        }
+      })
+
+
 
       // earliest date
       const features = featureBySong[songId]
@@ -97,18 +118,24 @@ class Generator {
 
       const earliestDate = features[0].is_date_estimate ? '?' : features[0].date
 
-      rows.push([name, authors, link, sources, altNames, medias, earliestDate, Date.parse(features[0].date)])
+      medias.forEach(media => {
+        mediaRows[media].push([name, authors, link, sources, altNames, mediaAndRelatedTo[media], earliestDate, Date.parse(features[0].date)])
+      })
     })
 
-    rows.sort((a, b) => a[7] - b[7])
-    const finalRows = []
-    rows.forEach((row, i) => {
-      const dateless = row.splice(0, 7)
-      dateless.splice(2, 0, i + 1)
-      finalRows.push(dateless)
+    medias.forEach(media => {
+      const rows = mediaRows[media]
+      rows.sort((a, b) => a[7] - b[7])
+      const finalRows = []
+      rows.forEach((row, i) => {
+        const dateless = row.splice(0, 7)
+        dateless.splice(2, 0, i + 1)
+        finalRows.push(dateless)
+      })
+      mediaRows[media] = finalRows
     })
-
-    return finalRows
+    
+    return mediaRows
   }
 
   /**
@@ -240,9 +267,9 @@ class Generator {
    * Update the list files
    */
   async updateLists () {
-    const list = await this.generateSeriesList()
-    const seriesHTML = await this.generateHTML(list)
-    const seriesCSV = await this.generateCSV(list)
+    const list = await this.generateLists([0, 1])
+    const seriesHTML = await this.generateHTML(list[0])
+    const seriesCSV = await this.generateCSV(list[0])
     this.db.pushListUpdate(0, seriesCSV)
     fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), seriesHTML)
   }

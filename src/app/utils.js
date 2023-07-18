@@ -19,4 +19,8 @@ function youtubify (videoCode) {
   return 'youtu.be/' + videoCode
 }
 
-module.exports = { compareObjects, youtubify }
+function deepcopy (object) {
+  return JSON.parse(JSON.stringify(object))
+}
+
+module.exports = { compareObjects, youtubify, deepcopy }
