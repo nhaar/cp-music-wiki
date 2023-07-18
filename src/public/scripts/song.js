@@ -65,7 +65,10 @@ class SongModel extends EditorModel {
 }
 
 class SongView extends EditorView {
-  constructor () { super('song-editor') }
+  constructor () {
+    super('song-editor')
+    this.expandClass = 'expand-button'
+  }
 
   /**
    * Song buildEditor
@@ -78,6 +81,9 @@ class SongView extends EditorView {
     const { song, authorInfo, files } = data
 
     if (song) {
+      // set up template rows
+      this.editor.style.gridTemplateRows = '1fr 1fr 50px 1fr 1fr '
+
       const { names, authors, link } = song
 
       // filter and order author names
@@ -101,57 +107,73 @@ class SongView extends EditorView {
     }
   }
 
+  renderRow(name, callback) {
+    this.renderHeader(name)
+
+
+    const wrapper = createElement({ parent: this.editor })
+    createElement({ parent: wrapper, tag: 'button', innerHTML: 'expand', className: this.expandClass })
+    callback(wrapper)
+  }
+
+
   /**
    * Renders the element with the song names
    */
   renderNames () {
-    this.namesDiv = new MoveableRowsElement(
-      'name-div',
-      this.names,
-      row => this.nameRowCallback(row)
-    )
+    this.renderRow('Names', wrapper => {
+      this.namesDiv = new MoveableRowsElement(
+        'name-div',
+        this.names,
+        row => this.nameRowCallback(row)
+      )
 
-    this.renderHeader('Names')
-    this.namesDiv.renderElement(this.editor)
+      this.namesDiv.renderElement(wrapper)
+    })
   }
 
   /**
    * Renders the element with the song authors
    */
   renderAuthors () {
-    this.authorsDiv = new MoveableRowsElement(
-      'authors-div',
-      this.authors,
-      row => this.authorRowCallback(row)
-    )
-
-    this.renderHeader('Authors')
-    this.authorsDiv.renderElement(this.editor)
-  }
+    this.renderRow('Authors', wrapper => {
+      this.authorsDiv = new MoveableRowsElement(
+        'authors-div',
+        this.authors,
+        row => this.authorRowCallback(row)
+      )
+  
+      this.authorsDiv.renderElement(wrapper)
+    
+    })
+    }
 
   /**
    * Renders the element with the youtube link input
    */
   renderLink () {
-    this.renderHeader('Link')
-    this.linkInput = createElement({ parent: this.editor, tag: 'input', type: 'text', value: this.link })
+    this.renderRow('Link', wrapper => {
+      this.linkInput = createElement({ parent: wrapper, tag: 'input', type: 'text', value: this.link })
+    })
   }
 
   /**
    * Renders the element with the HQ source checkboxes
    */
   renderFiles () {
-    this.renderHeader('HQ Sources')
-    this.filesDiv = createElement({ parent: this.editor, className: 'hq-sources' })
+    this.renderRow('HQ Sources', wrapper => {
 
-    this.files.forEach(file => {
-      const checkProperty = file.is_hq ? 'checked' : ''
-      const innerHTML = `
-        <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
-        <div>${file.original_name}</div>
-        <div>${generateAudio(file)}</div>
-      `
-      createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
+      this.filesDiv = createElement({ parent: wrapper, className: 'hq-sources' })
+
+      this.files.forEach(file => {
+        const checkProperty = file.is_hq ? 'checked' : ''
+        const innerHTML = `
+          <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
+          <div>${file.original_name}</div>
+          <div>${generateAudio(file)}</div>
+        `
+        createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
+      })
     })
   }
 
@@ -159,9 +181,11 @@ class SongView extends EditorView {
    * Renders the media editor
    */
   renderMedia () {
-    this.renderHeader('Medias')
-    this.mediaRows = new OrderedRowsELement('media-rows', 'media-element')
-    this.mediaRows.renderElement(this.editor)
+    this.renderRow('Medias', wrapper => {
+
+      this.mediaRows = new OrderedRowsELement('media-rows', 'media-element')
+      this.mediaRows.renderElement(wrapper)
+    })
   }
 
   /**
@@ -253,6 +277,56 @@ class SongController extends EditorController {
     this.setupLink()
     this.setupMedias()
     this.updateMediasRow()
+    this.setupExpand()
+  }
+
+  setupExpand() {
+    const expandButtons = selectElements(this.view.expandClass)
+    const currentStyle = this.view.editor.style.gridTemplateRows
+    const rowStyles = currentStyle.split(' ')
+    console.log(rowStyles)
+    
+    expandButtons.forEach((button, i) => {
+      const targetElement = button.parentElement.children[1]
+      const hide = () => {
+        this.swapTemplateRow(i + 1, '50px')
+        targetElement.classList.add('hidden-btn')
+      }
+      hide()
+      button.addEventListener('click', () => {
+        if (targetElement.classList.contains('hidden-btn')) {
+          targetElement.classList.remove('hidden-btn')
+          this.swapTemplateRow(i + 1, rowStyles[i])
+          button.classList.add('hidden-btn')
+  
+        }
+        else {
+          hide()
+        }
+      })
+  
+    })
+  }
+
+  swapTemplateRow(number, replacement) {
+    let currentNumber = 1
+    let foundStart = false
+    let start
+    let end
+    const currentStyle = this.view.editor.style.gridTemplateRows
+    console.log(currentStyle)
+    for (let i = 0; i < currentStyle.length; i++) {
+      const char = currentStyle[i]
+      if (char === ' ') currentNumber++
+      if (currentNumber === number && !foundStart) {foundStart = true; start = i}
+      if (currentNumber !== number && foundStart) {end = i; break}
+      if (i === currentStyle.length - 1 && foundStart) {end = currentStyle.length}
+    }
+    console.log(start, end)
+    const targetStyle = currentStyle.slice(0, start) + ' ' + replacement + currentStyle.slice(end, currentStyle.length)
+    this.view.editor.style.gridTemplateRows = targetStyle
+    console.log(targetStyle)
+    // this.editor.style.gridTemplateRows = '30px 1fr 30px 1fr 1fr'
   }
 
   /**

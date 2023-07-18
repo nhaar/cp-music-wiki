@@ -44,11 +44,11 @@ button:hover {
 
 .song-editor {
   width: 95vw;
-  height: 95vh;
+  max-height: 95vh;
 
   display: grid;
   grid-template-columns: 100px 1fr;
-  grid-template-rows: repeat(2, 1fr) 30px repeat(2, 1fr);
+  /* grid-template-rows: repeat(2, 1fr) 30px repeat(2, 1fr); */
   grid-gap: 5px;
 
   background-color: black;
@@ -137,4 +137,8 @@ button:hover {
 .feature-date {
   display: grid;
   grid-template-columns: 200px 50px;
+}
+
+.hidden-btn {
+  display: none;
 }
