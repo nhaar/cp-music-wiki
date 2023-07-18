@@ -272,7 +272,13 @@ class SongController extends EditorController {
     this.view.namesDiv.setupControls('')
     this.view.authorsDiv.setupControls({ author_id: '', name: '' },
       a => this.setupAuthorQuery(a),
-      () => this.submitBlocker.block('authorId')
+      () => this.submitBlocker.block('authorId'),
+      obj => {
+        // it ends up becoming button for some reason
+        if (selectElement(this.submitBlocker.blockedClass, obj.div).tagName === 'BUTTON') {
+          this.submitBlocker.unblock('authorId')
+        }
+      }
     )
     this.setupLink()
     this.setupMedias()
@@ -284,7 +290,6 @@ class SongController extends EditorController {
     const expandButtons = selectElements(this.view.expandClass)
     const currentStyle = this.view.editor.style.gridTemplateRows
     const rowStyles = currentStyle.split(' ')
-    console.log(rowStyles)
     
     expandButtons.forEach((button, i) => {
       const targetElement = button.parentElement.children[1]
@@ -314,7 +319,6 @@ class SongController extends EditorController {
     let start
     let end
     const currentStyle = this.view.editor.style.gridTemplateRows
-    console.log(currentStyle)
     for (let i = 0; i < currentStyle.length; i++) {
       const char = currentStyle[i]
       if (char === ' ') currentNumber++
@@ -322,11 +326,8 @@ class SongController extends EditorController {
       if (currentNumber !== number && foundStart) {end = i; break}
       if (i === currentStyle.length - 1 && foundStart) {end = currentStyle.length}
     }
-    console.log(start, end)
     const targetStyle = currentStyle.slice(0, start) + ' ' + replacement + currentStyle.slice(end, currentStyle.length)
     this.view.editor.style.gridTemplateRows = targetStyle
-    console.log(targetStyle)
-    // this.editor.style.gridTemplateRows = '30px 1fr 30px 1fr 1fr'
   }
 
   /**
@@ -374,8 +375,7 @@ class SongController extends EditorController {
         )
 
         return featureRows.div
-      },
-      mediaRows => this.addRowCallback(mediaRows, 'mediaBlock')
+      }
     )
   }
 
@@ -422,10 +422,11 @@ class SongController extends EditorController {
    */
   addRowCallback (orderedRows, variable) {
     const headers = orderedRows.div.querySelectorAll(`.${orderedRows.headerClass}.${orderedRows.identifierClass}`)
+    console.log(orderedRows.div)
 
     this.submitBlocker.ternaryBlock(
       headers.length === 0,
-      variable, orderedRows.div
+      variable, orderedRows.div.children[0].children[0]
     )
   }
 
@@ -643,9 +644,10 @@ class MoveableRowsElement {
    * @param {function(MoveableRowsElement) : void} controlCallback - Function to run after adding control to a row
    * @param {function() : void} clickCallback - Extra function to run after clicking the add button
    */
-  setupControls (defaultValue, controlCallback, clickCallback) {
+  setupControls (defaultValue, controlCallback, clickCallback, deleteCallback) {
     this.controlCallback = controlCallback
     this.clickCallback = clickCallback
+    this.deleteCallback = deleteCallback
     this.defaultValue = defaultValue
     this.setupRows()
     this.setupAddButton()
@@ -704,6 +706,7 @@ class MoveableRowsElement {
     // delete row
     selectElement(this.delClass, row).addEventListener('click', () => {
       this.rowsDiv.removeChild(row)
+      if (this.deleteCallback) this.deleteCallback(this)   
     })
 
     // start dragging

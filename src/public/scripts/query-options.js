@@ -25,6 +25,11 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
   // element to have the available options
   const queryOptions = createElement({ parent: input.parentElement, className: 'query-options' })
 
+  // default block when created if no variable
+  if (blocker) {
+    if (!input.value) blocker.blockElement(dataVar, input)
+  }
+
   const setPosition = () => {
     queryOptions.style.top = input.offsetHeight + input.offsetTop + 'px'
     queryOptions.style.width = input.offsetWidth + 'px'

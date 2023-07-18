@@ -267,9 +267,9 @@ class Generator {
    * Update the list files
    */
   async updateLists () {
-    const list = await this.generateLists([0, 1])
-    const seriesHTML = await this.generateHTML(list[0])
-    fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), seriesHTML)
+    // const list = await this.generateLists([0, 1])
+    // const seriesHTML = await this.generateHTML(list[0])
+    // fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), seriesHTML)
   }
 }
 
