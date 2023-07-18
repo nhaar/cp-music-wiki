@@ -269,8 +269,6 @@ class Generator {
   async updateLists () {
     const list = await this.generateLists([0, 1])
     const seriesHTML = await this.generateHTML(list[0])
-    const seriesCSV = await this.generateCSV(list[0])
-    this.db.pushListUpdate(0, seriesCSV)
     fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), seriesHTML)
   }
 }

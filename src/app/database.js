@@ -91,36 +91,12 @@ class WikiDatabase {
           date TEXT,
           is_date_estimate INTEGER
         )
-      `,
-      `
-        text (
-          text_id INTEGER PRIMARY KEY AUTOINCREMENT,
-          content TEXT
-        )
-      `,
-      `
-        lists (
-          list_id INTEGER PRIMARY KEY AUTOINCREMENT,
-          media_id INTEGER,
-          latest_revision INTEGER
-        )
-      `,
-      `
-        list_revisions (
-          list_rev_id INTEGER PRIMARY KEY AUTOINCREMENT,
-          text INTEGER
-        )
       `
 
     ]
 
     for (let i = 0; i < tables.length; i++) {
-      await this.createTable(tables[i])
-    }
-
-    const lists = await this.getAll('lists')
-    if (lists.length === 0) {
-      this.runInsert('lists (media_id)', [0])
+      this.createTable(tables[i])
     }
   }
 
@@ -442,19 +418,6 @@ class WikiDatabase {
       const { featureId, name, mediaId, date, isEstimate } = data
       this.db.run('UPDATE features SET name = ?, media_id = ?, release_date = ?, is_date_estimate = ? WHERE feature_id = ?', [name, mediaId, date, isEstimate, featureId])
     })
-  }
-
-  /**
-   * Updates a list
-   * @param {string} media - The media id for the list, or 0 if series list
-   * @param {string} csv - CSV content to save
-   */
-  async pushListUpdate (media, csv) {
-    const id = await this.insertBlankGetId('list_revisions')
-    this.db.run('UPDATE lists SET latest_revision = ? WHERE media_id = ?', [id, media])
-    const textId = await this.insertBlankGetId('text')
-    this.db.run('UPDATE list_revisions SET text = ? WHERE list_rev_id = ?', [textId, id])
-    this.db.run('UPDATE text SET content = ? WHERE text_id = ?', [csv, textId])
   }
 
   /**
