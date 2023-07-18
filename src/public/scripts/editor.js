@@ -5,6 +5,7 @@ import { Collection } from './collection.js'
 import { File } from './file.js'
 import { Media } from './media.js'
 import { Feature } from './feature.js'
+import { Reference } from './reference.js'
 
 class View {
   constructor () {
@@ -38,7 +39,8 @@ class Controller {
       2: Collection,
       3: File,
       4: Media,
-      5: Feature
+      5: Feature,
+      6: Reference
     }
 
     const Class = typeRelation[type]

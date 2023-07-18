@@ -79,6 +79,7 @@ export class EditorModel {
   getAuthorNames = async keyword => this.getByName(keyword, 'authors')
   getFeatureNames = async keyword => this.getByName(keyword, 'features')
   getFileNames = async keyword => this.getByName(keyword, 'files')
+  getReferenceNames = async keyword => this.getByName(keyword, 'wiki_references')
   getFeatureInMedias = async (keyword, mediaId) => postAndGetJSON('api/get-in-media', { keyword, mediaId })
 }
 

@@ -66,6 +66,11 @@ class Controller {
           fetchDataFunction = a => this.model.getFeatureNames(a)
           break
         }
+        case '6': {
+          databaseVar = 'reference_id'
+          databaseValue = 'name'
+          fetchDataFunction = a => this.model.getReferenceNames(a)
+        }
       }
 
       // reset query

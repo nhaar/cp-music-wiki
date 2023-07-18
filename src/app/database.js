@@ -111,8 +111,15 @@ class WikiDatabase {
           date TEXT,
           is_date_estimate INTEGER
         )
+      `,
       `
-
+        wiki_references (
+          reference_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          description TEXT,
+          link TEXT
+        )
+      `
     ]
 
     for (let i = 0; i < tables.length; i++) {
@@ -301,13 +308,30 @@ class WikiDatabase {
     }
   }
 
+  /**
+   * Get a reference's data from the database
+   * @param {string} referenceId
+   * @returns {import('../public/scripts/reference').ReferenceData}
+   */
+  async getReferenceById (referenceId) {
+    const row = await this.getFromTable('wiki_references', 'reference_id', referenceId)
+
+    return {
+      referenceId,
+      name: row.name,
+      link: row.link,
+      description: row.description
+    }
+  }
+
   async update (type, data) {
     const relation = {
       song: a => this.updateSong(a),
       author: a => this.updateAuthor(a),
       collection: a => this.updateCollection(a),
       media: a => this.updateMedia(a),
-      feature: a => this.updateFeature(a)
+      feature: a => this.updateFeature(a),
+      reference: a => this.updateReference(a)
     }
 
     const response = await relation[type](data)
@@ -457,6 +481,18 @@ class WikiDatabase {
     await this.updateBase(data, 'features', 'featureId', async data => {
       const { featureId, name, mediaId, date, isEstimate } = data
       this.db.run('UPDATE features SET name = ?, media_id = ?, release_date = ?, is_date_estimate = ? WHERE feature_id = ?', [name, mediaId, date, isEstimate, featureId])
+    })
+  }
+
+  /**
+   * Update a reference in the database
+   * @param {import('../public/scripts/reference').ReferenceData} data
+   */
+  async updateReference (data) {
+    await this.updateBase(data, 'wiki_references', 'referenceId', async data => {
+      const { referenceId, name, link, description } = data
+      console.log(data)
+      this.db.run('UPDATE wiki_references SET name = ?, link = ?, description = ? WHERE reference_id = ?', [name, link, description, referenceId])
     })
   }
 
@@ -646,7 +682,8 @@ class WikiDatabase {
       collection: async a => await this.getCollectionById(a),
       file: async a => await this.getFileById(a),
       media: async a => await this.getMediaById(a),
-      feature: async a => await this.getFeatureById(a)
+      feature: async a => await this.getFeatureById(a),
+      reference: async a => await this.getReferenceById(a)
     }
 
     const response = await relation[type](id)
