@@ -33,9 +33,9 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
   const setPosition = () => {
     queryOptions.style.top = input.offsetHeight + input.offsetTop + 'px'
     queryOptions.style.width = input.offsetWidth + 'px'
-    queryOptions.style.left = input.offsetLeft + 'px'  
+    queryOptions.style.left = input.offsetLeft + 'px'
   }
-  
+
   // flag for hovering options or not
   const listenerRel = { mouseover: '1', mouseout: '' }
   for (const event in listenerRel) {

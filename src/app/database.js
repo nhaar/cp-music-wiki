@@ -42,6 +42,26 @@ class WikiDatabase {
         )
       `,
       `
+        song_localization_names (
+          song_id INTEGER,
+          pos INTEGER,
+          lang TEXT,
+          name_text TEXT,
+          translation_notes TEXT,
+          PRIMARY KEY (song_id, pos, lang)
+          FOREIGN KEY (song_id) REFERENCES songs(song_id)
+        )
+      `,
+      `
+        unnoficial_names (
+          song_id INTEGER,
+          pos INTEGER,
+          name_text TEXT,
+          PRIMARY KEY (song_id, pos)
+          FOREIGN KEY (song_id) REFERENCES songs(song_id)
+        )
+      `,
+      `
         song_author (
           song_id INTEGER,
           author_id INTEGER,
@@ -212,6 +232,14 @@ class WikiDatabase {
     const row = await this.getSong('song_id', songId)
     const authors = await deconstructRows(() => this.getSongAuthors(songId), 'author_id')
     const names = await deconstructRows(() => this.getSongNames(songId), 'name_text')
+    const codes = ['pt', 'fr', 'es', 'de', 'ru']
+    const codeNames = {}
+    for (let i = 0; i < codes.length; i++) {
+      const code = codes[i]
+      codeNames[code + 'Names'] = await this.deconstructLanguageRows(songId, code)
+    }
+    const unNames = await deconstructRows(() => this.getUnnoficialNames(songId), 'name_text')
+
     const link = row.link ? youtubify(row.link) : ''
 
     const files = {}
@@ -224,7 +252,7 @@ class WikiDatabase {
 
     const medias = await this.getSongMedias(songId)
 
-    const song = { names, authors, link, files, medias }
+    const song = Object.assign({ names }, codeNames, { unNames, authors, link, files, medias })
     return song
   }
 
@@ -300,7 +328,7 @@ class WikiDatabase {
    */
   async updateSong (data) {
     await this.updateBase(data, 'songs', 'songId', async data => {
-      const { songId, names, link, files, medias } = data
+      const { songId, names, unNames, link, files, medias } = data
       const authors = data.authors.map(n => Number(n))
 
       // authors
@@ -313,6 +341,18 @@ class WikiDatabase {
       this.updatePositionalTable('song_names', 'name_text', songId, names, async songId => {
         const oldData = await this.getSongNames(songId)
         return oldData
+      })
+
+      // unnoficial names
+      this.updatePositionalTable('unnoficial_names', 'name_text', songId, unNames, async songId => {
+        const oldData = await this.getUnnoficialNames(songId)
+        return oldData
+      })
+
+      // localization names
+      const codes = ['pt', 'fr', 'es', 'de', 'ru']
+      codes.forEach(code => {
+        this.updateLocalizationTable(code, songId, data[code + 'Names'])
       })
 
       // link
@@ -435,20 +475,65 @@ class WikiDatabase {
    * paralel to newData but before changes
    */
   async updatePositionalTable (table, dataColumn, songId, newData, getRowsFunction) {
+    await this.updatePositionalTableBase(table, dataColumn, undefined, undefined, songId, newData, getRowsFunction)
+  }
+
+  /**
+   * Helper function to update all the positional data for a song
+   * in a single language inside the localization table
+   * @param {string} code - Language code
+   * @param {string} songId - Song id
+   * @param {string[]} newData - Array of names in order to be updated
+   */
+  async updateLocalizationTable (code, songId, newData) {
+    await this.updatePositionalTableBase('song_localization_names', 'name_text', 'lang', code, songId, newData, async () => await this.runSelectMethod(callback => {
+      this.db.all('SELECT * FROM song_localization_names WHERE song_id = ? AND lang = ?', [songId, code], callback)
+    }))
+  }
+
+  /**
+   * Base function for updatePositionalTable and updateLocalizationTable
+   *
+   * It does mostly the same for both but in the localization there is an extra
+   * column to be checked for
+   * @param {string} table
+   * @param {string} dataColumn
+   * @param {string | undefined} extraColumn
+   * @param {*} extraValue
+   * @param {string} songId
+   * @param {object} newData
+   * @param {function(number) : *[]} getRowsFunction
+   */
+  async updatePositionalTableBase (table, dataColumn, extraColumn, extraValue, songId, newData, getRowsFunction) {
     const oldData = await getRowsFunction(songId)
+    const extraCommand = extraColumn
+      ? ` AND ${extraColumn} = ?`
+      : ''
     if (oldData.length < newData.length) {
       for (let i = oldData.length; i < newData.length; i++) {
-        this.runInsert(`${table} (song_id, pos, ${dataColumn})`, [songId, i + 1, newData[i]])
+        let command = `${table} (song_id, pos, ${dataColumn}`
+        const values = [songId, i + 1, newData[i]]
+        if (extraColumn) {
+          command += `, ${extraColumn})`
+          values.push(extraValue)
+        } else command += ')'
+        this.runInsert(command, values)
       }
     } else if (oldData.length > newData.length) {
       for (let i = newData.length; i < oldData.length; i++) {
-        this.db.run(`DELETE FROM ${table} WHERE song_id = ? AND pos = ?`, [songId, i + 1])
+        const values = [songId, i + 1]
+        if (extraColumn) values.push(extraValue)
+
+        console.log(extraCommand)
+        this.db.run(`DELETE FROM ${table} WHERE song_id = ? AND pos = ? ${extraCommand}`, values)
       }
     }
 
     for (let i = 0; i < newData.length && i < oldData.length; i++) {
       if (oldData[i][dataColumn] !== newData[i]) {
-        this.db.run(`UPDATE ${table} SET ${dataColumn} = ? WHERE song_id = ? AND pos = ?`, [newData[i], songId, i + 1])
+        const values = [newData[i], songId, i + 1]
+        if (extraColumn) values.push(extraValue)
+        this.db.run(`UPDATE ${table} SET ${dataColumn} = ? WHERE song_id = ? AND pos = ?` + extraCommand, values)
       }
     }
   }
@@ -485,6 +570,13 @@ class WikiDatabase {
     const names = await this.getSongPositionalValues(songId, 'song_names')
     return names
   }
+
+  /**
+   * Get all unnoficial names from a song ordered
+   * @param {string} songId
+   * @returns {Row[]} All the unnoficial rows for a song ordered
+   */
+  getUnnoficialNames = async songId => await this.getSongPositionalValues(songId, 'unnoficial_names')
 
   /**
    * Gets the medias object for a song
@@ -608,6 +700,17 @@ class WikiDatabase {
     })
     return rows
   }
+
+  /**
+   * Deconstruct the relational tables to get the array of all
+   * names for a given language and for a given song
+   * @param {string} songId
+   * @param {string} code - Language code
+   * @returns {string[]} - All names ordered
+   */
+  deconstructLanguageRows = async (songId, code) => deconstructRows(async () => await this.runSelectMethod(callback => {
+    this.db.all('SELECT * FROM song_localization_names WHERE lang = ? AND song_id = ?', [code, songId], callback)
+  }), 'name_text')
 
   /**
    * Runs an asynchronous SQL method automatically handling resolving and rejecting

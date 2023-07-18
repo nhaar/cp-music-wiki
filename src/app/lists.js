@@ -1,5 +1,5 @@
-const fs = require('fs')
-const path = require('path')
+// const fs = require('fs')
+// const path = require('path')
 
 const db = require('./database')
 const { youtubify, deepcopy } = require('./utils')
@@ -81,7 +81,7 @@ class Generator {
       const altNames = this.arrayToCommaSeparated(alternateArray)
 
       // medias AND related to
-      let mediaAndRelatedTo = {}
+      const mediaAndRelatedTo = {}
 
       const featuresContained = [...new Set(songFeatureBySong[songId])]
       medias.forEach(media => {
@@ -99,8 +99,6 @@ class Generator {
           mediaAndRelatedTo[media] = this.arrayToCommaSeparated(featuresInMedia)
         }
       })
-
-
 
       // earliest date
       const features = featureBySong[songId]
@@ -134,7 +132,7 @@ class Generator {
       })
       mediaRows[media] = finalRows
     })
-    
+
     return mediaRows
   }
 

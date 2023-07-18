@@ -9,6 +9,12 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
  * @typedef {object} SongData
  * @property {string} songId
  * @property {string[]} names
+ * @property {string[]} ptNames
+ * @property {string[]} frNames
+ * @property {string[]} esNames
+ * @property {string[]} deNames
+ * @property {string[]} ruNames
+ * @property {string[]} unNames
  * @property {string[]} authors
  * @property {Files} files
  * @property {Medias}
@@ -68,6 +74,7 @@ class SongView extends EditorView {
   constructor () {
     super('song-editor')
     this.expandClass = 'expand-button'
+    this.nameDivs = {}
   }
 
   /**
@@ -82,7 +89,11 @@ class SongView extends EditorView {
 
     if (song) {
       // set up template rows
-      this.editor.style.gridTemplateRows = '1fr 1fr 50px 1fr 1fr '
+      let gridTemplateRows = ''
+      for (let i = 0; i < 8; i++) gridTemplateRows += '1fr '
+      gridTemplateRows += '50px '
+      for (let i = 0; i < 2; i++) gridTemplateRows += '1fr '
+      this.editor.style.gridTemplateRows = gridTemplateRows
 
       const { names, authors, link } = song
 
@@ -94,10 +105,22 @@ class SongView extends EditorView {
         }
       })
 
-      Object.assign(this, { names, authors, link, files })
+      Object.assign(this, { names, authors, link, files, song })
+
+      const nameHeaderCodes = {
+        en: 'Names',
+        pt: 'Portuguese Names',
+        fr: 'French Names',
+        es: 'Spanish Names',
+        de: 'German Names',
+        ru: 'Russian Names',
+        un: 'Unofficial Names'
+      }
 
       // draw editor elements
-      this.renderNames()
+      for (const code in nameHeaderCodes) {
+        this.renderNameDiv(nameHeaderCodes[code], code)
+      }
       this.renderAuthors()
       this.renderLink()
       this.renderFiles()
@@ -107,28 +130,29 @@ class SongView extends EditorView {
     }
   }
 
-  renderRow(name, callback) {
+  renderRow (name, callback) {
     this.renderHeader(name)
-
 
     const wrapper = createElement({ parent: this.editor })
     createElement({ parent: wrapper, tag: 'button', innerHTML: 'expand', className: this.expandClass })
     callback(wrapper)
   }
 
-
   /**
-   * Renders the element with the song names
+   * Renders the moveable rows for the names wfor a particular code
+   * @param {string} header - Name of the header for the row
+   * @param {string} code - A language code like en or pt
    */
-  renderNames () {
-    this.renderRow('Names', wrapper => {
-      this.namesDiv = new MoveableRowsElement(
+  renderNameDiv (header, code) {
+    const targetNames = code === 'en' ? 'names' : code + 'Names'
+    this.renderRow(header, wrapper => {
+      this.nameDivs[code] = new MoveableRowsElement(
         'name-div',
-        this.names,
+        this.song[targetNames],
         row => this.nameRowCallback(row)
       )
 
-      this.namesDiv.renderElement(wrapper)
+      this.nameDivs[code].renderElement(wrapper)
     })
   }
 
@@ -142,11 +166,10 @@ class SongView extends EditorView {
         this.authors,
         row => this.authorRowCallback(row)
       )
-  
+
       this.authorsDiv.renderElement(wrapper)
-    
     })
-    }
+  }
 
   /**
    * Renders the element with the youtube link input
@@ -162,7 +185,6 @@ class SongView extends EditorView {
    */
   renderFiles () {
     this.renderRow('HQ Sources', wrapper => {
-
       this.filesDiv = createElement({ parent: wrapper, className: 'hq-sources' })
 
       this.files.forEach(file => {
@@ -182,7 +204,6 @@ class SongView extends EditorView {
    */
   renderMedia () {
     this.renderRow('Medias', wrapper => {
-
       this.mediaRows = new OrderedRowsELement('media-rows', 'media-element')
       this.mediaRows.renderElement(wrapper)
     })
@@ -269,7 +290,10 @@ class SongController extends EditorController {
    * Song setupEditor
    */
   async setupEditor () {
-    this.view.namesDiv.setupControls('')
+    // setting up name rows
+    for (const code in this.view.nameDivs) {
+      this.view.nameDivs[code].setupControls('')
+    }
     this.view.authorsDiv.setupControls({ author_id: '', name: '' },
       a => this.setupAuthorQuery(a),
       () => this.submitBlocker.block('authorId'),
@@ -286,11 +310,11 @@ class SongController extends EditorController {
     this.setupExpand()
   }
 
-  setupExpand() {
+  setupExpand () {
     const expandButtons = selectElements(this.view.expandClass)
     const currentStyle = this.view.editor.style.gridTemplateRows
     const rowStyles = currentStyle.split(' ')
-    
+
     expandButtons.forEach((button, i) => {
       const targetElement = button.parentElement.children[1]
       const hide = () => {
@@ -303,17 +327,14 @@ class SongController extends EditorController {
           targetElement.classList.remove('hidden-btn')
           this.swapTemplateRow(i + 1, rowStyles[i])
           button.classList.add('hidden-btn')
-  
-        }
-        else {
+        } else {
           hide()
         }
       })
-  
     })
   }
 
-  swapTemplateRow(number, replacement) {
+  swapTemplateRow (number, replacement) {
     let currentNumber = 1
     let foundStart = false
     let start
@@ -322,9 +343,9 @@ class SongController extends EditorController {
     for (let i = 0; i < currentStyle.length; i++) {
       const char = currentStyle[i]
       if (char === ' ') currentNumber++
-      if (currentNumber === number && !foundStart) {foundStart = true; start = i}
-      if (currentNumber !== number && foundStart) {end = i; break}
-      if (i === currentStyle.length - 1 && foundStart) {end = currentStyle.length}
+      if (currentNumber === number && !foundStart) { foundStart = true; start = i }
+      if (currentNumber !== number && foundStart) { end = i; break }
+      if (i === currentStyle.length - 1 && foundStart) { end = currentStyle.length }
     }
     const targetStyle = currentStyle.slice(0, start) + ' ' + replacement + currentStyle.slice(end, currentStyle.length)
     this.view.editor.style.gridTemplateRows = targetStyle
@@ -436,13 +457,22 @@ class SongController extends EditorController {
    */
   getUserData () {
     // author ids are saved as data variables in inputs
-    const names = this.collectInputData(this.view.namesDiv.rowsDiv, false)
+    const names = this.collectInputData(this.view.nameDivs.en.rowsDiv, false)
+
+    // collect other names
+    const nameCodes = {}
+    for (const code in this.view.nameDivs) {
+      if (code !== 'en') {
+        nameCodes[code + 'Names'] = this.collectInputData(this.view.nameDivs[code].rowsDiv)
+      }
+    }
+
     const authors = this.collectInputData(this.view.authorsDiv.rowsDiv, true, 'authorId')
     const link = this.view.linkInput.value
     const files = this.collectHQCheckData()
     const medias = this.collectMediaData()
 
-    return { songId: this.model.id, names, authors, link, files, medias }
+    return Object.assign({ songId: this.model.id, names }, nameCodes, { authors, link, files, medias })
   }
 
   /**
@@ -706,7 +736,7 @@ class MoveableRowsElement {
     // delete row
     selectElement(this.delClass, row).addEventListener('click', () => {
       this.rowsDiv.removeChild(row)
-      if (this.deleteCallback) this.deleteCallback(this)   
+      if (this.deleteCallback) this.deleteCallback(this)
     })
 
     // start dragging
