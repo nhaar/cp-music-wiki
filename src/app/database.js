@@ -252,17 +252,27 @@ class WikiDatabase {
 
     const link = row.link ? youtubify(row.link) : ''
 
-    const files = {}
     const fileRows = await this.runSelectMethod(callback => {
       this.db.all('SELECT * FROM files WHERE song_id = ?', [songId], callback)
     })
+
+    // sorting files and saving metadata
+    fileRows.sort((a, b) => {
+      return a.song_pos - b.song_pos
+    })
+    const files = []
+    const fileNames = []
+    const fileOriginalNames = []
+
     fileRows.forEach(row => {
-      files[row.file_id] = Boolean(row.is_hq)
+      files.push(row.file_id)
+      fileNames.push(row.file_name)
+      fileOriginalNames.push(row.original_name)
     })
 
     const medias = await this.getSongMedias(songId)
 
-    const song = { names, unNames, authors, link, files, medias }
+    const song = { names, unNames, authors, link, files, medias, meta: { fileNames, fileOriginalNames } }
     return song
   }
 
@@ -295,7 +305,7 @@ class WikiDatabase {
 
   /**
    * Gets the file data for a file id
-   * @param {number} fileId 
+   * @param {number} fileId
    * @returns {import('../public/scripts/file').FileData}
    */
   async getFileById (fileId) {
@@ -388,11 +398,10 @@ class WikiDatabase {
       // link
       this.db.run(`UPDATE songs SET link = ? WHERE song_id = ${songId}`, [extractVideoCode(link)])
 
-      // file hq info
-      for (const fileId in files) {
-        const isHQ = files[fileId] ? 1 : 0
-        this.db.run('UPDATE files SET is_hq = ? WHERE song_id = ? AND file_id = ?', [isHQ, songId, fileId])
-      }
+      // update file orders
+      files.forEach((file, i) => {
+        this.db.run('UPDATE files SET song_pos = ? WHERE file_id = ?', [i + 1, file])
+      })
 
       // media info
       // compare previous and current to find differences

@@ -146,7 +146,7 @@ button:hover {
   flex-direction: column;
 }
 
-.name-div .moveable-row {
+.moveable-row {
   height: 100%;
 }
 
@@ -164,4 +164,9 @@ button:hover {
 
 .hidden-btn {
   display: none;
+}
+
+.files-div .row-content {
+  display: grid;
+  grid-template-rows: 30px 80px;
 }

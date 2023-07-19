@@ -261,21 +261,29 @@ class SongView extends EditorView {
   }
 
   /**
-   * Renders the element with the HQ source checkboxes
+   * Renders the element with the files slider
    */
   renderFiles () {
-    this.renderRow('HQ Sources', wrapper => {
-      this.filesDiv = createElement({ parent: wrapper, className: 'hq-sources' })
-
-      this.files.forEach(file => {
-        const checkProperty = file.is_hq ? 'checked' : ''
-        const innerHTML = `
-          <input class="file-hq-check" type="checkbox" ${checkProperty} data-id="${file.file_id}">
-          <div>${file.original_name}</div>
-          <div>${generateAudio(file)}</div>
-        `
-        createElement({ parent: this.filesDiv, className: 'hq-source', innerHTML })
+    const fileRows = []
+    this.song.files.forEach((file, i) => {
+      fileRows.push({
+        fileId: file,
+        filename: this.song.meta.fileNames[i],
+        originalname: this.song.meta.fileOriginalNames[i]
       })
+    })
+    this.renderRow('HQ Sources', wrapper => {
+      this.filesDiv = new MoveableRowsElement(
+        'files-div',
+        fileRows,
+        row => `<div data-file-id="${row.fileId}">${row.originalname}</div> ${generateAudio(row)}`,
+        {
+          useAdd: false,
+          useDelete: false
+        }
+      )
+
+      this.filesDiv.renderElement(wrapper)
     })
   }
 
@@ -417,6 +425,9 @@ class SongController extends EditorController {
         }
       }
     )
+
+    // file controls
+    this.view.filesDiv.setupControls()
     this.setupLink()
     this.setupMedias()
     this.updateMediasRow()
@@ -572,7 +583,7 @@ class SongController extends EditorController {
     const names = this.collectNameData()
     const authors = this.collectAuthorData(this.view.authorsDiv.rowsDiv, true, 'authorId')
     const link = this.view.linkInput.value
-    const files = this.collectHQCheckData()
+    const files = this.collectFilesData()
     const medias = this.collectMediaData()
 
     return { songId: this.model.id, names, authors, link, files, medias }
@@ -650,15 +661,15 @@ class SongController extends EditorController {
   }
 
   /**
-   * Gets the HQ source information for the song files from the user data
-   * @returns {Files}
+   * Gets the files order from the page
+   * @returns {number[]}
    */
-  collectHQCheckData () {
-    const files = {}
-    const fileChecks = this.view.filesDiv.querySelectorAll('input')
-    fileChecks.forEach(checkbox => {
-      const fileId = checkbox.dataset.id
-      files[fileId] = checkbox.checked
+  collectFilesData () {
+    const audios = this.view.filesDiv.rowsDiv.querySelectorAll('audio')
+    const files = []
+    audios.forEach(audio => {
+      const fileId = audio.parentElement.children[0].dataset.fileId
+      files.push(fileId)
     })
 
     return files
@@ -803,9 +814,16 @@ class MoveableRowsElement {
    * by a specific rowCallback that transforms it into a RowData object
    * @param {string} divClass - CSS class for the element
    * @param {*} rows
+   * @param {object} options - Rows options
+   * @param {boolean} optinons.useDelete - True if want to have delete button
+   * @param {boolean} options.useAdd - True if want to have add button
    */
-  constructor (divClass, rows, rowGenerator) {
+  constructor (divClass, rows, rowGenerator, options = {
+    useDelete: true,
+    useAdd: true
+  }) {
     this.rowGenerator = rowGenerator
+    this.options = options
 
     this.rowClass = 'moveable-row'
     this.delClass = 'del-button'
@@ -818,7 +836,10 @@ class MoveableRowsElement {
     })
 
     this.rowsDiv = createElement({ className: divClass, innerHTML })
-    this.addButton = createElement({ parent: this.rowsDiv, tag: 'button', innerHTML: 'ADD' })
+
+    if (options.useAdd) {
+      this.addButton = createElement({ parent: this.rowsDiv, tag: 'button', innerHTML: 'ADD' })
+    }
   }
 
   /**
@@ -835,9 +856,13 @@ class MoveableRowsElement {
    * @returns {string}
    */
   generateRow (rowData) {
+    const deleteRow = this.options.useDelete
+      ? `<button class="${this.delClass}"> DELETE </button>`
+      : ''
+
     return `
       <div class="${this.contentClass}">${this.rowGenerator(rowData)}</div>
-      <button class="${this.delClass}"> DELETE </button>
+      ${deleteRow}
       <button class="${this.moveClass}"> MOVE </button>
     `
   }
@@ -854,7 +879,7 @@ class MoveableRowsElement {
     this.deleteCallback = deleteCallback
     this.defaultValue = defaultValue
     this.setupRows()
-    this.setupAddButton()
+    if (this.options.useAdd) this.setupAddButton()
   }
 
   /**
@@ -867,6 +892,7 @@ class MoveableRowsElement {
       this.setupRow(row)
     })
 
+    console.log(this.rowsDiv)
     // to move rows
     this.rowsDiv.addEventListener('mouseup', () => {
       if (this.rowsDiv.dataset.isMoving) {
@@ -908,10 +934,12 @@ class MoveableRowsElement {
    */
   setupRow (row) {
     // delete row
-    selectElement(this.delClass, row).addEventListener('click', () => {
-      this.rowsDiv.removeChild(row)
-      if (this.deleteCallback) this.deleteCallback(this)
-    })
+    if (this.options.useDelete) {
+      selectElement(this.delClass, row).addEventListener('click', () => {
+        this.rowsDiv.removeChild(row)
+        if (this.deleteCallback) this.deleteCallback(this)
+      })
+    }
 
     // start dragging
     selectElement(this.moveClass, row).addEventListener('mousedown', () => {
