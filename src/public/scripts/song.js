@@ -9,10 +9,10 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
  * @typedef {object} SongData
  * @property {string} songId
  * @property {Name[]} names
- * @property {string[]} unNames
- * @property {string[]} authors
+ * @property {SongAuthor[]} authors
  * @property {Files} files
  * @property {Medias}
+ * @property {UnofficialNames[]} unNames
  */
 
 /**
@@ -31,6 +31,12 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
  * @property {string} name
  * @property {string} referenceId
  * @property {string} translationNotes
+ */
+
+/**
+ * @typedef {object} SongAuthor
+ * @property {number} authorId
+ * @property {string} referenceId
  */
 
 /**
@@ -62,6 +68,11 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
  * @typedef {object} RowData
  * @property {string} value
  * @property {object} dataset
+ */
+
+/**
+ * Object that maps an id onto a row
+ * @typedef {object} IdMap
  */
 
 class SongModel extends EditorModel {
@@ -98,7 +109,7 @@ class SongView extends EditorView {
    * @param {Row[]} data.files - All the files belonging to this song
    */
   buildEditor (data) {
-    const { song, authorInfo, referenceMap, files } = data
+    const { song, authorMap, referenceMap, files } = data
 
     if (song) {
       // set up template rows
@@ -111,12 +122,11 @@ class SongView extends EditorView {
       const { names, authors, link } = song
 
       // filter and order author names
-      mapIntoIdList(authors, authorInfo, 'author_id')
 
       Object.assign(this, { names, authors, link, files, song })
 
       this.renderNamesDiv(referenceMap)
-      this.renderAuthors()
+      this.renderAuthors(authorMap, referenceMap)
       this.renderLink()
       this.renderFiles()
       this.renderMedia()
@@ -215,13 +225,35 @@ class SongView extends EditorView {
 
   /**
    * Renders the element with the song authors
+   * @param {IdMap} authorMap
+   * @param {IdMap} referenceMap
    */
-  renderAuthors () {
+  renderAuthors (authorMap, referenceMap) {
     this.renderRow('Authors', wrapper => {
       this.authorsDiv = new MoveableRowsElement(
         'authors-div',
         this.authors,
-        row => `<input value="${row.name}" data-author-id="${row.author_id}">`
+        row => {
+          let referenceName = ''
+          let referenceId = ''
+          console.log(referenceMap)
+          if (row.referenceId) {
+            referenceId = row.referenceId
+            referenceName = referenceMap[referenceId].name
+          }
+          let authorId = ''
+          let authorName = ''
+          console.log(authorMap)
+          if (row.authorId) {
+            authorId = row.authorId
+            authorName = authorMap[authorId].name
+          }
+
+          return `
+            <input value="${authorName}" data-author-id="${authorId}">
+            <input value="${referenceName}" data-reference-id="${referenceId}">
+          `
+        }
       )
 
       this.authorsDiv.renderElement(wrapper)
@@ -337,13 +369,14 @@ class SongController extends EditorController {
 
     const referenceInfo = await this.model.getReferenceNames('')
     const referenceMap = rowsToIdMap(referenceInfo, 'reference_id')
+    const authorNames = (await this.model.getAuthorNames(''))
+    const authorMap = rowsToIdMap(authorNames, 'author_id')
 
-    const authorInfo = await this.model.getAuthorNames('')
     const files = await this.model.getFileData()
     this.mediaNames = await this.model.getMediaNames('')
     this.featureNames = await this.model.getFeatureNames('')
 
-    return { song, authorInfo, referenceMap, files }
+    return { song, authorMap, referenceMap, files }
   }
 
   /**
@@ -382,7 +415,8 @@ class SongController extends EditorController {
       }
     )
 
-    this.view.authorsDiv.setupControls({ author_id: '', name: '' },
+    // author controls
+    this.view.authorsDiv.setupControls({ authorId: '' },
       a => this.setupAuthorQuery(a),
       () => this.submitBlocker.block('authorId'),
       obj => {
@@ -545,7 +579,7 @@ class SongController extends EditorController {
   getUserData () {
     // author ids are saved as data variables in inputs
     const names = this.collectNameData()
-    const authors = this.collectInputData(this.view.authorsDiv.rowsDiv, true, 'authorId')
+    const authors = this.collectAuthorData(this.view.authorsDiv.rowsDiv, true, 'authorId')
     const link = this.view.linkInput.value
     const files = this.collectHQCheckData()
     const medias = this.collectMediaData()
@@ -603,6 +637,25 @@ class SongController extends EditorController {
     })
 
     return names
+  }
+
+  /**
+   * Collects the author data from the page
+   * @returns {SongAuthor}
+   */
+  collectAuthorData () {
+    const rowsDiv = this.view.authorsDiv.rowsDiv
+    const authorInputs = rowsDiv.querySelectorAll('input:first-child')
+    const referenceInputs = rowsDiv.querySelectorAll('input:nth-child(2)')
+    const authors = []
+    authorInputs.forEach((authorInput, i) => {
+      authors.push({
+        authorId: Number(authorInput.dataset.authorId),
+        referenceId: Number(referenceInputs[i].dataset.referenceId) || null
+      })
+    })
+
+    return authors
   }
 
   /**
@@ -673,7 +726,7 @@ class SongController extends EditorController {
    * @returns {import('./query-options.js').TakenInfo}
    */
   getAllTakenAuthors () {
-    const allInputs = this.view.authorsDiv.rowsDiv.querySelectorAll('input')
+    const allInputs = this.view.authorsDiv.rowsDiv.querySelectorAll('input:first-child')
     return this.getAllTakenMoveableRow(allInputs, 'authorId')
   }
 
@@ -725,7 +778,8 @@ class SongController extends EditorController {
    * @param {HTMLDivElement} - The element for the row inside the element
    */
   setupAuthorQuery (row) {
-    const input = row.querySelector('input')
+    const input = row.querySelector('input:first-child')
+    const referenceInput = row.querySelector('input:nth-child(2)')
     createSearchQuery(
       input,
       'authorId',
@@ -734,6 +788,14 @@ class SongController extends EditorController {
       a => this.model.getAuthorNames(a),
       () => this.getAllTakenAuthors(),
       this.submitBlocker
+    )
+
+    createSearchQuery(
+      referenceInput,
+      'referenceId',
+      'reference_id',
+      'name',
+      a => this.model.getReferenceNames(a)
     )
   }
 }
@@ -1034,26 +1096,10 @@ function indexOfChild (parent, child) {
 }
 
 /**
- * Takes a list of ids, and turns into a list of rows replacing the ids with their respective rows
- * @param {string[]} ids - List of ids to be mutated
- * @param {object[]} info - Can be any object, as long as it has the id as a property
- * @param {string} property - Property name for the id
- * @returns {object[]} Sorted and filtered by ids
- */
-function mapIntoIdList (ids, info, property) {
-  info.forEach(i => {
-    const index = ids.indexOf(i[property])
-    if (index > -1) ids[index] = i
-  })
-
-  return ids
-}
-
-/**
  * Get a map of id -> row based of an array of rows
  * @param {import('../../app/database.js').Row[]} rows
  * @param {string} idName - Name of the id column/property
- * @returns {object} Map of id -> row
+ * @returns {IdMap} Map of id -> row
  */
 function rowsToIdMap (rows, idName) {
   const map = {}

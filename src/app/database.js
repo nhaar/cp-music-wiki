@@ -71,6 +71,7 @@ class WikiDatabase {
           song_id INTEGER,
           author_id INTEGER,
           pos INTEGER,
+          reference_id, INTEGER,
           PRIMARY KEY (song_id, pos),
           FOREIGN KEY (song_id) REFERENCES songs(song_id)
           FOREIGN KEY (author_id) REFERENCES authors(author_id)
@@ -242,7 +243,7 @@ class WikiDatabase {
    */
   async getSongById (songId) {
     const row = await this.getSong('song_id', songId)
-    const authors = await deconstructRows(() => this.getSongAuthors(songId), 'author_id')
+    const authors = await this.getSongAuthors(songId)
     const names = await this.deconstructNameRows(songId)
 
     const unNames = await deconstructRows(() => this.getUnnoficialNames(songId), 'name_text')
@@ -352,15 +353,10 @@ class WikiDatabase {
    */
   async updateSong (data) {
     await this.updateBase(data, 'songs', 'songId', async data => {
-      const { songId, names, link, files, medias } = data
-
-      const authors = data.authors.map(n => Number(n))
+      const { songId, names, authors, link, files, medias } = data
 
       // authors
-      this.updatePositionalTable('song_author', 'author_id', songId, authors, async songId => {
-        const oldData = await this.getSongAuthors(songId)
-        return oldData
-      })
+      this.updateSongAuthors(songId, authors)
 
       // names
       this.updateNames(songId, names)
@@ -518,6 +514,22 @@ class WikiDatabase {
     }))
   }
 
+  /**
+   * Updates the list of authors for a song
+   * @param {number} songId 
+   * @param {import('../public/scripts/author').AuthorData[]} newData 
+   */
+  async updateSongAuthors (songId, newData) {
+    await this.updatePositionalTableBase(
+      songId, newData,
+      async songId => await this.getSongAuthors(songId),
+      (songId, i, newData) => this.runInsert('song_author (song_id, pos, author_id, reference_id)', [songId, i + 1, newData[i].authorId, newData[i].referenceId]),
+      (songId, i) => this.db.run('DELETE FROM song_author WHERE song_id = ? AND pos = ?', [songId, i + 1]),
+      (oldData, newData, i) => !compareObjects(oldData[i], newData[i]),
+      (songId, i, newData) => this.db.run('UPDATE song_author SET author_id = ?, reference_id = ? WHERE song_id = ? AND pos = ?', [newData[i].authorId, newData[i].referenceId, songId, i + 1])
+    )
+  }
+
   async updatePositionalTableBase (songId, newData, getRowsFunction, insertCallback, deleteCallback, comparisonCallback, updateCallback) {
     const oldData = await getRowsFunction(songId)
 
@@ -533,6 +545,7 @@ class WikiDatabase {
 
     for (let i = 0; i < newData.length && i < oldData.length; i++) {
       if (comparisonCallback(oldData, newData, i)) {
+        console.log(i)
         updateCallback(songId, i, newData)
       }
     }
@@ -638,10 +651,13 @@ class WikiDatabase {
   /**
    * Get all the authors from a song in an ordered array
    * @param {string} songId
-   * @returns {Row[]} Rows from song_author
+   * @returns {import('../public/scripts/song').SongAuthor[]}
    */
   async getSongAuthors (songId) {
-    const authors = await this.getSongPositionalValues(songId, 'song_author')
+    const authors = (await this.getSongPositionalValues(songId, 'song_author')).map(row => ({
+      authorId: row.author_id,
+      referenceId: row.reference_id
+    }))
     return authors
   }
 
