@@ -32,8 +32,8 @@ class Generator {
     const authorNames = this.getIdToNameMap(authors, 'author_id')
     const songAuthors = this.organizeBySongId(songAuthor, 'author_id')
 
-    const collections = await this.db.getAll('collections')
-    const collectionNames = this.getIdToNameMap(collections, 'collection_id')
+    const sources = await this.db.getAll('sources')
+    const sourceNames = this.getIdToNameMap(sources, 'source_id')
 
     const files = await this.db.getAll('files')
     const songFiles = this.organizeBySongId(files)
@@ -68,11 +68,11 @@ class Generator {
       const sourceIds = []
       filesUsed.forEach(file => {
         if (file.is_hq) {
-          const source = file.collection_id
+          const source = file.source_id
           if (!sourceIds.includes(source)) sourceIds.push(source)
         }
       })
-      const sourceArray = sourceIds.map(id => collectionNames[id])
+      const sourceArray = sourceIds.map(id => sourceNames[id])
       const sources = this.arrayToCommaSeparated(sourceArray)
 
       // alternate names

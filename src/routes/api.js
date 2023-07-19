@@ -24,15 +24,15 @@ const upload = multer({ dest: path.join(__dirname, '../public/music/') })
  * Submits a music file to add it to the database
  * @param {} file
  * @param {string} body.songId
- * @param {string} body.collectionId
+ * @param {string} body.sourceId
  */
 router.post('/submit-file', upload.single('file'), async (req, res) => {
   let originalname
   let filename
   if (req.file) ({ originalname, filename } = req.file)
   else ({ originalname, filename } = req.body)
-  const { songId, collectionId, fileId } = req.body
-  const data = { fileId, songId, collectionId, originalname, filename }
+  const { songId, sourceId, fileId, sourceLink, isHQ } = req.body
+  const data = { fileId, meta: { songId }, sourceId, originalname, filename, sourceLink, isHQ: Boolean(isHQ) }
   await db.updateFile(data)
   gen.updateLists()
   res.sendStatus(200)

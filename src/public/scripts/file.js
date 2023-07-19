@@ -5,10 +5,11 @@ import { createElement, getTakenVariable } from './utils.js'
 /**
  * @typedef FileData
  * @property {string} fileId
- * @property {string} songId
- * @property {string} collectionId
+ * @property {string} sourceId
  * @property {string} filename
  * @property {string} originalname
+ * @property {boolean} isHQ
+ * @property {string} sourceLink
  */
 
 class FileModel extends EditorModel {
@@ -17,7 +18,7 @@ class FileModel extends EditorModel {
   }
 
   getSongName = async () => await this.getNameFromId('song_names', this.data.songId)
-  getCollectionName = async () => await this.getNameFromId('collections', this.data.collectionId)
+  getSourceName = async () => await this.getNameFromId('sources', this.data.sourceId)
 
   /**
    * File overwrite update method, needed because the data needs to be submitted as
@@ -26,7 +27,7 @@ class FileModel extends EditorModel {
    * @property {object} data.file - User file from the file input
    */
   update (data) {
-    const { fileId, songId, collectionId, file, filename, originalname } = data
+    const { fileId, songId, sourceId, file, filename, originalname, sourceLink, isHQ } = data
     const formData = new FormData()
     if (file) {
       formData.append('file', file)
@@ -36,7 +37,10 @@ class FileModel extends EditorModel {
     }
     formData.append('fileId', fileId)
     formData.append('songId', songId)
-    formData.append('collectionId', collectionId)
+    formData.append('sourceId', sourceId)
+    formData.append('sourceLink', sourceLink)
+    const stringBool = isHQ ? '1' : ''
+    formData.append('isHQ', stringBool)
 
     fetch('api/submit-file', {
       method: 'POST',
@@ -53,16 +57,19 @@ class FileView extends EditorView {
    * @param {object} data
    * @param {FileData} data.file
    * @param {string} data.songName
-   * @param {string} data.collectionName
+   * @param {string} data.sourceName
    */
   buildEditor (data) {
-    const { file, songName, collectionName } = data
-    const { songId, collectionId } = file
+    const { file } = data
+    const { sourceId, sourceLink, isHQ, meta } = file
+    const { songId, songName, sourceName } = meta
 
     this.songInput = createElement({ parent: this.editor, tag: 'input', value: songName, dataset: { songId } })
-    this.collectionInput = createElement({ parent: this.editor, tag: 'input', value: collectionName, dataset: { collectionId } })
+    this.sourceInput = createElement({ parent: this.editor, tag: 'input', value: sourceName, dataset: { sourceId } })
     this.fileInput = createElement({ parent: this.editor, tag: 'input', type: 'file' })
     this.filePreview = createElement({ parent: this.editor, innerHTML: generateAudio(file) })
+    this.linkInput = createElement({ parent: this.editor, tag: 'input', value: sourceLink })
+    this.checkbox = createElement({ parent: this.editor, tag: 'input', type: 'checkbox', checked: isHQ })
   }
 }
 
@@ -73,8 +80,8 @@ class FileController extends EditorController {
     /** Blocking variable for the song input */
     this.songVar = 'songId'
 
-    /** Blocking variable for the collection input */
-    this.collectionVar = 'collectionId'
+    /** Blocking variable for the source input */
+    this.sourceVar = 'sourceId'
   }
 
   /**
@@ -83,10 +90,8 @@ class FileController extends EditorController {
    */
   async getBuildData () {
     const file = this.model.data
-    const songName = await this.model.getSongName()
-    const collectionName = await this.model.getCollectionName()
 
-    return { file, songName, collectionName }
+    return { file }
   }
 
   /**
@@ -95,10 +100,13 @@ class FileController extends EditorController {
    */
   getUserData () {
     const songVar = this.songVar
-    const collectionVar = this.collectionVar
+    const sourceVar = this.sourceVar
 
     const songId = this.view.songInput.dataset[songVar]
-    const collectionId = this.view.collectionInput.dataset[collectionVar]
+    const sourceId = this.view.sourceInput.dataset[sourceVar]
+    const sourceLink = this.view.linkInput.value
+    const isHQ = this.view.checkbox.checked
+
     const file = this.view.fileInput.files[0]
     let originalname
     let filename
@@ -109,7 +117,7 @@ class FileController extends EditorController {
       filename = audioElement.src.match(/\/([^/]+)$/)[1]
     }
 
-    return { fileId: this.model.id, songId, collectionId, file, originalname, filename }
+    return { fileId: this.model.id, songId, sourceId, file, originalname, filename, sourceLink, isHQ }
   }
 
   /**
@@ -117,19 +125,22 @@ class FileController extends EditorController {
    */
   setupEditor () {
     const songVar = this.songVar
-    const collectionVar = this.collectionVar
+    const sourceVar = this.sourceVar
     const fileVar = 'file'
 
     if (!this.model.id) {
-      this.submitBlocker.blockVarElements([fileVar, songVar, collectionVar], [this.view.fileInput, this.view.songInput, this.view.collectionInput])
-    }
+      this.submitBlocker.blockVarElements([fileVar, songVar, sourceVar], [this.view.fileInput, this.view.songInput, this.view.sourceInput])
 
-    this.view.fileInput.addEventListener('change', e => {
-      this.submitBlocker.ternaryBlock(
-        e.target.files.length === 0 && !this.model.id,
-        fileVar, this.view.fileInput
-      )
-    })
+      this.view.fileInput.addEventListener('change', e => {
+        this.submitBlocker.ternaryBlock(
+          e.target.files.length === 0 && !this.model.id,
+          fileVar, this.view.fileInput
+        )
+      })
+      this.view.filePreview.classList.add('hidden')
+    } else {
+      this.view.fileInput.classList.add('hidden')
+    }
 
     createSearchQuery(
       this.view.songInput,
@@ -142,12 +153,12 @@ class FileController extends EditorController {
     )
 
     createSearchQuery(
-      this.view.collectionInput,
-      collectionVar,
-      'collection_id',
+      this.view.sourceInput,
+      sourceVar,
+      'source_id',
       'name',
-      a => this.model.getCollectionNames(a),
-      a => this.getTakenCollection(a),
+      a => this.model.getSourceNames(a),
+      a => this.getTakenSource(a),
       this.submitBlocker
     )
   }
@@ -162,12 +173,12 @@ class FileController extends EditorController {
   }
 
   /**
-   * Gets the taken data for the collection
-   * @param {HTMLInputElement} input - The collection name input
+   * Gets the taken data for the source
+   * @param {HTMLInputElement} input - The source name input
    * @returns {import('./query-options.js').TakenInfo}
    */
-  getTakenCollection (input) {
-    return getTakenVariable(input, 'collectionId')
+  getTakenSource (input) {
+    return getTakenVariable(input, 'sourceId')
   }
 }
 

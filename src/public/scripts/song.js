@@ -10,7 +10,7 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
  * @property {string} songId
  * @property {Name[]} names
  * @property {SongAuthor[]} authors
- * @property {Files} files
+ * @property {number[]} files
  * @property {Medias}
  * @property {UnofficialNames[]} unNames
  */
@@ -37,12 +37,6 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
  * @typedef {object} SongAuthor
  * @property {number} authorId
  * @property {string} referenceId
- */
-
-/**
- * Each property is a file id and it maps to a boolean representing whether or not
- * it is a high quality source
- * @typedef {object} Files
  */
 
 /**
@@ -186,7 +180,6 @@ class SongView extends EditorView {
 
         html += '<div>'
         for (const code in langCodes) {
-          console.log(code)
           let name = ''
           let referenceName = ''
           let referenceId = ''
@@ -236,14 +229,12 @@ class SongView extends EditorView {
         row => {
           let referenceName = ''
           let referenceId = ''
-          console.log(referenceMap)
           if (row.referenceId) {
             referenceId = row.referenceId
             referenceName = referenceMap[referenceId].name
           }
           let authorId = ''
           let authorName = ''
-          console.log(authorMap)
           if (row.authorId) {
             authorId = row.authorId
             authorName = authorMap[authorId].name

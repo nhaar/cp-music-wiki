@@ -1,7 +1,7 @@
 import { selectElement } from './utils.js'
 import { Song } from './song.js'
 import { Author } from './author.js'
-import { Collection } from './collection.js'
+import { Source } from './source.js'
 import { File } from './file.js'
 import { Media } from './media.js'
 import { Feature } from './feature.js'
@@ -36,7 +36,7 @@ class Controller {
     const typeRelation = {
       0: Song,
       1: Author,
-      2: Collection,
+      2: Source,
       3: File,
       4: Media,
       5: Feature,

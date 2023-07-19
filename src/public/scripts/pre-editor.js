@@ -43,9 +43,9 @@ class Controller {
           break
         }
         case '2': {
-          databaseVar = 'collection_id'
+          databaseVar = 'source_id'
           databaseValue = 'name'
-          fetchDataFunction = a => this.model.getCollectionNames(a)
+          fetchDataFunction = a => this.model.getSourceNames(a)
           break
         }
         case '3': {

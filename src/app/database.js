@@ -78,18 +78,20 @@ class WikiDatabase {
         )
       `,
       `
-        collections (
-          collection_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sources (
+          source_id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT
         )
       `,
       `
         files (
           file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          source_id INTEGER,
           song_id INTEGER,
-          collection_id INTEGER,
+          song_pos INTEGER,
           file_name TEXT,
           original_name TEXT,
+          source_link TEXT,
           is_hq INTEGER
         )
       `,
@@ -205,7 +207,7 @@ class WikiDatabase {
     const idName = {
       song_names: 'song_id',
       authors: 'author_id',
-      collections: 'collection_id',
+      sources: 'source_id',
       medias: 'media_id',
       features: 'feature_id'
     }[table]
@@ -275,23 +277,39 @@ class WikiDatabase {
   }
 
   /**
-   * Asynchronously get the row for a collection
-   * @param {string} collectionId
-   * @returns {Row | null} Row or null if doesn't exist
+   * Asynchronously get the row for a source
+   * @param {string} sourceId
+   * @returns {import('../public/scripts/file').FileData | null} Row or null if doesn't exist
    */
-  async getCollectionById (collectionId) {
-    const row = await this.getFromTable('collections', 'collection_id', collectionId)
+  async getSourceById (sourceId) {
+    const row = await this.getFromTable('sources', 'source_id', sourceId)
     return row
   }
 
+  /**
+   * Asynchronously run a select SQLITE method with the .get method
+   * @param {string} command - The SQL code to run
+   * @param {*[]} values - Array of values to use
+   */
+  runGet = async (command, values) => this.runSelectMethod(callback => this.db.get(command, values, callback))
+
+  /**
+   * Gets the file data for a file id
+   * @param {number} fileId 
+   * @returns {import('../public/scripts/file').FileData}
+   */
   async getFileById (fileId) {
     const row = await this.getFromTable('files', 'file_id', fileId)
+    const songName = await this.runGet('SELECT name_text FROM song_names WHERE song_id = ?', [row.song_id])
+    const sourceName = await this.runGet('SELECT name FROM sources WHERE source_id = ?', [row.source_id])
 
     return {
-      songId: row.song_id,
-      collectionId: row.collection_id,
+      meta: { songId: row.song_id, songName: songName.name_text, sourceName: sourceName.name },
+      sourceId: row.source_id,
       filename: row.file_name,
-      originalname: row.original_name
+      originalname: row.original_name,
+      sourceLink: row.source_link,
+      isHQ: Boolean(row.is_hq)
     }
   }
 
@@ -329,7 +347,7 @@ class WikiDatabase {
     const relation = {
       song: a => this.updateSong(a),
       author: a => this.updateAuthor(a),
-      collection: a => this.updateCollection(a),
+      source: a => this.updateSource(a),
       media: a => this.updateMedia(a),
       feature: a => this.updateFeature(a),
       reference: a => this.updateReference(a)
@@ -426,27 +444,27 @@ class WikiDatabase {
   }
 
   /**
-   * Update a collection with new info
+   * Update a source with new info
    * @param {Row} data - New row info
    */
-  async updateCollection (data) {
-    await this.updateBase(data, 'collections', 'collectionId', async data => {
-      const { name, collectionId } = data
-      this.db.run('UPDATE collections SET name = ? WHERE collection_id = ?', [name, collectionId])
+  async updateSource (data) {
+    await this.updateBase(data, 'sources', 'sourceId', async data => {
+      const { name, sourceId } = data
+      this.db.run('UPDATE sources SET name = ? WHERE source_id = ?', [name, sourceId])
     })
   }
 
   /**
    * Create a new (music) file
    * @param {string} songId - Song the file belongs to
-   * @param {string} collectionId - Collection the file belongs to
+   * @param {string} sourceId - Source the file belongs to
    * @param {string} originalName - Original file name from the user upload
    * @param {string} name - File name as is stored in the database
    */
   async updateFile (data) {
     await this.updateBase(data, 'files', 'fileId', async data => {
-      const { songId, collectionId, originalname, filename, fileId } = data
-      this.db.run('UPDATE files SET song_id = ?, collection_id = ?, original_name = ?, file_name = ? WHERE file_id = ?', [songId, collectionId, originalname, filename, fileId])
+      const { meta, sourceId, originalname, filename, fileId, sourceLink, isHQ } = data
+      this.db.run('UPDATE files SET song_id = ?, source_id = ?, original_name = ?, file_name = ?, source_link = ?, is_hq = ? WHERE file_id = ?', [meta.songId, sourceId, originalname, filename, sourceLink, Number(isHQ), fileId])
     })
   }
 
@@ -516,8 +534,8 @@ class WikiDatabase {
 
   /**
    * Updates the list of authors for a song
-   * @param {number} songId 
-   * @param {import('../public/scripts/author').AuthorData[]} newData 
+   * @param {number} songId
+   * @param {import('../public/scripts/author').AuthorData[]} newData
    */
   async updateSongAuthors (songId, newData) {
     await this.updatePositionalTableBase(
@@ -545,7 +563,6 @@ class WikiDatabase {
 
     for (let i = 0; i < newData.length && i < oldData.length; i++) {
       if (comparisonCallback(oldData, newData, i)) {
-        console.log(i)
         updateCallback(songId, i, newData)
       }
     }
@@ -743,7 +760,7 @@ class WikiDatabase {
     const relation = {
       song: async a => await this.getSongById(a),
       author: async a => await this.getAuthorById(a),
-      collection: async a => await this.getCollectionById(a),
+      source: async a => await this.getsourceById(a),
       file: async a => await this.getFileById(a),
       media: async a => await this.getMediaById(a),
       feature: async a => await this.getFeatureById(a),
