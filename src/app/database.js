@@ -37,6 +37,7 @@ class WikiDatabase {
           song_id INTEGER,
           pos INTEGER,
           name_text TEXT,
+          reference_id INTEGER,
           PRIMARY KEY (song_id, pos)
           FOREIGN KEY (song_id) REFERENCES songs(song_id)
         )
@@ -47,6 +48,7 @@ class WikiDatabase {
           pos INTEGER,
           lang TEXT,
           name_text TEXT,
+          reference_id INTEGER,
           translation_notes TEXT,
           PRIMARY KEY (song_id, pos, lang)
           FOREIGN KEY (song_id) REFERENCES songs(song_id)
@@ -238,7 +240,7 @@ class WikiDatabase {
   async getSongById (songId) {
     const row = await this.getSong('song_id', songId)
     const authors = await deconstructRows(() => this.getSongAuthors(songId), 'author_id')
-    const names = await deconstructRows(() => this.getSongNames(songId), 'name_text')
+    const names = await deconstructNameRows(() => this.getSongNames(songId))
     const codes = ['pt', 'fr', 'es', 'de', 'ru']
     const codeNames = {}
     for (let i = 0; i < codes.length; i++) {
@@ -362,22 +364,23 @@ class WikiDatabase {
       })
 
       // names
-      this.updatePositionalTable('song_names', 'name_text', songId, names, async songId => {
-        const oldData = await this.getSongNames(songId)
-        return oldData
-      })
+      this.updatePositionalNames(songId, names)
+      // this.updatePositionalTable('song_names', 'name_text', songId, names, async songId => {
+      //   const oldData = await this.getSongNames(songId)
+      //   return oldData
+      // })
 
-      // unnoficial names
-      this.updatePositionalTable('unnoficial_names', 'name_text', songId, unNames, async songId => {
-        const oldData = await this.getUnnoficialNames(songId)
-        return oldData
-      })
+      // // unnoficial names
+      // this.updatePositionalTable('unnoficial_names', 'name_text', songId, unNames, async songId => {
+      //   const oldData = await this.getUnnoficialNames(songId)
+      //   return oldData
+      // })
 
-      // localization names
-      const codes = ['pt', 'fr', 'es', 'de', 'ru']
-      codes.forEach(code => {
-        this.updateLocalizationTable(code, songId, data[code + 'Names'])
-      })
+      // // localization names
+      // const codes = ['pt', 'fr', 'es', 'de', 'ru']
+      // codes.forEach(code => {
+      //   this.updateLocalizationTable(code, songId, data[code + 'Names'])
+      // })
 
       // link
       this.db.run(`UPDATE songs SET link = ? WHERE song_id = ${songId}`, [extractVideoCode(link)])
@@ -511,7 +514,7 @@ class WikiDatabase {
    * paralel to newData but before changes
    */
   async updatePositionalTable (table, dataColumn, songId, newData, getRowsFunction) {
-    await this.updatePositionalTableBase(table, dataColumn, undefined, undefined, songId, newData, getRowsFunction)
+    await this.updateSingleValuePositionalTableBase(table, dataColumn, undefined, undefined, songId, newData, getRowsFunction)
   }
 
   /**
@@ -522,56 +525,95 @@ class WikiDatabase {
    * @param {string[]} newData - Array of names in order to be updated
    */
   async updateLocalizationTable (code, songId, newData) {
-    await this.updatePositionalTableBase('song_localization_names', 'name_text', 'lang', code, songId, newData, async () => await this.runSelectMethod(callback => {
+    await this.updateSingleValuePositionalTableBase('song_localization_names', 'name_text', 'lang', code, songId, newData, async () => await this.runSelectMethod(callback => {
       this.db.all('SELECT * FROM song_localization_names WHERE song_id = ? AND lang = ?', [songId, code], callback)
     }))
   }
 
-  /**
-   * Base function for updatePositionalTable and updateLocalizationTable
-   *
-   * It does mostly the same for both but in the localization there is an extra
-   * column to be checked for
-   * @param {string} table
-   * @param {string} dataColumn
-   * @param {string | undefined} extraColumn
-   * @param {*} extraValue
-   * @param {string} songId
-   * @param {object} newData
-   * @param {function(number) : *[]} getRowsFunction
-   */
-  async updatePositionalTableBase (table, dataColumn, extraColumn, extraValue, songId, newData, getRowsFunction) {
+  async updatePositionalTableBase (songId, newData, getRowsFunction, insertCallback, deleteCallback, comparisonCallback, updateCallback) {
     const oldData = await getRowsFunction(songId)
-    const extraCommand = extraColumn
-      ? ` AND ${extraColumn} = ?`
-      : ''
+
     if (oldData.length < newData.length) {
       for (let i = oldData.length; i < newData.length; i++) {
-        let command = `${table} (song_id, pos, ${dataColumn}`
-        const values = [songId, i + 1, newData[i]]
-        if (extraColumn) {
-          command += `, ${extraColumn})`
-          values.push(extraValue)
-        } else command += ')'
-        this.runInsert(command, values)
+        insertCallback(songId, i, newData)
       }
     } else if (oldData.length > newData.length) {
       for (let i = newData.length; i < oldData.length; i++) {
-        const values = [songId, i + 1]
-        if (extraColumn) values.push(extraValue)
-
-        console.log(extraCommand)
-        this.db.run(`DELETE FROM ${table} WHERE song_id = ? AND pos = ? ${extraCommand}`, values)
+        deleteCallback(songId, i)
       }
     }
 
     for (let i = 0; i < newData.length && i < oldData.length; i++) {
-      if (oldData[i][dataColumn] !== newData[i]) {
-        const values = [newData[i], songId, i + 1]
-        if (extraColumn) values.push(extraValue)
-        this.db.run(`UPDATE ${table} SET ${dataColumn} = ? WHERE song_id = ? AND pos = ?` + extraCommand, values)
+      if (comparisonCallback(oldData, newData, i)) {
+        updateCallback(songId, i, newData)
       }
     }
+  }
+
+  async updatePositionalNames (songId, newData) {
+    await this.updatePositionalTableBase(songId, newData, async () =>  await this.runSelectMethod(callback => {
+        this.db.all('SELECT * FROM song_names WHERE song_id = ?', [songId], callback)
+      }), (songId, i, newData) => {
+        this.runInsert('song_names (song_id, pos, name_text, reference_id)', [songId, i + 1, newData[i].name, newData[i].referenceId])
+      }, (songId, i) => {
+        this.db.run('DELETE FROM song_names WHERE song_id = ? AND pos = ?', [songId, i + 1])
+      }, (oldData, newData, i) => {
+        const name = oldData[i].name_text === newData[i].name
+        const reference = oldData[i].reference_id === newData[i].referenceId
+        return name && reference
+      }, (songId, i, newData) => {
+        this.db.run('UPDATE song_names SET name_text = ?, reference_id = ? WHERE song_id = ? AND pos = ?', [newData[i].name, newData[i].referenceId, songId, i +1])
+      })
+  }
+
+  
+  async updatePositionalNames (songId, newData, code) {
+    const isUnofficial = code === 'un'
+    const isLocalization = !isUnofficial && code !== 'en'
+    const table = code === 'en' ? 'song_names' : 'song_localization_names'
+    await this.updatePositionalTableBase(songId, newData, async () =>  await this.runSelectMethod(callback => {
+
+        this.db.all('SELECT * FROM song_names WHERE song_id = ?', [songId], callback)
+      }), (songId, i, newData) => {
+        this.runInsert('song_names (song_id, pos, name_text, reference_id)', [songId, i + 1, newData[i].name, newData[i].referenceId])
+      }, (songId, i) => {
+        this.db.run('DELETE FROM song_names WHERE song_id = ? AND pos = ?', [songId, i + 1])
+      }, (oldData, newData, i) => {
+        const name = oldData[i].name_text === newData[i].name
+        const reference = oldData[i].reference_id === newData[i].referenceId
+        return name && reference
+      }, (songId, i, newData) => {
+        this.db.run('UPDATE song_names SET name_text = ?, reference_id = ? WHERE song_id = ? AND pos = ?', [newData[i].name, newData[i].referenceId, songId, i +1])
+      })
+  }
+
+
+  async updateSingleValuePositionalTableBase (table, dataColumn, extraColumn, extraValue, songId, newData, getRowsFunction) {
+    const extraCommand = extraColumn
+    ? ` AND ${extraColumn} = ?`
+    : ''
+
+    await this.updatePositionalTableBase(songId, newData, getRowsFunction, (songId, i, newData) => {
+      let command = `${table} (song_id, pos, ${dataColumn}`
+      const values = [songId, i + 1, newData[i]]
+      if (extraColumn) {
+        command += `, ${extraColumn})`
+        values.push(extraValue)
+      } else command += ')'
+      this.runInsert(command, values)
+    }, (songId, i) => {
+      const values = [songId, i + 1]
+      if (extraColumn) values.push(extraValue)
+
+      console.log(extraCommand)
+      this.db.run(`DELETE FROM ${table} WHERE song_id = ? AND pos = ? ${extraCommand}`, values)
+    }, (oldData, newData, i) => {
+      return oldData[i][dataColumn] !== newData[i]
+    }, (songId, i, newData) => {
+      const values = [newData[i], songId, i + 1]
+      if (extraColumn) values.push(extraValue)
+      this.db.run(`UPDATE ${table} SET ${dataColumn} = ? WHERE song_id = ? AND pos = ?` + extraCommand, values)
+    })
   }
 
   /**
@@ -745,9 +787,12 @@ class WikiDatabase {
    * @param {string} code - Language code
    * @returns {string[]} - All names ordered
    */
-  deconstructLanguageRows = async (songId, code) => deconstructRows(async () => await this.runSelectMethod(callback => {
+  deconstructLanguageRows = async (songId, code) => (await deconstructEntireRow(async () => await this.runSelectMethod(callback => {
     this.db.all('SELECT * FROM song_localization_names WHERE lang = ? AND song_id = ?', [code, songId], callback)
-  }), 'name_text')
+  }))).map(row => ({
+    name: row.name_text,
+    referenceId: row.reference_id
+  }))
 
   /**
    * Runs an asynchronous SQL method automatically handling resolving and rejecting
@@ -786,6 +831,25 @@ class WikiDatabase {
   }
 }
 
+async function deconstructEntireRow (rowCallback) {
+  const rows = await rowCallback()
+  const values = []
+  rows.forEach(row => {
+    values.push(row)
+  })
+
+  return values
+}
+
+async function deconstructNameRows (rowCallback) {
+  const rows = (await deconstructEntireRow(rowCallback)).map(row => ({
+    name: row.name_text,
+    referenceId: row.reference_id
+  }))
+
+  return rows
+}
+
 /**
  * Helper function that creates an array
  * out of a column of a group of rows
@@ -795,11 +859,8 @@ class WikiDatabase {
  * @returns {string[]} Array with all the saved values
  */
 async function deconstructRows (rowCallback, column) {
-  const rows = await rowCallback()
-  const values = []
-  rows.forEach(row => {
-    values.push(row[column])
-  })
+  const rows = await deconstructEntireRow(rowCallback)
+  const values = rows.map(row => row[column])
 
   return values
 }

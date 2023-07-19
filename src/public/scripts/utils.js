@@ -108,11 +108,20 @@ export async function postAndGetJSON (route, object) {
  * @param {*} value
  * @returns {object}
  */
-export function findInObject (object, property, value) {
+function findElementInObject (object, property, value) {
   for (let i = 0; i < object.length; i++) {
     const element = object[i]
-    if (element[property] === value) { return element }
+    if (element[property] === value) { return { element, i }  }
   }
+  return { }
+}
+
+export function findInObject (object, property, value) {
+  return findElementInObject(object, property, value).element
+}
+
+export function findIndexInObject (object, property, value) {
+  return findElementInObject(object, property, value).i
 }
 
 /**

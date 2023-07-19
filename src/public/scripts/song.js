@@ -2,22 +2,28 @@ import { EditorModel, EditorView, EditorController, EditorType } from './editor-
 import { generateAudio } from './file.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
-import { createElement, findInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
+import { createElement, findInObject, findIndexInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
 
 /**
  * Data structure for a song
  * @typedef {object} SongData
  * @property {string} songId
- * @property {string[]} names
- * @property {string[]} ptNames
- * @property {string[]} frNames
- * @property {string[]} esNames
- * @property {string[]} deNames
- * @property {string[]} ruNames
+ * @property {Name[]} names
+ * @property {Name[]} ptNames
+ * @property {Name[]} frNames
+ * @property {Name[]} esNames
+ * @property {Name[]} deNames
+ * @property {Name[]} ruNames
  * @property {string[]} unNames
  * @property {string[]} authors
  * @property {Files} files
  * @property {Medias}
+ */
+
+/**
+ * @typedef {object} Name
+ * @property {string} name
+ * @property {string} referenceId
  */
 
 /**
@@ -53,7 +59,7 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
 
 class SongModel extends EditorModel {
   constructor () {
-    super('song', { names: [], authors: [] })
+    super('song', { names: [], ptNames:[], frNames: [], esNames: [], deNames: [], ruNames:[], unNames: [], authors: [] })
   }
 
   /**
@@ -98,12 +104,7 @@ class SongView extends EditorView {
       const { names, authors, link } = song
 
       // filter and order author names
-      authorInfo.forEach(info => {
-        const index = authors.indexOf(info.author_id)
-        if (index > -1) {
-          authors[index] = info
-        }
-      })
+      mapIntoIdList(authors, authorInfo, 'author_id')
 
       Object.assign(this, { names, authors, link, files, song })
 
@@ -145,11 +146,23 @@ class SongView extends EditorView {
    */
   renderNameDiv (header, code) {
     const targetNames = code === 'en' ? 'names' : code + 'Names'
+    
     this.renderRow(header, wrapper => {
+      const rowGenerator = code === 'un'
+        ? row => `<input value="${row}" data-author-id="${row.author_id}">`
+        : row => {
+          const reference = row.mapped
+          const referenceName = reference ? reference.name : ''
+          return `
+            <input value="${row.name}">
+            <input value="${referenceName}" data-reference-id="${row.referenceId}">
+
+          `
+        }
       this.nameDivs[code] = new MoveableRowsElement(
         'name-div',
         this.song[targetNames],
-        row => this.nameRowCallback(row)
+        rowGenerator  
       )
 
       this.nameDivs[code].renderElement(wrapper)
@@ -164,7 +177,7 @@ class SongView extends EditorView {
       this.authorsDiv = new MoveableRowsElement(
         'authors-div',
         this.authors,
-        row => this.authorRowCallback(row)
+        row => `<input value="${row.name}" data-author-id="${row.author_id}">`
       )
 
       this.authorsDiv.renderElement(wrapper)
@@ -277,7 +290,9 @@ class SongController extends EditorController {
   async getBuildData () {
     const song = this.model.data
     this.song = song
-
+    
+    const referenceInfo = await this.model.getReferenceNames('')
+    mapOntoIds(song.names, referenceInfo, 'referenceId', 'reference_id')
     const authorInfo = await this.model.getAuthorNames('')
     const files = await this.model.getFileData()
     this.mediaNames = await this.model.getMediaNames('')
@@ -292,7 +307,9 @@ class SongController extends EditorController {
   async setupEditor () {
     // setting up name rows
     for (const code in this.view.nameDivs) {
-      this.view.nameDivs[code].setupControls('')
+      this.view.nameDivs[code].setupControls({ name: '' },
+      a => this.setupNameReferenceQuery(a)
+      )
     }
     this.view.authorsDiv.setupControls({ author_id: '', name: '' },
       a => this.setupAuthorQuery(a),
@@ -457,13 +474,13 @@ class SongController extends EditorController {
    */
   getUserData () {
     // author ids are saved as data variables in inputs
-    const names = this.collectInputData(this.view.nameDivs.en.rowsDiv, false)
-
+    const names = this.collectNameData(this.view.nameDivs.en.rowsDiv)
+    console.log(names)
     // collect other names
     const nameCodes = {}
     for (const code in this.view.nameDivs) {
       if (code !== 'en') {
-        nameCodes[code + 'Names'] = this.collectInputData(this.view.nameDivs[code].rowsDiv)
+        nameCodes[code + 'Names'] = this.collectNameData(this.view.nameDivs[code].rowsDiv)
       }
     }
 
@@ -490,6 +507,19 @@ class SongController extends EditorController {
       ? input => input.dataset[dataProperty]
       : input => input.value
     return [...parent.querySelectorAll('input')].map(mapFunction)
+  }
+
+  collectNameData (parent) {
+    const elements = [...parent.querySelectorAll('input:first-child')].map(input => input.parentElement)
+    const names = []
+    elements.forEach(element => {
+      names.push({
+        name: element.children[0].value,
+        referenceId: element.children[1].dataset.referenceId
+      })
+    })
+
+    return names
   }
 
   /**
@@ -540,17 +570,12 @@ class SongController extends EditorController {
     return data
   }
 
-  /**
-   * Get all the authors that have been picked by the user
-   * @returns {import('./query-options.js').TakenInfo}
-   */
-  getAllTakenAuthors () {
-    const allInputs = this.view.authorsDiv.rowsDiv.querySelectorAll('input')
+  getAllTakenMoveableRow (elements, dataVar) {
     const takenIds = []
     let hasUntakenId = false
-    allInputs.forEach(input => {
-      const { authorId } = input.dataset
-      if (authorId) takenIds.push(authorId)
+    elements.forEach(element => {
+      const id = element.dataset[dataVar]
+      if (id) takenIds.push(id)
       else hasUntakenId = true
     })
 
@@ -558,6 +583,15 @@ class SongController extends EditorController {
       takenIds,
       hasUntakenId
     }
+  }
+
+  /**
+   * Get all the authors that have been picked by the user
+   * @returns {import('./query-options.js').TakenInfo}
+   */
+  getAllTakenAuthors () {
+    const allInputs = this.view.authorsDiv.rowsDiv.querySelectorAll('input')
+    return this.getAllTakenMoveableRow(allInputs, 'authorId')
   }
 
   /**
@@ -592,6 +626,18 @@ class SongController extends EditorController {
     }
   }
 
+  setupNameReferenceQuery (row) {
+    const input = row.children[0].children[1]
+    console.log(input)
+    createSearchQuery(
+      input,
+      'referenceId',
+      'reference_id',
+      'name',
+      a => this.model.getReferenceNames(a)
+    )
+  }
+
   /**
    * Callback which adds the search queries to the authors
    * @param {HTMLDivElement} - The element for the row inside the element
@@ -622,20 +668,17 @@ class MoveableRowsElement {
    * by a specific rowCallback that transforms it into a RowData object
    * @param {string} divClass - CSS class for the element
    * @param {*} rows
-   * @param {function(*) : RowData} rowCallback
    */
-  constructor (divClass, rows, rowCallback) {
-    this.rowCallback = rowCallback
+  constructor (divClass, rows,  rowGenerator) {
+    this.rowGenerator = rowGenerator
 
     this.rowClass = 'moveable-row'
     this.delClass = 'del-button'
     this.moveClass = 'move-button'
-    this.inputClass = 'row-input'
 
     let innerHTML = ''
     rows.forEach(row => {
-      const rowData = rowCallback(row)
-      innerHTML += `<div class=${this.rowClass}>${this.generateRow(rowData)}</div>`
+      innerHTML += `<div class=${this.rowClass}>${this.generateRow(row)}</div>`
     })
 
     this.rowsDiv = createElement({ className: divClass, innerHTML })
@@ -656,13 +699,9 @@ class MoveableRowsElement {
    * @returns {string}
    */
   generateRow (rowData) {
-    let dataset = ''
-    for (const data in rowData.dataset) {
-      dataset += `data-${data}="${rowData.dataset[data]}"`
-    }
-
+    console.log(rowData, this.rowGenerator(rowData))
     return `
-      <input class="${this.inputClass}" type="text" value="${rowData.value}" ${dataset}>
+      <div>${this.rowGenerator(rowData)}</div>
       <button class="${this.delClass}"> DELETE </button>
       <button class="${this.moveClass}"> MOVE </button>
     `
@@ -719,7 +758,7 @@ class MoveableRowsElement {
    */
   setupAddButton () {
     this.addButton.addEventListener('click', () => {
-      const innerHTML = this.generateRow(this.rowCallback(this.defaultValue))
+      const innerHTML = this.generateRow(this.defaultValue)
       const newRow = createElement({ className: this.rowClass, innerHTML })
       this.addButton.parentElement.insertBefore(newRow, this.addButton)
       this.setupRow(newRow)
@@ -911,3 +950,23 @@ function isValidLink (link) {
 function indexOfChild (parent, child) {
   return [...parent.children].indexOf(child)
 }
+
+
+function mapIntoIdList (ids, info, property) {
+  info.forEach(i => {
+    const index = ids.indexOf(i[property])
+    if (index > - 1) ids[index] = i
+  })
+
+  return ids
+}
+
+function mapOntoIds (ids, info, idName, property) {
+  info.forEach(i => {
+    const index = findIndexInObject(ids, idName, i[property])
+    if (index) Object.assign(ids[index], {mapped: i})
+  })
+
+  return ids
+}
+

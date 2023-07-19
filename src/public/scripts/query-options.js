@@ -22,6 +22,9 @@ import { createElement } from './utils.js'
  * @param {import("./submit-block").Blocker} blocker - If the query is associated with a button to block, the blocker object of the button
  */
 export function createSearchQuery (input, dataVar, databaseVar, databaseValue, fetchDataFunction, checkTakenFunction, blocker) {
+  // for when taken function and blockers are useless
+  if (!checkTakenFunction) checkTakenFunction = () => ({ hasUntakenId: true, takenIds: []})
+
   // element to have the available options
   const queryOptions = createElement({ parent: input.parentElement, className: 'query-options' })
 
