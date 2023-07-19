@@ -23,7 +23,7 @@ import { createElement } from './utils.js'
  */
 export function createSearchQuery (input, dataVar, databaseVar, databaseValue, fetchDataFunction, checkTakenFunction, blocker) {
   // for when taken function and blockers are useless
-  if (!checkTakenFunction) checkTakenFunction = () => ({ hasUntakenId: true, takenIds: []})
+  if (!checkTakenFunction) checkTakenFunction = () => ({ hasUntakenId: true, takenIds: [] })
 
   // element to have the available options
   const queryOptions = createElement({ parent: input.parentElement, className: 'query-options' })

@@ -15,11 +15,14 @@
   -webkit-text-fill-color: white;
 }
 
-input {
+input, textarea {
   font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   color: black;
   -webkit-text-stroke: 0;
   -webkit-text-fill-color: black;
+}
+
+input {
   height: 24px;
 }
 
@@ -65,7 +68,7 @@ button:hover {
   text-align: center;
 }
 
-.authors-div, .name-div {
+.authors-div {
   display: flex;
   flex-direction: column;
 }
@@ -137,6 +140,27 @@ button:hover {
   display: grid;
   grid-template-columns: 200px 50px;
 }
+
+.name-div {
+  display: flex;
+  flex-direction: column;
+}
+
+.name-div .moveable-row {
+  height: 100%;
+}
+
+
+.name-div .row-content {
+  display: grid;
+  grid-template-rows: 50px 50px 1fr;
+}
+
+.hidden {
+  display: none;
+  height: 0;
+}
+
 
 .hidden-btn {
   display: none;

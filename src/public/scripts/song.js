@@ -2,18 +2,13 @@ import { EditorModel, EditorView, EditorController, EditorType } from './editor-
 import { generateAudio } from './file.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
-import { createElement, findInObject, findIndexInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
+import { createElement, findInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
 
 /**
  * Data structure for a song
  * @typedef {object} SongData
  * @property {string} songId
  * @property {Name[]} names
- * @property {Name[]} ptNames
- * @property {Name[]} frNames
- * @property {Name[]} esNames
- * @property {Name[]} deNames
- * @property {Name[]} ruNames
  * @property {string[]} unNames
  * @property {string[]} authors
  * @property {Files} files
@@ -24,6 +19,18 @@ import { createElement, findInObject, findIndexInObject, postAndGetJSON, selectE
  * @typedef {object} Name
  * @property {string} name
  * @property {string} referenceId
+ * @property {LocalizationName} pt
+ * @property {LocalizationName} fr
+ * @property {LocalizationName} es
+ * @property {LocalizationName} de
+ * @property {LocalizationName} ru
+ */
+
+/**
+ * @typedef {object} LocalizationName
+ * @property {string} name
+ * @property {string} referenceId
+ * @property {string} translationNotes
  */
 
 /**
@@ -59,7 +66,7 @@ import { createElement, findInObject, findIndexInObject, postAndGetJSON, selectE
 
 class SongModel extends EditorModel {
   constructor () {
-    super('song', { names: [], ptNames:[], frNames: [], esNames: [], deNames: [], ruNames:[], unNames: [], authors: [] })
+    super('song', { names: [], authors: [] })
   }
 
   /**
@@ -91,12 +98,12 @@ class SongView extends EditorView {
    * @param {Row[]} data.files - All the files belonging to this song
    */
   buildEditor (data) {
-    const { song, authorInfo, files } = data
+    const { song, authorInfo, referenceMap, files } = data
 
     if (song) {
       // set up template rows
       let gridTemplateRows = ''
-      for (let i = 0; i < 8; i++) gridTemplateRows += '1fr '
+      for (let i = 0; i < 2; i++) gridTemplateRows += '1fr '
       gridTemplateRows += '50px '
       for (let i = 0; i < 2; i++) gridTemplateRows += '1fr '
       this.editor.style.gridTemplateRows = gridTemplateRows
@@ -108,20 +115,7 @@ class SongView extends EditorView {
 
       Object.assign(this, { names, authors, link, files, song })
 
-      const nameHeaderCodes = {
-        en: 'Names',
-        pt: 'Portuguese Names',
-        fr: 'French Names',
-        es: 'Spanish Names',
-        de: 'German Names',
-        ru: 'Russian Names',
-        un: 'Unofficial Names'
-      }
-
-      // draw editor elements
-      for (const code in nameHeaderCodes) {
-        this.renderNameDiv(nameHeaderCodes[code], code)
-      }
+      this.renderNamesDiv(referenceMap)
       this.renderAuthors()
       this.renderLink()
       this.renderFiles()
@@ -140,32 +134,82 @@ class SongView extends EditorView {
   }
 
   /**
-   * Renders the moveable rows for the names wfor a particular code
-   * @param {string} header - Name of the header for the row
-   * @param {string} code - A language code like en or pt
+   * Render the moveable rows for the main names
+   * @param {object} references - Object that maps reference ids to reference database rows, used to get the reference name
    */
-  renderNameDiv (header, code) {
-    const targetNames = code === 'en' ? 'names' : code + 'Names'
-    
-    this.renderRow(header, wrapper => {
-      const rowGenerator = code === 'un'
-        ? row => `<input value="${row}" data-author-id="${row.author_id}">`
-        : row => {
-          const reference = row.mapped
-          const referenceName = reference ? reference.name : ''
-          return `
-            <input value="${row.name}">
-            <input value="${referenceName}" data-reference-id="${row.referenceId}">
+  renderNamesDiv (references) {
+    this.langDiv = 'lang-div'
 
-          `
+    const langCodes = {
+      pt: 'Portuguese Names',
+      fr: 'French Names',
+      es: 'Spanish Names',
+      de: 'German Names',
+      ru: 'Russian Names'
+    }
+
+    this.renderRow('Names', wrapper => {
+      const rowGenerator = row => {
+        let referenceName = ''
+        let referenceId = ''
+        if (row.referenceId) {
+          referenceId = row.referenceId
+          referenceName = references[referenceId].name
         }
-      this.nameDivs[code] = new MoveableRowsElement(
+        let html = `
+            <div>
+              <input value="${row.name}">
+              <input value="${referenceName}" data-reference-id="${referenceId}">
+            </div>
+            <div>
+              <select>
+                <option selected> [PICK LOCALIZATION] </option>
+                <option value="pt"> Portuguese </option>
+                <option value="fr"> French </option>
+                <option value="es"> Spanish </option>
+                <option value="de"> German </option>
+                <option value="ru"> Russian </option>
+              </select>
+            </div>
+            
+          `
+
+        html += '<div>'
+        for (const code in langCodes) {
+          console.log(code)
+          let name = ''
+          let referenceName = ''
+          let referenceId = ''
+          let translationNotes = ''
+
+          // avoid breaking on new rows
+          if (row[code]) {
+            name = row[code].name
+            referenceId = row[code].referenceId
+            translationNotes = row[code].translationNotes
+          }
+
+          if (references[referenceId]) referenceName = references[referenceId].name
+
+          html += `
+              <div class="hidden ${this.langDiv}">
+                <input value="${name}">  
+                <input value="${referenceName}" data-reference-id="${referenceId}">
+                <textarea>${translationNotes}</textarea>
+              </div>
+            `
+        }
+        html += '</div>'
+
+        return html
+      }
+      this.namesDiv = new MoveableRowsElement(
         'name-div',
-        this.song[targetNames],
-        rowGenerator  
+        this.song.names,
+        rowGenerator
       )
 
-      this.nameDivs[code].renderElement(wrapper)
+      this.namesDiv.renderElement(wrapper)
     })
   }
 
@@ -290,15 +334,16 @@ class SongController extends EditorController {
   async getBuildData () {
     const song = this.model.data
     this.song = song
-    
+
     const referenceInfo = await this.model.getReferenceNames('')
-    mapOntoIds(song.names, referenceInfo, 'referenceId', 'reference_id')
+    const referenceMap = rowsToIdMap(referenceInfo, 'reference_id')
+
     const authorInfo = await this.model.getAuthorNames('')
     const files = await this.model.getFileData()
     this.mediaNames = await this.model.getMediaNames('')
     this.featureNames = await this.model.getFeatureNames('')
 
-    return { song, authorInfo, files }
+    return { song, authorInfo, referenceMap, files }
   }
 
   /**
@@ -306,11 +351,37 @@ class SongController extends EditorController {
    */
   async setupEditor () {
     // setting up name rows
-    for (const code in this.view.nameDivs) {
-      this.view.nameDivs[code].setupControls({ name: '' },
-      a => this.setupNameReferenceQuery(a)
-      )
-    }
+    this.view.namesDiv.setupControls(
+      { name: '' },
+      row => {
+        const mainReference = row.children[0].children[0].children[1]
+        const otherReferences = row.children[0].children[2].querySelectorAll(`.${this.view.langDiv} input:nth-child(2)`)
+        const references = [mainReference, ...otherReferences]
+        references.forEach(input => {
+          createSearchQuery(
+            input,
+            'referenceId',
+            'reference_id',
+            'name',
+            x => this.model.getReferenceNames(x)
+          )
+        })
+        const select = row.querySelector('select')
+        select.addEventListener('change', () => {
+          const targetElement = {
+            pt: 0,
+            fr: 1,
+            es: 2,
+            de: 3,
+            ru: 4
+          }[select.value]
+          const previousElement = row.querySelector(`.${this.view.langDiv}:not(.hidden)`)
+          if (previousElement) previousElement.classList.add('hidden')
+          if (targetElement !== undefined) row.children[0].children[2].children[targetElement].classList.remove('hidden')
+        })
+      }
+    )
+
     this.view.authorsDiv.setupControls({ author_id: '', name: '' },
       a => this.setupAuthorQuery(a),
       () => this.submitBlocker.block('authorId'),
@@ -460,7 +531,6 @@ class SongController extends EditorController {
    */
   addRowCallback (orderedRows, variable) {
     const headers = orderedRows.div.querySelectorAll(`.${orderedRows.headerClass}.${orderedRows.identifierClass}`)
-    console.log(orderedRows.div)
 
     this.submitBlocker.ternaryBlock(
       headers.length === 0,
@@ -474,22 +544,13 @@ class SongController extends EditorController {
    */
   getUserData () {
     // author ids are saved as data variables in inputs
-    const names = this.collectNameData(this.view.nameDivs.en.rowsDiv)
-    console.log(names)
-    // collect other names
-    const nameCodes = {}
-    for (const code in this.view.nameDivs) {
-      if (code !== 'en') {
-        nameCodes[code + 'Names'] = this.collectNameData(this.view.nameDivs[code].rowsDiv)
-      }
-    }
-
+    const names = this.collectNameData()
     const authors = this.collectInputData(this.view.authorsDiv.rowsDiv, true, 'authorId')
     const link = this.view.linkInput.value
     const files = this.collectHQCheckData()
     const medias = this.collectMediaData()
 
-    return Object.assign({ songId: this.model.id, names }, nameCodes, { authors, link, files, medias })
+    return { songId: this.model.id, names, authors, link, files, medias }
   }
 
   /**
@@ -509,14 +570,36 @@ class SongController extends EditorController {
     return [...parent.querySelectorAll('input')].map(mapFunction)
   }
 
-  collectNameData (parent) {
-    const elements = [...parent.querySelectorAll('input:first-child')].map(input => input.parentElement)
+  /**
+   * Get the name data from the page
+   * @returns {Name}
+   */
+  collectNameData () {
+    const rows = selectElements(this.view.namesDiv.contentClass, this.view.namesDiv.rowsDiv)
     const names = []
-    elements.forEach(element => {
-      names.push({
-        name: element.children[0].value,
-        referenceId: element.children[1].dataset.referenceId
+    rows.forEach(row => {
+      const mainDiv = row.children[0]
+
+      const name = {
+        name: mainDiv.children[0].value,
+        referenceId: mainDiv.children[1].dataset.referenceId
+      }
+
+      const codes = ['pt', 'fr', 'es', 'de', 'ru']
+      codes.forEach((code, i) => {
+        const localizationDiv = row.children[2].children[i]
+        const localizationName = {
+          [code]: {
+            name: localizationDiv.children[0].value,
+            referenceId: localizationDiv.children[1].dataset.referenceId,
+            translationNotes: localizationDiv.children[2].value
+          }
+        }
+
+        Object.assign(name, localizationName)
       })
+
+      names.push(name)
     })
 
     return names
@@ -628,7 +711,6 @@ class SongController extends EditorController {
 
   setupNameReferenceQuery (row) {
     const input = row.children[0].children[1]
-    console.log(input)
     createSearchQuery(
       input,
       'referenceId',
@@ -669,12 +751,13 @@ class MoveableRowsElement {
    * @param {string} divClass - CSS class for the element
    * @param {*} rows
    */
-  constructor (divClass, rows,  rowGenerator) {
+  constructor (divClass, rows, rowGenerator) {
     this.rowGenerator = rowGenerator
 
     this.rowClass = 'moveable-row'
     this.delClass = 'del-button'
     this.moveClass = 'move-button'
+    this.contentClass = 'row-content'
 
     let innerHTML = ''
     rows.forEach(row => {
@@ -699,9 +782,8 @@ class MoveableRowsElement {
    * @returns {string}
    */
   generateRow (rowData) {
-    console.log(rowData, this.rowGenerator(rowData))
     return `
-      <div>${this.rowGenerator(rowData)}</div>
+      <div class="${this.contentClass}">${this.rowGenerator(rowData)}</div>
       <button class="${this.delClass}"> DELETE </button>
       <button class="${this.moveClass}"> MOVE </button>
     `
@@ -951,22 +1033,34 @@ function indexOfChild (parent, child) {
   return [...parent.children].indexOf(child)
 }
 
-
+/**
+ * Takes a list of ids, and turns into a list of rows replacing the ids with their respective rows
+ * @param {string[]} ids - List of ids to be mutated
+ * @param {object[]} info - Can be any object, as long as it has the id as a property
+ * @param {string} property - Property name for the id
+ * @returns {object[]} Sorted and filtered by ids
+ */
 function mapIntoIdList (ids, info, property) {
   info.forEach(i => {
     const index = ids.indexOf(i[property])
-    if (index > - 1) ids[index] = i
+    if (index > -1) ids[index] = i
   })
 
   return ids
 }
 
-function mapOntoIds (ids, info, idName, property) {
-  info.forEach(i => {
-    const index = findIndexInObject(ids, idName, i[property])
-    if (index) Object.assign(ids[index], {mapped: i})
+/**
+ * Get a map of id -> row based of an array of rows
+ * @param {import('../../app/database.js').Row[]} rows
+ * @param {string} idName - Name of the id column/property
+ * @returns {object} Map of id -> row
+ */
+function rowsToIdMap (rows, idName) {
+  const map = {}
+  rows.forEach(row => {
+    const id = row[idName]
+    map[id] = row
   })
 
-  return ids
+  return map
 }
-

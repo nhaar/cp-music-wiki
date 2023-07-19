@@ -38,19 +38,22 @@ class WikiDatabase {
           pos INTEGER,
           name_text TEXT,
           reference_id INTEGER,
+          pt_name TEXT,
+          pt_reference_id INTEGER,
+          pt_translation_notes TEXT,
+          fr_name TEXT,
+          fr_reference_id INTEGER,
+          fr_translation_notes TEXT,
+          es_name TEXT,
+          es_reference_id INTEGER,
+          es_translation_notes TEXT,
+          de_name TEXT,
+          de_reference_id INTEGER,
+          de_translation_notes TEXT,
+          ru_name TEXT,
+          ru_reference_id INTEGER,
+          ru_translation_notes TEXT,
           PRIMARY KEY (song_id, pos)
-          FOREIGN KEY (song_id) REFERENCES songs(song_id)
-        )
-      `,
-      `
-        song_localization_names (
-          song_id INTEGER,
-          pos INTEGER,
-          lang TEXT,
-          name_text TEXT,
-          reference_id INTEGER,
-          translation_notes TEXT,
-          PRIMARY KEY (song_id, pos, lang)
           FOREIGN KEY (song_id) REFERENCES songs(song_id)
         )
       `,
@@ -240,13 +243,8 @@ class WikiDatabase {
   async getSongById (songId) {
     const row = await this.getSong('song_id', songId)
     const authors = await deconstructRows(() => this.getSongAuthors(songId), 'author_id')
-    const names = await deconstructNameRows(() => this.getSongNames(songId))
-    const codes = ['pt', 'fr', 'es', 'de', 'ru']
-    const codeNames = {}
-    for (let i = 0; i < codes.length; i++) {
-      const code = codes[i]
-      codeNames[code + 'Names'] = await this.deconstructLanguageRows(songId, code)
-    }
+    const names = await this.deconstructNameRows(songId)
+
     const unNames = await deconstructRows(() => this.getUnnoficialNames(songId), 'name_text')
 
     const link = row.link ? youtubify(row.link) : ''
@@ -261,7 +259,7 @@ class WikiDatabase {
 
     const medias = await this.getSongMedias(songId)
 
-    const song = Object.assign({ names }, codeNames, { unNames, authors, link, files, medias })
+    const song = { names, unNames, authors, link, files, medias }
     return song
   }
 
@@ -354,7 +352,8 @@ class WikiDatabase {
    */
   async updateSong (data) {
     await this.updateBase(data, 'songs', 'songId', async data => {
-      const { songId, names, unNames, link, files, medias } = data
+      const { songId, names, link, files, medias } = data
+
       const authors = data.authors.map(n => Number(n))
 
       // authors
@@ -364,22 +363,12 @@ class WikiDatabase {
       })
 
       // names
-      this.updatePositionalNames(songId, names)
-      // this.updatePositionalTable('song_names', 'name_text', songId, names, async songId => {
-      //   const oldData = await this.getSongNames(songId)
-      //   return oldData
-      // })
+      this.updateNames(songId, names)
 
       // // unnoficial names
       // this.updatePositionalTable('unnoficial_names', 'name_text', songId, unNames, async songId => {
       //   const oldData = await this.getUnnoficialNames(songId)
       //   return oldData
-      // })
-
-      // // localization names
-      // const codes = ['pt', 'fr', 'es', 'de', 'ru']
-      // codes.forEach(code => {
-      //   this.updateLocalizationTable(code, songId, data[code + 'Names'])
       // })
 
       // link
@@ -494,7 +483,6 @@ class WikiDatabase {
   async updateReference (data) {
     await this.updateBase(data, 'wiki_references', 'referenceId', async data => {
       const { referenceId, name, link, description } = data
-      console.log(data)
       this.db.run('UPDATE wiki_references SET name = ?, link = ?, description = ? WHERE reference_id = ?', [name, link, description, referenceId])
     })
   }
@@ -550,48 +538,67 @@ class WikiDatabase {
     }
   }
 
-  async updatePositionalNames (songId, newData) {
-    await this.updatePositionalTableBase(songId, newData, async () =>  await this.runSelectMethod(callback => {
-        this.db.all('SELECT * FROM song_names WHERE song_id = ?', [songId], callback)
-      }), (songId, i, newData) => {
-        this.runInsert('song_names (song_id, pos, name_text, reference_id)', [songId, i + 1, newData[i].name, newData[i].referenceId])
-      }, (songId, i) => {
-        this.db.run('DELETE FROM song_names WHERE song_id = ? AND pos = ?', [songId, i + 1])
-      }, (oldData, newData, i) => {
-        const name = oldData[i].name_text === newData[i].name
-        const reference = oldData[i].reference_id === newData[i].referenceId
-        return name && reference
-      }, (songId, i, newData) => {
-        this.db.run('UPDATE song_names SET name_text = ?, reference_id = ? WHERE song_id = ? AND pos = ?', [newData[i].name, newData[i].referenceId, songId, i +1])
+  /**
+   * Saves all the names of a song into the database
+   * @param {string} songId
+   * @param {import('../public/scripts/song').Name} newData
+   */
+  async updateNames (songId, newData) {
+    const codes = ['pt', 'fr', 'es', 'de', 'ru']
+
+    // helper function
+    const codeIterator = (callback, newData, i, values) => {
+      codes.forEach(code => {
+        callback(code)
+        const langData = newData[i][code]
+        values.push(langData.name)
+        values.push(langData.referenceId)
+        values.push(langData.translationNotes)
       })
+    }
+
+    await this.updatePositionalTableBase(songId, newData, async () => await this.runSelectMethod(callback => {
+      this.db.all('SELECT * FROM song_names WHERE song_id = ?', [songId], callback)
+    }), (songId, i, newData) => {
+      let command = ''
+      const values = [songId, i + 1, newData[i].name, newData[i].referenceId]
+      codeIterator(code => {
+        command += `, ${code}_name, ${code}_reference_id, ${code}_translation_notes`
+      }, newData, i, values)
+
+      this.runInsert(`song_names (song_id, pos, name_text, reference_id${command})`, values)
+    }, (songId, i) => {
+      this.db.run('DELETE FROM song_names WHERE song_id = ? AND pos = ?', [songId, i + 1])
+    }, (oldData, newData, i) => {
+      if (oldData[i].name_text !== newData[i].name || oldData[i].reference_id !== newData[i].referenceId) return true
+      for (let j = 0; j < codes.length; j++) {
+        const code = codes[j]
+        const localizationChanges =
+            oldData[i][code + '_name'] === newData[i][code].name &&
+            oldData[i][code + '_reference_id'] === newData[i][code].referenceId &&
+            oldData[i][code + '_translation_notes'] === newData[i][code].translationNotes
+
+        if (!localizationChanges) return true
+      }
+      return false
+    }, (songId, i, newData) => {
+      let langCommands = ''
+      const values = [newData[i].name, newData[i].referenceId]
+      codeIterator(code => {
+        langCommands += `, ${code}_name = ?, ${code}_reference_id = ?, ${code}_translation_notes = ?`
+      }, newData, i, values)
+
+      values.push(songId)
+      values.push(i + 1)
+
+      this.db.run(`UPDATE song_names SET name_text = ?, reference_id = ?${langCommands} WHERE song_id = ? AND pos = ?`, values)
+    })
   }
-
-  
-  async updatePositionalNames (songId, newData, code) {
-    const isUnofficial = code === 'un'
-    const isLocalization = !isUnofficial && code !== 'en'
-    const table = code === 'en' ? 'song_names' : 'song_localization_names'
-    await this.updatePositionalTableBase(songId, newData, async () =>  await this.runSelectMethod(callback => {
-
-        this.db.all('SELECT * FROM song_names WHERE song_id = ?', [songId], callback)
-      }), (songId, i, newData) => {
-        this.runInsert('song_names (song_id, pos, name_text, reference_id)', [songId, i + 1, newData[i].name, newData[i].referenceId])
-      }, (songId, i) => {
-        this.db.run('DELETE FROM song_names WHERE song_id = ? AND pos = ?', [songId, i + 1])
-      }, (oldData, newData, i) => {
-        const name = oldData[i].name_text === newData[i].name
-        const reference = oldData[i].reference_id === newData[i].referenceId
-        return name && reference
-      }, (songId, i, newData) => {
-        this.db.run('UPDATE song_names SET name_text = ?, reference_id = ? WHERE song_id = ? AND pos = ?', [newData[i].name, newData[i].referenceId, songId, i +1])
-      })
-  }
-
 
   async updateSingleValuePositionalTableBase (table, dataColumn, extraColumn, extraValue, songId, newData, getRowsFunction) {
     const extraCommand = extraColumn
-    ? ` AND ${extraColumn} = ?`
-    : ''
+      ? ` AND ${extraColumn} = ?`
+      : ''
 
     await this.updatePositionalTableBase(songId, newData, getRowsFunction, (songId, i, newData) => {
       let command = `${table} (song_id, pos, ${dataColumn}`
@@ -605,7 +612,6 @@ class WikiDatabase {
       const values = [songId, i + 1]
       if (extraColumn) values.push(extraValue)
 
-      console.log(extraCommand)
       this.db.run(`DELETE FROM ${table} WHERE song_id = ? AND pos = ? ${extraCommand}`, values)
     }, (oldData, newData, i) => {
       return oldData[i][dataColumn] !== newData[i]
@@ -829,6 +835,34 @@ class WikiDatabase {
     const result = await this.runDatabaseMethod(methodCallback)
     return result
   }
+
+  /**
+   * Helper function that gets all the name data for a song
+   * @param {string} songId
+   * @returns {import('../public/scripts/song').Name[]}
+   */
+  async deconstructNameRows (songId) {
+    const rows = (await deconstructEntireRow(() => this.getSongNames(songId))).map(row => {
+      const name = {
+        name: row.name_text,
+        referenceId: row.reference_id
+      }
+      const codes = ['pt', 'fr', 'es', 'de', 'ru']
+      codes.forEach(code => {
+        Object.assign(name, {
+          [code]: {
+            name: row[code + '_name'],
+            referenceId: row[code + '_reference_id'],
+            translationNotes: row[code + '_translation_notes']
+          }
+        })
+      })
+
+      return name
+    })
+
+    return rows
+  }
 }
 
 async function deconstructEntireRow (rowCallback) {
@@ -839,15 +873,6 @@ async function deconstructEntireRow (rowCallback) {
   })
 
   return values
-}
-
-async function deconstructNameRows (rowCallback) {
-  const rows = (await deconstructEntireRow(rowCallback)).map(row => ({
-    name: row.name_text,
-    referenceId: row.reference_id
-  }))
-
-  return rows
 }
 
 /**
