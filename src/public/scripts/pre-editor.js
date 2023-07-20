@@ -71,6 +71,11 @@ class Controller {
           databaseValue = 'name'
           fetchDataFunction = a => this.model.getReferenceNames(a)
         }
+        case '7': {
+          databaseVar = 'room_id'
+          databaseValue = 'name'
+          fetchDataFunction = a => this.model.getRoomNames(a)
+        }
       }
 
       // reset query

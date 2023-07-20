@@ -1,5 +1,6 @@
 import { EditorModel, EditorView, EditorController, EditorType } from './editor-class.js'
 import { generateAudio } from './file.js'
+import { OrderedRowsElement } from './ordered-rows.js'
 import { createSearchQuery } from './query-options.js'
 import { Blocker } from './submit-block.js'
 import { createElement, findInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
@@ -292,7 +293,7 @@ class SongView extends EditorView {
    */
   renderMedia () {
     this.renderRow('Medias', wrapper => {
-      this.mediaRows = new OrderedRowsELement('media-rows', 'media-element')
+      this.mediaRows = new OrderedRowsElement('media-rows', 'media-element')
       this.mediaRows.renderElement(wrapper)
     })
   }
@@ -499,7 +500,7 @@ class SongController extends EditorController {
       'name',
       a => this.model.getMediaNames(a),
       parent => {
-        const featureRows = new OrderedRowsELement('feature-row', 'feature-element')
+        const featureRows = new OrderedRowsElement('feature-row', 'feature-element')
 
         // save the featureRows variable to be read during page initialization
         if (!this.view.mediaRows.featureRows) this.view.mediaRows.featureRows = []
@@ -562,7 +563,7 @@ class SongController extends EditorController {
   /**
    * Base function for the addCallback to run
    * in the ordered rows which block/unblock the submit button
-   * @param {OrderedRowsELement} orderedRows
+   * @param {OrderedRowsElement} orderedRows
    * @param {string} variable - Blocking variable
    */
   addRowCallback (orderedRows, variable) {
@@ -954,138 +955,6 @@ class MoveableRowsElement {
       this.rowsDiv.dataset.hoveringRow = index
     })
     if (this.controlCallback) this.controlCallback(row)
-  }
-}
-
-class OrderedRowsELement {
-  /**
-   * Creates the element using divClass as the element class,
-   * and idClass are assigned to all row headers
-   * @param {string} divClass
-   * @param {string} idClass
-   */
-  constructor (divClass, idClass) {
-    this.rowClass = 'ordered-row'
-    this.headerClass = 'row-header'
-    this.identifierClass = idClass
-
-    this.div = createElement({ className: divClass })
-    this.newRowDiv = createElement({ parent: this.div, className: 'add-ordered-row' })
-    this.addButton = createElement({ parent: this.newRowDiv, tag: 'button', innerHTML: 'ADD' })
-    this.addInput = createElement({ parent: this.newRowDiv, tag: 'input' })
-  }
-
-  /**
-   * Appends the ordered rows element to a parent element
-   * @param {HTMLElement} parent
-   */
-  renderElement (parent) {
-    parent.appendChild(this.div)
-  }
-
-  /**
-   * Adds control to the add row button
-   *
-   * The first four arguments are related to the arguments for the search query
-   * @param {string} dataVar
-   * @param {string} databaseVar
-   * @param {string} databaseValue
-   * @param {function(string) : Row} fetchDataFunction
-   *
-   * @param {function(HTMLDivElement) : void} contentFunction - A function that adds to the given div argument the element that will be displayed next to the header
-   * @param {function(OrderedRowsELement) : void} addCallback - A function to call every time a row is added (also runs when the element is created)
-   */
-  setupAddRow (
-    dataVar,
-    databaseVar,
-    databaseValue,
-    fetchDataFunction,
-    contentFunction,
-    addCallback
-  ) {
-    this.dataVar = dataVar
-    this.contentFunction = contentFunction
-    this.addCallback = addCallback
-
-    if (addCallback) addCallback(this)
-
-    this.addBlocker = new Blocker(this.addButton, () => this.createNewRow(this.addInput.value, this.addInput.dataset[dataVar]))
-
-    this.addBlocker.blockElement(dataVar, this.addInput)
-
-    createSearchQuery(
-      this.addInput,
-      dataVar,
-      databaseVar,
-      databaseValue,
-      fetchDataFunction,
-      a => this.checkTakenIds(a),
-      this.addBlocker
-    )
-  }
-
-  /**
-   * Creates a new row where the header is the name and adds the data variable as the id
-   * @param {string} name
-   * @param {string} id
-   */
-  createNewRow (name, id) {
-    // reset input
-    this.addBlocker.blockElement(this.dataVar, this.addInput)
-    this.addInput.value = ''
-    this.addInput.dataset[this.dataVar] = ''
-    const newRow = createElement({ classes: [this.rowClass, this.identifierClass] })
-    createElement({ parent: newRow, classes: [this.headerClass, this.identifierClass], dataset: { [this.dataVar]: id }, innerHTML: name })
-
-    this.div.insertBefore(newRow, this.newRowDiv)
-
-    const contentDiv = createElement({ parent: newRow })
-    this.contentFunction(contentDiv)
-
-    if (this.addCallback) this.addCallback(this)
-  }
-
-  /**
-   * Function that checkds which of the ids are taken for the query
-   * @param {HTMLInputElement} input
-   * @returns {import('./query-options.js').TakenInfo}
-   */
-  checkTakenIds (input) {
-    const id = input.dataset[this.dataVar]
-    const headers = this.div.querySelectorAll(`.${this.headerClass}.${this.identifierClass}`)
-
-    const takenIds = []
-    let hasUntakenId = false
-
-    const check = id => {
-      if (id) takenIds.push(id)
-      else hasUntakenId = true
-    }
-
-    check(id)
-
-    headers.forEach(header => {
-      const id = header.dataset[this.dataVar]
-      check(id)
-    })
-
-    return { hasUntakenId, takenIds }
-  }
-
-  /**
-   * Gives a string that can be used to select a row
-   * @returns
-   */
-  getRowSelector () {
-    return `.${this.rowClass}.${this.identifierClass}`
-  }
-
-  /**
-   * Gets all the rows inside this element
-   * @returns
-   */
-  getRows () {
-    return this.div.querySelectorAll(this.getRowSelector())
   }
 }
 

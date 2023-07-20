@@ -102,6 +102,28 @@ class WikiDatabase {
         )
       `,
       `
+        flash_rooms (
+          room_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          release_date TEXT,
+          is_release_estimate INTEGER,
+          closure_date TEXT,
+          is_closure_estimate INTEGER
+        )
+      `,
+      `
+        room_song (
+          room_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          pos INTEGER,
+          is_unused INTEGER,
+          date_start TEXT,
+          is_start_estimate INTEGER,
+          date_end TEXT,
+          is_end_estimate INTEGER,
+          song_id INTEGER
+        )
+      `,
+      `
         features (
           feature_id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT,
@@ -303,6 +325,8 @@ class WikiDatabase {
    */
   runGet = async (command, values) => this.runSelectMethod(callback => this.db.get(command, values, callback))
 
+  runAll = async (command, values) => this.runSelectMethod(callback => this.db.all(command, values, callback))
+
   /**
    * Gets the file data for a file id
    * @param {number} fileId
@@ -353,6 +377,37 @@ class WikiDatabase {
     }
   }
 
+  async getFlashRoomById (roomId) {
+    const row = await this.getFromTable('flash_rooms', 'room_id', roomId)
+    const useRows = await this.runAll('SELECT * FROM room_song WHERE room_id = ?', [roomId])
+    console.log(useRows)
+    const data = {
+      name: row.name,
+      releaseDate: row.release_date,
+      isReleaseEstimate: row.is_release_estimate,
+      closureDate: row.closureDate,
+      isClosureEstimate: row.isClosureEstimate,
+      songUses: []
+    }
+    for (let i = 0; i < useRows.length; i++) {
+      const row = useRows[i]
+      const songNameRow = (await this.runGet('SELECT name_text FROM song_names WHERE song_id = ?', [row.song_id]))
+      let songName = ''
+      if (songNameRow) songName = songNameRow.name_text
+      data.songUses.push({
+        songId: row.song_id,
+        isUnused: row.is_unused,
+        startDate: row.start_date,
+        isStartEstimate: row.is_start_estimate,
+        endDate: row.end_date,
+        isEndEstimate: row.is_end_estimate,
+        meta: { songName }
+      })
+    }
+
+    return data
+  }
+
   async update (type, data) {
     const relation = {
       song: a => this.updateSong(a),
@@ -360,7 +415,8 @@ class WikiDatabase {
       source: a => this.updateSource(a),
       media: a => this.updateMedia(a),
       feature: a => this.updateFeature(a),
-      reference: a => this.updateReference(a)
+      reference: a => this.updateReference(a),
+      'flash-room': x => this.updateFlashRoom(x)
     }
 
     const response = await relation[type](data)
@@ -510,6 +566,33 @@ class WikiDatabase {
     })
   }
 
+  async updateFlashRoom (data) {
+    console.log(data)
+    await this.updateBase(data, 'flash_rooms', 'roomId', async data => {
+      const { roomId, name, releaseDate, isReleaseEstimate, closureDate, isClosureEstimate, songUses } = data
+      this.db.run('UPDATE flash_rooms SET name = ?, release_date = ?, is_release_estimate = ?, closure_date = ?, is_closure_estimate = ? WHERE room_id = ?', [name, releaseDate, isReleaseEstimate, closureDate, isClosureEstimate, roomId])
+
+      this.updatePositionalTableBase(
+        roomId,
+        songUses,
+        async () => await this.runAll('SELECT * FROM room_song WHERE room_id = ?', [roomId]),
+        (roomId, i, newData) => {
+          console.log(newData, i)
+          const { isUnused, dateStart, isStartEstimate, dateEnd, isEndEstimate, songId } = newData[i]
+          this.runInsert('room_song (room_id, pos, is_unused, date_start, is_start_estimate, date_end, is_end_estimate, song_id)', [roomId, i + 1, isUnused, dateStart, isStartEstimate, dateEnd, isEndEstimate, songId])
+        },
+        (roomId, i) => {
+          this.db.run('DELETE FROM room_song WHERE room_id = ? AND pos = ?', [roomId, i + 1])
+        },
+        (oldData, newData) => compareObjects(oldData, newData),
+        (roomId, i, newData) => {
+          const { isUnused, dateStart, isStartEstimate, dateEnd, isEndEstimate, songId } = newData[i]
+          this.db.run('UPDATE room_song SET is_unused = ?, date_start = ?, is_start_estimate = ?, date_end = ?, is_end_estimate = ?, song_id = ? WHERE room_id = ? AND pos = ?', [isUnused, dateStart, isStartEstimate, dateEnd, isEndEstimate, songId, roomId, i + 1])
+        }
+      )
+    })
+  }
+
   /**
    * Helper function that updates a SQL table based on position
    * (containing song_id, pos, and another column)
@@ -557,22 +640,22 @@ class WikiDatabase {
     )
   }
 
-  async updatePositionalTableBase (songId, newData, getRowsFunction, insertCallback, deleteCallback, comparisonCallback, updateCallback) {
-    const oldData = await getRowsFunction(songId)
+  async updatePositionalTableBase (id, newData, getRowsFunction, insertCallback, deleteCallback, comparisonCallback, updateCallback) {
+    const oldData = await getRowsFunction(id)
 
     if (oldData.length < newData.length) {
       for (let i = oldData.length; i < newData.length; i++) {
-        insertCallback(songId, i, newData)
+        insertCallback(id, i, newData)
       }
     } else if (oldData.length > newData.length) {
       for (let i = newData.length; i < oldData.length; i++) {
-        deleteCallback(songId, i)
+        deleteCallback(id, i)
       }
     }
 
     for (let i = 0; i < newData.length && i < oldData.length; i++) {
       if (comparisonCallback(oldData, newData, i)) {
-        updateCallback(songId, i, newData)
+        updateCallback(id, i, newData)
       }
     }
   }
@@ -773,7 +856,8 @@ class WikiDatabase {
       file: async a => await this.getFileById(a),
       media: async a => await this.getMediaById(a),
       feature: async a => await this.getFeatureById(a),
-      reference: async a => await this.getReferenceById(a)
+      reference: async a => await this.getReferenceById(a),
+      'flash-room': async x => await this.getFlashRoomById(x)
     }
 
     const response = await relation[type](id)

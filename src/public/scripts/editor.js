@@ -6,6 +6,7 @@ import { File } from './file.js'
 import { Media } from './media.js'
 import { Feature } from './feature.js'
 import { Reference } from './reference.js'
+import { FlashRoom } from './flash_room.js'
 
 class View {
   constructor () {
@@ -40,7 +41,8 @@ class Controller {
       3: File,
       4: Media,
       5: Feature,
-      6: Reference
+      6: Reference,
+      7: FlashRoom
     }
 
     const Class = typeRelation[type]
