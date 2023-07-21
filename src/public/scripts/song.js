@@ -72,7 +72,7 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
 
 class SongModel extends EditorModel {
   constructor () {
-    super('song', { names: [], authors: [], files: [] })
+    super('song', { names: [], authors: [], files: [], meta: {} })
   }
 
   /**
@@ -143,8 +143,8 @@ class SongView extends EditorView {
    */
   renderNamesDiv () {
     this.langDiv = 'lang-div'
+    console.log(this.song)
     const references = this.song.meta.referenceNames
-    console.log(references)
 
     const langCodes = {
       pt: 'Portuguese Names',
@@ -194,7 +194,7 @@ class SongView extends EditorView {
             translationNotes = row[code].translationNotes
           }
 
-          if (references[referenceId]) referenceName = references[referenceId].name
+          if (references && referenceId) referenceName = references[referenceId].name
 
           html += `
               <div class="hidden ${this.langDiv}">
@@ -883,7 +883,6 @@ class MoveableRowsElement {
       this.setupRow(row)
     })
 
-    console.log(this.rowsDiv)
     // to move rows
     this.rowsDiv.addEventListener('mouseup', () => {
       if (this.rowsDiv.dataset.isMoving) {

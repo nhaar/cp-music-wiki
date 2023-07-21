@@ -36,7 +36,7 @@ class WikiDatabase {
         song_names (
           song_id INTEGER,
           pos INTEGER,
-          name_text TEXT,
+          name TEXT,
           reference_id INTEGER,
           pt_name TEXT,
           pt_reference_id INTEGER,
@@ -53,15 +53,6 @@ class WikiDatabase {
           ru_name TEXT,
           ru_reference_id INTEGER,
           ru_translation_notes TEXT,
-          PRIMARY KEY (song_id, pos)
-          FOREIGN KEY (song_id) REFERENCES songs(song_id)
-        )
-      `,
-      `
-        unnoficial_names (
-          song_id INTEGER,
-          pos INTEGER,
-          name_text TEXT,
           PRIMARY KEY (song_id, pos)
           FOREIGN KEY (song_id) REFERENCES songs(song_id)
         )
@@ -89,16 +80,10 @@ class WikiDatabase {
           source_id INTEGER,
           song_id INTEGER,
           song_pos INTEGER,
-          file_name TEXT,
-          original_name TEXT,
+          filename TEXT,
+          originalname TEXT,
           source_link TEXT,
           is_hq INTEGER
-        )
-      `,
-      `
-        medias (
-          media_id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT
         )
       `,
       `
@@ -121,25 +106,6 @@ class WikiDatabase {
           date_end TEXT,
           is_end_estimate INTEGER,
           song_id INTEGER
-        )
-      `,
-      `
-        features (
-          feature_id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT,
-          media_id INTEGER,
-          release_date TEXT,
-          is_date_estimate INTEGER
-        )
-      `,
-      `
-        song_feature (
-          feature_id,
-          media_id INTEGER,
-          song_id INTEGER,
-          use_release_date INTEGER,
-          date TEXT,
-          is_date_estimate INTEGER
         )
       `,
       `
@@ -195,26 +161,71 @@ class WikiDatabase {
    * @param {string} value - Value to search in the property
    * @returns {Row | null} Row info or null if doesn't exist
    */
-  getFromTable = async (table, column, value) => await this.get(table, `${column} = ?`, [value])
+  getFromTable = async (table, column, value) => await this.get(table, column, [value])
 
-  /**
-   * Get all rows from a table
-   * @param {string} table
-   * @returns {Row[]}
-   */
-  getAll = async table => this.runSelectMethod(callback => {
-    this.db.all(`SELECT * FROM ${table}`, [], callback)
-  })
-
-  selectBase = async (method, table, condition, values, columns) => await this.runSelectMethod(
-    callback => method(`SELECT ${columns} FROM ${table} WHERE ${condition}`, values, callback)
-  )
+  selectBase = async (method, table, condition, values, columns) => {
+    const response = await this.runSelectMethod(
+      callback => {
+        condition = makeConditionProper(condition)
+        method(`SELECT ${columns} FROM ${table} WHERE ${condition}`, values, callback)
+      }
+    )
+    return camelfySelected(response)
+  }
 
   all = async (table, condition, values, columns = '*') => await this.selectBase((x, y, z) => this.db.all(x, y, z), table, condition, values, columns)
 
   get = async (table, condition, values, columns = '*') => await this.selectBase((x, y, z) => this.db.get(x, y, z), table, condition, values, columns)
 
-  allOrdered = async (table, condition, orderColumn, values, columns = '*') => await this.all(table, `${condition} ORDER BY ${orderColumn} ASC`, values, columns)
+  getById = async (table, id, columns = '*') => {
+    let idName
+    switch (table) {
+      case 'songs':
+      case 'authors':
+      case 'files':
+      case 'sources': {
+        idName = `${table.slice(0, table.length - 1)}_id`
+        break
+      }
+      case 'flash_rooms': {
+        idName = 'room_id'
+        break
+      }
+      case 'wiki_references': {
+        idName = 'reference_id'
+        break
+      }
+    }
+    return await this.get(table, idName, [id], columns)
+  }
+
+  getCellById = async (table, id, column) => (await this.getById(table, id, column))[snakeToCamel(column)]
+  
+
+  getByPos = async (table, id, pos, columns = '*') => {
+    let idName
+    switch (table) {
+      case 'room_song': {
+        idName = 'room_id'
+        break
+      }
+      case 'song_names':
+      case 'song_author':
+      case 'files': {
+        idName = 'song_id'
+        break
+      }
+    }
+    const posName = table === 'files' ? 'song_pos' : 'pos'
+    return await this.get(table, `${idName}, ${posName}`, [id, pos], columns)
+  }
+
+  allOrdered = async (table, condition, orderColumn, values, columns = '*') => {
+    const response = await this.runSelectMethod(
+      callback => this.db.all(`SELECT ${columns} FROM ${table} WHERE ${makeConditionProper(condition)} ORDER BY ${orderColumn} ASC`, values, callback)
+    )
+    return camelfySelected(response)
+  }
 
   /**
    * Asynchronously gets the data for a song based on its id
@@ -222,23 +233,22 @@ class WikiDatabase {
    * @returns {import('../public/scripts/editor').Song | null} Song object or null if doesn't exist
    */
   async getSongById (songId) {
-    const row = await this.get('songs', 'song_id = ?', [songId])
+    const row = await this.getById('songs', songId)
 
     // names
     const names = await this.callAsyncResult(() => this.allOrderedBySong(songId, 'song_names'),
       rows => rows.map(row => {
-        const name = {
-          name: row.name_text,
-          referenceId: row.reference_id
-        }
+        const variables = ['name', 'referenceId', 'translationNotes']
+        const name = destructureVariables(row, variables[0], variables[1])
         const codes = ['pt', 'fr', 'es', 'de', 'ru']
         codes.forEach(code => {
+          const codeObject = {}
+          variables.forEach(variable => {
+            const localizedVariable = `${code}${variable.charAt(0).toUpperCase()}${variable.slice(1)}`
+            codeObject[variable] = row[localizedVariable]
+          })
           Object.assign(name, {
-            [code]: {
-              name: row[code + '_name'],
-              referenceId: row[code + '_reference_id'],
-              translationNotes: row[code + '_translation_notes']
-            }
+            [code]: codeObject
           })
         })
         return name
@@ -261,8 +271,8 @@ class WikiDatabase {
     let authorIdNames = []
     const authors = await this.callAsyncResult(() => this.allOrderedBySong(songId, 'song_author'),
       rows => rows.map(row => {
-        const authorId = row.author_id
-        const referenceId = row.reference_id
+        const { authorId } = row
+        const { referenceId } = row
         referenceIdNames.push(authorId)
         authorIdNames.push(authorId)
         return { authorId, referenceId }
@@ -273,36 +283,33 @@ class WikiDatabase {
     const link = row.link ? youtubify(row.link) : ''
 
     // files and metada
-    const fileRows = await this.allOrdered('files', 'song_id = ?', 'song_pos', [songId])
+    const fileRows = await this.allOrdered('files', 'song_id', 'song_pos', [songId])
     const files = []
     const fileNames = {}
     const fileOriginalNames = {}
     fileRows.forEach(row => {
-      const fileId = row.file_id
+      const { fileId } = row
       files.push(fileId)
-      fileNames[fileId] = row.file_name
-      fileOriginalNames[fileId] = row.original_name
+      fileNames[fileId] = row.filename
+      fileOriginalNames[fileId] = row.originalname
     })
 
     authorIdNames = removeDuplicates(authorIdNames)
     referenceIdNames = removeDuplicates(referenceIdNames)
 
-    console.log('referenceeeeeeee', referenceIdNames)
 
-    const referenceNames = await this.mapIdToValue(referenceIdNames, 'wiki_references', 'reference_id', 'name')
-    const authorNames = await this.mapIdToValue(authorIdNames, 'authors', 'author_id', 'name')
+    const referenceNames = await this.mapIdToValue(referenceIdNames, 'wiki_references', 'name')
+    const authorNames = await this.mapIdToValue(authorIdNames, 'authors', 'name')
 
     const song = { names, authors, link, files, meta: { fileNames, fileOriginalNames, authorNames, referenceNames } }
     return song
   }
 
-  async mapIdToValue (ids, table, idName, nameColumn) {
+  async mapIdToValue (ids, table, nameColumn) {
     const map = {}
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i]
-      console.log('iiiiiiii', ids[i])
-      const name = await this.getTableCell(table, idName, id, nameColumn)
-      console.log(name)
+      const name = await this.getCellById(table, id, nameColumn)
       map[id] = name
     }
     return map
@@ -314,10 +321,7 @@ class WikiDatabase {
    * @returns {Row | null} Row info or null if doesn't exist
    */
 
-  getAuthorById = async authorId => await this.callAsyncResult(
-    () => this.getFromTable('authors', 'author_id', authorId),
-    row => ({ authorId, name: row.name })
-  )
+  getAuthorById = async id => await this.getById('authors', id)
 
   /**
    * Asynchronously get the row for a source
@@ -342,7 +346,7 @@ class WikiDatabase {
    */
   async getFileById (fileId) {
     const row = await this.getFromTable('files', 'file_id', fileId)
-    const songName = await this.getTableCell('song_names', 'song_id', row.song_id, 'name_text')
+    const songName = await this.getTableCell('song_names', 'song_id', row.song_id, 'name')
     const sourceName = await this.getTableCell('sources', 'source_id', row.source_id, 'name')
 
     return {
@@ -351,7 +355,7 @@ class WikiDatabase {
       originalname: row.original_name,
       sourceLink: row.source_link,
       isHQ: Boolean(row.is_hq),
-      meta: { songId: row.song_id, songName: songName.name_text, sourceName: sourceName.name }
+      meta: { songId: row.song_id, songName: songName.name, sourceName: sourceName.name }
     }
   }
 
@@ -372,7 +376,7 @@ class WikiDatabase {
 
   async getFlashRoomById (roomId) {
     const row = await this.getFromTable('flash_rooms', 'room_id', roomId)
-    const useRows = await this.allOrdered('room_song', 'room_id = ?', 'pos', [roomId])
+    const useRows = await this.allOrdered('room_song', 'room_id', 'pos', [roomId])
 
     const data = {
       name: row.name,
@@ -384,7 +388,7 @@ class WikiDatabase {
     }
     for (let i = 0; i < useRows.length; i++) {
       const row = useRows[i]
-      const songName = await this.getTableCell('song_names', 'song_id', row.song_id, 'name_text')
+      const songName = await this.getTableCell('song_names', 'song_id', row.song_id, 'name')
       data.songUses.push({
         songId: row.song_id,
         isUnused: row.is_unused,
@@ -455,7 +459,6 @@ class WikiDatabase {
   updateSong = async (data, type) => await this.updateBase(data, 'songs', 'songId', async data => {
     const { songId, names, authors, link, files } = data
     const oldData = await this.typeMethods[type].get(songId)
-    console.log(names)
     // authors
     this.updateSongAuthors(songId, authors, oldData.authors)
 
@@ -471,7 +474,6 @@ class WikiDatabase {
 
   updateAuthor = async (data) => await this.updateBase(data, 'authors', 'authorId', async data => {
     const { authorId, name } = data
-    console.log(name, authorId)
     this.update('authors', 'name = ?', 'author_id = ?', [name, authorId])
   })
   /**
@@ -498,7 +500,6 @@ class WikiDatabase {
    */
   updateFile = async (data) => await this.updateBase(data, 'files', 'fileId', async data => {
     const { meta, sourceId, originalname, filename, fileId, sourceLink, isHQ } = data
-    console.log('file', data)
     this.update(
       'files',
       'song_id = ?, source_id = ?, original_name = ?, file_name = ?, source_link = ?, is_hq = ?',
@@ -560,7 +561,6 @@ class WikiDatabase {
   }
 
   async updatePositionalTableBase (oldData, newData, id, table, valueNames, valueCallbacks, idName, posName, comparisonCallback) {
-    console.log(valueCallbacks)
     valueNames = valueNames
     const condition = `${idName} = ? AND ${posName} = ?`
     const getValues = i => {
@@ -584,7 +584,6 @@ class WikiDatabase {
       if (comparisonCallback(oldData, newData, i)) {
         const settingVariables = valueNames.map(name => `${name} = ?`).join(', ')
         const values = getValues(i)
-        console.log('kkkkkkkkkkkkkkkk', table, settingVariables, condition, values)
 
         this.update(table, settingVariables, condition, values)
       }
@@ -599,7 +598,7 @@ class WikiDatabase {
   async updateNames (songId, newData, oldData) {
     const langCodes = ['pt', 'fr', 'es', 'de', 'ru']
 
-    const valueNames = ['name_text', 'reference_id']
+    const valueNames = ['name', 'reference_id']
     const sqlVariables = ['name', 'reference_id', 'translation_notes']
     langCodes.forEach(code => {
       sqlVariables.forEach(variable => valueNames.push(`${code}_${variable}`))
@@ -611,7 +610,7 @@ class WikiDatabase {
     await this.updatePositionalTableBase(
       oldData, newData, songId, 'song_names', valueNames, valueCallbacks, 'song_id', 'pos',
       (oldData, newData, i) => {
-        if (oldData[i].name_text !== newData[i].name || oldData[i].reference_id !== newData[i].referenceId) return true
+        if (oldData[i].name !== newData[i].name || oldData[i].reference_id !== newData[i].referenceId) return true
         for (let j = 0; j < langCodes.length; j++) {
           const code = langCodes[j]
           const localizationChanges =
@@ -650,7 +649,7 @@ class WikiDatabase {
    * @param {string} table - Table name
    * @returns {Row[]} Array with all the rows ordered
    */
-  allOrderedBySong = async (songId, table) => await this.allOrdered(table, 'song_id = ?', 'pos', [songId])
+  allOrderedBySong = async (songId, table) => await this.allOrdered(table, 'song_id', 'pos', [songId])
 
   /**
    * Get all the authors from a song in an ordered array
@@ -699,7 +698,9 @@ class WikiDatabase {
    * @param {*} keyword - Keyword for column to be like
    * @returns {Row[]}
    */
-  selectLike = async (table, column, keyword) => await this.all(table, `${column} LIKE '%' || ? || '%'`, [keyword])
+  selectLike = async (table, column, keyword) => await this.runSelectMethod(
+    callback => this.db.all(`SELECT * FROM ${table} WHERE ${column} LIKE '%' || ? || '%'`, [keyword], callback)
+  )
 
   /**
    * Gets rows for a table based on filtering names by keyword
@@ -775,10 +776,10 @@ function extractVideoCode (link) {
 function getNameColumn (table) {
   switch (table) {
     case 'song_names': {
-      return 'name_text'
+      return 'name'
     }
     case 'files': {
-      return 'original_name'
+      return 'originalname'
     }
     default: {
       return 'name'
@@ -789,6 +790,40 @@ function getNameColumn (table) {
 function removeDuplicates (array) {
   return [...new Set(array)]
 }
+
+function snakeToCamel(str) {
+  return str.replace(/(_\w)/g, match =>  match[1].toUpperCase())
+}
+
+function camelfyObject (object) {
+  const newObject = {}
+  for (const key in object) {
+    newObject[snakeToCamel(key)] = object[key]
+  }
+  return newObject
+}
+
+function camelfySelected (response) {
+  if (Array.isArray(response)) {
+    response.forEach((element, i) => {
+      response[i] = camelfyObject(element)
+    })
+    return response
+  } else return camelfyObject(response)
+}
+
+function destructureVariables(object, ...variables) {
+  const newObj = {}
+  variables.forEach(variable => {
+    newObj[variable] = object[variable]
+  })
+  return newObj
+}
+
+function makeConditionProper (condition) {
+  return condition.replace(/\s/g, '').split(',').map(variable => `${variable} = ?`).join(' AND ')
+}
+
 
 const db = new WikiDatabase()
 

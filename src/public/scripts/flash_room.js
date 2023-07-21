@@ -29,7 +29,6 @@ class FlashRoomModel extends EditorModel {
 
 class FlashRoomView extends EditorView {
   buildEditor (data) {
-    console.log(data)
     this.nameInput = createElement({ parent: this.editor, tag: 'input' })
     this.releaseInput = createElement({ parent: this.editor, tag: 'input', type: 'date' })
     this.releaseCheckbox = createElement({ parent: this.editor, tag: 'input', type: 'checkbox' })
@@ -81,7 +80,6 @@ class FlashRoomController extends EditorController {
 
         element.parentElement.dataset.sorter = Date.parse(data.dateStart)
       }, x => {
-        console.log(x)
         return Number(Date.parse(x.children[0].children[1].value))
       }
     )
@@ -106,7 +104,6 @@ class FlashRoomController extends EditorController {
       songUses.push({ songId, isUnused, startDate, isStartEstimate, endDate, isEndEstimate })
     })
 
-    console.log(songUses)
     return { roomId: this.model.id, name, releaseDate, isReleaseEstimate, closureDate, isClosureEstimate, songUses }
   }
 }

@@ -97,7 +97,6 @@ export class OrderedRowsElement {
       this.rowsDiv.removeChild(this.rowsDiv.firstChild)
     }
 
-    console.log(rowsArray)
     rowsArray.sort((a, b) => {
       return this.sortValueFunction(a) - this.sortValueFunction(b)
     })
