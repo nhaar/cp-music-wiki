@@ -10,7 +10,7 @@ const gen = require('../app/lists')
 
 router.post('/update', async (req, res) => {
   const { data, type } = req.body
-  await db.update(type, data)
+  await db.updateType(type, data)
   gen.updateLists()
 
   res.sendStatus(200)

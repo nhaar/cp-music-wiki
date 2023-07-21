@@ -72,7 +72,7 @@ import { createElement, findInObject, postAndGetJSON, selectElement, selectEleme
 
 class SongModel extends EditorModel {
   constructor () {
-    super('song', { names: [], authors: [] })
+    super('song', { names: [], authors: [], files: [] })
   }
 
   /**
@@ -120,11 +120,10 @@ class SongView extends EditorView {
 
       Object.assign(this, { names, authors, link, files, song })
 
-      this.renderNamesDiv(referenceMap)
-      this.renderAuthors(authorMap, referenceMap)
+      this.renderNamesDiv()
+      this.renderAuthors()
       this.renderLink()
       this.renderFiles()
-      this.renderMedia()
     } else {
       this.editor.innerHTML = 'NO SONG FOUND'
     }
@@ -142,8 +141,10 @@ class SongView extends EditorView {
    * Render the moveable rows for the main names
    * @param {object} references - Object that maps reference ids to reference database rows, used to get the reference name
    */
-  renderNamesDiv (references) {
+  renderNamesDiv () {
     this.langDiv = 'lang-div'
+    const references = this.song.meta.referenceNames
+    console.log(references)
 
     const langCodes = {
       pt: 'Portuguese Names',
@@ -159,7 +160,7 @@ class SongView extends EditorView {
         let referenceId = ''
         if (row.referenceId) {
           referenceId = row.referenceId
-          referenceName = references[referenceId].name
+          referenceName = references[referenceId]
         }
         let html = `
             <div>
@@ -222,8 +223,9 @@ class SongView extends EditorView {
    * @param {IdMap} authorMap
    * @param {IdMap} referenceMap
    */
-  renderAuthors (authorMap, referenceMap) {
+  renderAuthors () {
     this.renderRow('Authors', wrapper => {
+      const { referenceNames, authorNames } = this.song.meta
       this.authorsDiv = new MoveableRowsElement(
         'authors-div',
         this.authors,
@@ -232,13 +234,13 @@ class SongView extends EditorView {
           let referenceId = ''
           if (row.referenceId) {
             referenceId = row.referenceId
-            referenceName = referenceMap[referenceId].name
+            referenceName = referenceNames[referenceId]
           }
           let authorId = ''
           let authorName = ''
           if (row.authorId) {
             authorId = row.authorId
-            authorName = authorMap[authorId].name
+            authorName = authorNames[authorId]
           }
 
           return `
@@ -269,8 +271,8 @@ class SongView extends EditorView {
     this.song.files.forEach((file, i) => {
       fileRows.push({
         fileId: file,
-        filename: this.song.meta.fileNames[i],
-        originalname: this.song.meta.fileOriginalNames[i]
+        filename: this.song.meta.fileNames[file],
+        originalname: this.song.meta.fileOriginalNames[file]
       })
     })
     this.renderRow('HQ Sources', wrapper => {
@@ -367,16 +369,7 @@ class SongController extends EditorController {
     const song = this.model.data
     this.song = song
 
-    const referenceInfo = await this.model.getReferenceNames('')
-    const referenceMap = rowsToIdMap(referenceInfo, 'reference_id')
-    const authorNames = (await this.model.getAuthorNames(''))
-    const authorMap = rowsToIdMap(authorNames, 'author_id')
-
-    const files = await this.model.getFileData()
-    this.mediaNames = await this.model.getMediaNames('')
-    this.featureNames = await this.model.getFeatureNames('')
-
-    return { song, authorMap, referenceMap, files }
+    return { song }
   }
 
   /**
@@ -430,8 +423,6 @@ class SongController extends EditorController {
     // file controls
     this.view.filesDiv.setupControls()
     this.setupLink()
-    this.setupMedias()
-    this.updateMediasRow()
     this.setupExpand()
   }
 
@@ -585,9 +576,8 @@ class SongController extends EditorController {
     const authors = this.collectAuthorData(this.view.authorsDiv.rowsDiv, true, 'authorId')
     const link = this.view.linkInput.value
     const files = this.collectFilesData()
-    const medias = this.collectMediaData()
 
-    return { songId: this.model.id, names, authors, link, files, medias }
+    return { songId: this.model.id, names, authors, link, files }
   }
 
   /**

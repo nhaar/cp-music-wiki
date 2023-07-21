@@ -14,7 +14,7 @@ import { createElement, getTakenVariable } from './utils.js'
 
 class FileModel extends EditorModel {
   constructor () {
-    super('file')
+    super('file', { meta: {}})
   }
 
   getSongName = async () => await this.getNameFromId('song_names', this.data.songId)
@@ -50,8 +50,6 @@ class FileModel extends EditorModel {
 }
 
 class FileView extends EditorView {
-  constructor () { super(undefined) }
-
   /**
    * File buildEditor
    * @param {object} data
