@@ -44,7 +44,8 @@ class WikiDatabase {
 
   assignDefaults (code) {
     this.defaults = {}
-    const standardVariables = ['TEXT', 'INT']
+    const standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE']
+    this.standardVariables = standardVariables
     const dividedVariables = code.match(/\*\w+(?=:)|\w+(?=:)|\{([^}]+)\}/g)
     const vars = {}
     this.vars = vars
@@ -86,7 +87,7 @@ class DataValidator {
 
   validate (type, data) {
     this.errors = []
-    this.iterateObject(type, data, [])
+    this.iterateObject(type, data, [`[${type} Object]`])
     return this.errors
   }
 
@@ -95,7 +96,6 @@ class DataValidator {
     const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
       .map(line => line.trim())
     definitions.forEach((def, i) => {
-      // data value validation through evaluation
       if (def.includes('=>')) {
         // am unsure of a simple replacement for this eval
         // without making a custom minilanguage
@@ -103,20 +103,16 @@ class DataValidator {
           this.errors.push(definitions[i + 1].replace(/:/, '').trim())
         }
       } else if (!def.includes(':')) {
-        const varAndType = def.match(/\w+(\[\])*/g)
-        const property = varAndType[0]
-        const type = varAndType[1]
-
-        if (data === undefined) {
-          this.errors.push(`${path.join('')} must be a valid object`)
-        } else {
-          this.checkType(data[property], type, property, path.concat([`.${property}`]))
-        }
+        const names = def.match(/\w+(\[\])*/g)
+        const property = names[0]
+        const type = names[1]
+        this.checkType(data[property], type, path.concat([`.${property}`]))
+        
       }
     })
   }
 
-  checkType = (value, type, name, path) => {
+  checkType = (value, type, path) => {
     if (type.includes('[')) {
       // figure out dimension
       const dimension = type.match(/\[\]/g).length
@@ -128,7 +124,7 @@ class DataValidator {
             const newPath = JSON.parse(JSON.stringify(path))
             newPath.push(`[${i}]`)
             if (level === 1) {
-              this.checkType(array[i], realType, name, newPath)
+              this.checkType(array[i], realType, newPath)
             } else {
               dimensionIterator(array[i], level - 1)
             }
@@ -139,21 +135,34 @@ class DataValidator {
       }
       dimensionIterator(value, dimension)
     } else {
-      if (type === 'TEXT') {
-        if (typeof value !== 'string') {
-          this.errors.push(`${path.join('')} must be a text string`)
-        }
-      } else if (type === 'INT') {
+      const errorMsg = indefiniteDescription => this.errors.push(`${path.join('')} must be ${indefiniteDescription}`)
 
-        if (!Number.isInteger(value)) {
-          this.errors.push(`${path.join('')} must be an integer number`)
+      if (this.db.standardVariables.includes(type)) {
+        if (value === null) return
+
+
+        if (type === 'TEXT') {
+          if (typeof value !== 'string') {
+            errorMsg('a text string')
+          }
+        } else if (type === 'INT') {
+          if (!Number.isInteger(value)) {
+            errorMsg('an integer number')
+          }
+        }  else if (type === 'BOOLEAN') {
+          if (typeof value !== 'boolean') {
+            errorMsg('a boolean value')
+          } else if (type === 'DATE') {
+            if (!value.match(/\d+-\d{2}-\d{2}/)) {
+              errorMsg('a valid date string (YYYY-MM-DD)')
+            }
+          }
         }
       } else {
-        if (!value) this.errors.push(`${path.join('')} must a valid object`)
+        if (!value) errorMsg('a valid object')
         else this.iterateObject(`*${type}`, value, path)
       }
     }
-      
   }
 
 }
@@ -167,9 +176,9 @@ song: {
   files INT[]
   unofficialNames TEXT[]
   => $names.length > 0 || $unofficialNames.length > 0
-  : Needs to supply at least one name or one unofficial name
+  : A song must have at least one name or one unofficial name
   => $link === '' || $link.includes('youtube.com/watch&v=') || $link.includes('youtu.be/')
-  : Link is not a valid youtube video
+  : A song link must be a valid YouTube link
 }
 
 *NAME: {
@@ -181,15 +190,15 @@ song: {
   de LOCALIZATION_NAME
   ru LOCALIZATION_NAME
   => $name
-  : Name must be included in each new name
+  : A song name must contain a non empty text for its name
 }
 
 *LOCALIZATION_NAME: {
   name TEXT
   reference INT
   translationNotes TEXT
-  => $name
-  : Name must be included for each localization
+  => ($reference || $translationNotes) && $name || (!$reference && !$translationNotes && !$name)
+  : Localization name contains reference or translation notes but contains no actual name
 }
 
 *SONG_AUTHOR: {
@@ -199,14 +208,18 @@ song: {
 
 author: {
   name TEXT
-  => name
-  : Author must have a name
+  => $name
+  : Author must have a non empty name
 }
 `
 )
 
 console.log(db.validate('song', {
-  names: [],
+  names: [
+    {
+      name: 'hello'
+    }
+  ],
   authors: [
     {
       author: 1,
