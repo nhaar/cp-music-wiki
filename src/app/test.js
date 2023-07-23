@@ -20,6 +20,11 @@ class WikiDatabase {
     return result.rows[0]
   }
 
+  validate (type, data) {
+    const validator = new DataValidator(this)
+    return validator.validate(type, data)
+  }
+
   async updateType (name, row) {
     const id = row.id
     const data = JSON.stringify(row.data)
@@ -35,108 +40,7 @@ class WikiDatabase {
     return this.defaults[type]
   }
 
-  validate (type, data) {
-    const errors = []
-
-    const objectIterate = (type, data, path) => {
-      const code = this.vars[type]
-      const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
-        .map(line => line.trim())
-      definitions.forEach((def, i) => {
-        // data value validation through evaluation
-        if (def.includes('=>')) {
-          // am unsure of a simple replacement for this eval
-          // without making a custom minilanguage
-          if (!eval(def.replace(/=>/, '').replace(/\$/g, 'data.'))) {
-            errors.push(definitions[i + 1].replace(/:/, '').trim())
-          }
-        } else if (!def.includes(':')) {
-          const varAndType = def.match(/\w+(\[\])*/g)
-          const variableName = varAndType[0]
-          const type = varAndType[1]
-          const checkType = (value, type, name, arrayLevel, path) => {
-            console.log('ct', value, type, name, arrayLevel, path)
-            if (type.includes('[')) {
-              // figure out dimension
-              const dimension = type.match(/\[\]/g).length
-              const realType = type.slice(0, type.length - 2 * dimension)
-              const dimensionIterator = (array, level) => {
-                
-                if (Array.isArray(array)) {
-                  for (let i = 0; i < array.length; i ++) {
-                    const newPath = JSON.parse(JSON.stringify(path))
-                    newPath.push(`[${i}]`)
-                    if (level === 1) {
-                      checkType(array[i], realType, name, dimension, newPath)
-                    } else {
-                      dimensionIterator(array[i], level - 1)
-                    }
-                  }
-                } else {
-                  errors.push(`${path.join('')} is not an array`)
-                }                
-              }
-              dimensionIterator(value, dimension)
-            } else {
-              if (type === 'TEXT') {
-                if (typeof value !== 'string') {
-                  errors.push(`${path.join('')} must be a text string`)
-                }
-              } else if (type === 'INT') {
-
-                if (!Number.isInteger(value)) {
-                  errors.push(`${path.join('')} must be an integer number`)
-                }
-              } else {
-                const nextData = data[variableName]
-                const iterateHere = (nextData, arrayLevel, indexPath) => {
-                  if (arrayLevel === indexPath.length) {
-                    if (nextData === undefined) errors.push(`${path.join('')} must a valid object`)
-                    else objectIterate(`*${type}`, nextData, path)
-                  } else {
-                    iterateHere(nextData[indexPath[arrayLevel]], arrayLevel + 1, indexPath)
-                  }
-                }
-                const indexPath = this.getPathIndex(path)
-                iterateHere(nextData, 0, indexPath)
-                
-
-                // check if it matches object type (go back to the start)
-              }
-            }
-              
-          }
-          if (data === undefined) {
-            errors.push(`${path.join('')} must be a valid object`)
-          } else {
-            checkType(data[variableName], type, variableName, 0, path.concat(['.' + variableName]))
-          }
-        }
-      })
-    }
-
-    objectIterate(type, data, [])
-
-    return errors
-  }
-
-  getPathIndex (path) {
-    const end = path.length - 1
-    let startIndex
-    for (let i = end; i >= 0; i--) {
-      if (!path[i].includes('[')) {
-        startIndex = i + 1
-        break
-      }
-    }
-
-    const copy = JSON.parse(JSON.stringify(path))
-    return copy.splice(startIndex, end - startIndex + 1).map(value => Number(value.match(/\[(.*?)\]/)[1]))
-  }
-
-  pathConvert (path) {
-    return 
-  }
+ 
 
   assignDefaults (code) {
     this.defaults = {}
@@ -173,6 +77,85 @@ class WikiDatabase {
       }
     }
   }
+}
+
+class DataValidator {
+  constructor (db) {
+    this.db = db
+  }
+
+  validate (type, data) {
+    this.errors = []
+    this.iterateObject(type, data, [])
+    return this.errors
+  }
+
+  iterateObject = (type, data, path) => {
+    const code = this.db.vars[type]
+    const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
+      .map(line => line.trim())
+    definitions.forEach((def, i) => {
+      // data value validation through evaluation
+      if (def.includes('=>')) {
+        // am unsure of a simple replacement for this eval
+        // without making a custom minilanguage
+        if (!eval(def.replace(/=>/, '').replace(/\$/g, 'data.'))) {
+          this.errors.push(definitions[i + 1].replace(/:/, '').trim())
+        }
+      } else if (!def.includes(':')) {
+        const varAndType = def.match(/\w+(\[\])*/g)
+        const property = varAndType[0]
+        const type = varAndType[1]
+
+        if (data === undefined) {
+          this.errors.push(`${path.join('')} must be a valid object`)
+        } else {
+          this.checkType(data[property], type, property, path.concat([`.${property}`]))
+        }
+      }
+    })
+  }
+
+  checkType = (value, type, name, path) => {
+    if (type.includes('[')) {
+      // figure out dimension
+      const dimension = type.match(/\[\]/g).length
+      const realType = type.slice(0, type.length - 2 * dimension)
+      const dimensionIterator = (array, level) => {
+        
+        if (Array.isArray(array)) {
+          for (let i = 0; i < array.length; i ++) {
+            const newPath = JSON.parse(JSON.stringify(path))
+            newPath.push(`[${i}]`)
+            if (level === 1) {
+              this.checkType(array[i], realType, name, newPath)
+            } else {
+              dimensionIterator(array[i], level - 1)
+            }
+          }
+        } else {
+          this.errors.push(`${path.join('')} is not an array`)
+        }                
+      }
+      dimensionIterator(value, dimension)
+    } else {
+      if (type === 'TEXT') {
+        if (typeof value !== 'string') {
+          this.errors.push(`${path.join('')} must be a text string`)
+        }
+      } else if (type === 'INT') {
+
+        if (!Number.isInteger(value)) {
+          this.errors.push(`${path.join('')} must be an integer number`)
+        }
+      } else {
+        if (!value) this.errors.push(`${path.join('')} must a valid object`)
+        else this.iterateObject(`*${type}`, value, path)
+      }
+    }
+      
+  }
+
 }
 
 const db = new WikiDatabase(
