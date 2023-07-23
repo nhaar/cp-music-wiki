@@ -38,83 +38,104 @@ class WikiDatabase {
   validate (type, data) {
     const errors = []
 
-    const objectIterate = (type, data) => {
-      const isArray = Array.isArray(data)
+    const objectIterate = (type, data, path) => {
       const code = this.vars[type]
       const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
         .map(line => line.trim())
       definitions.forEach((def, i) => {
+        // data value validation through evaluation
         if (def.includes('=>')) {
-          const limit = isArray ? data.length : 1
-          for (let j = 0; j < limit; j++) {
-            // am unsure of a replacement for this eval
-            if (!eval(def.replace(/=>/, '').replace(/\$/g, '(isArray ? data[j] : data).'))) {
-              errors.push(definitions[i + 1].replace(/:/, '').trim())
-            }
+          // am unsure of a simple replacement for this eval
+          // without making a custom minilanguage
+          if (!eval(def.replace(/=>/, '').replace(/\$/g, 'data.'))) {
+            errors.push(definitions[i + 1].replace(/:/, '').trim())
           }
         } else if (!def.includes(':')) {
-          const varAndType = def.match(/\w+\[\]|\w+/g)
+          const varAndType = def.match(/\w+(\[\])*/g)
           const variableName = varAndType[0]
           const type = varAndType[1]
-          const checkType = (value, type, name, inArray = []) => {
+          const checkType = (value, type, name, arrayLevel, path) => {
+            console.log('ct', value, type, name, arrayLevel, path)
             if (type.includes('[')) {
-              // iterate through array and verify that the type is valid
-              if (!Array.isArray(value)) {
-                errors.push(`${name} must be an array`)
-              } else {
-                for (let i = 0; i < data[name].length; i++) {
-                  let arr = data[name]
-                  for (const index of inArray) {
-                    arr = [inArray[index]]
+              // figure out dimension
+              const dimension = type.match(/\[\]/g).length
+              const realType = type.slice(0, type.length - 2 * dimension)
+              const dimensionIterator = (array, level) => {
+                
+                if (Array.isArray(array)) {
+                  for (let i = 0; i < array.length; i ++) {
+                    const newPath = JSON.parse(JSON.stringify(path))
+                    newPath.push(`[${i}]`)
+                    if (level === 1) {
+                      checkType(array[i], realType, name, dimension, newPath)
+                    } else {
+                      dimensionIterator(array[i], level - 1)
+                    }
                   }
-
-                  checkType(arr[i], type.slice(0, type.length - 2), name, inArray.concat(i))
-                }
-              }
-            } else if (type === 'TEXT') {
-              if (typeof value !== 'string') {
-                if (inArray.length) {
-                  errors.push(`${name} must be an array of text strings`)
                 } else {
-                  errors.push(`${name} must be a text string`)
-                }
+                  errors.push(`${path.join('')} is not an array`)
+                }                
               }
-            } else if (type === 'INT') {
-              if (!Number.isInteger(value)) {
-                if (inArray.length) {
-                  errors.push(`${name} must be an array of integer numbers`)
-                } else {
-                  errors.push(`${name} must be an integer number`)
-                }
-              }
+              dimensionIterator(value, dimension)
             } else {
-              if (isArray) {
-                for (let i = 0; i < data.length; i++) {
-                  const nextData = data[i][variableName]
-                  if (nextData === undefined) errors.push(`${variableName} must a valid object`)
-                  else objectIterate(`*${type}`, data[i][variableName])
+              if (type === 'TEXT') {
+                if (typeof value !== 'string') {
+                  errors.push(`${path.join('')} must be a text string`)
+                }
+              } else if (type === 'INT') {
+
+                if (!Number.isInteger(value)) {
+                  errors.push(`${path.join('')} must be an integer number`)
                 }
               } else {
                 const nextData = data[variableName]
-                if (nextData === undefined) errors.push(`${variableName} must a valid object`)
-                else objectIterate(`*${type}`, data[variableName])
-              }
+                const iterateHere = (nextData, arrayLevel, indexPath) => {
+                  if (arrayLevel === indexPath.length) {
+                    if (nextData === undefined) errors.push(`${path.join('')} must a valid object`)
+                    else objectIterate(`*${type}`, nextData, path)
+                  } else {
+                    iterateHere(nextData[indexPath[arrayLevel]], arrayLevel + 1, indexPath)
+                  }
+                }
+                const indexPath = this.getPathIndex(path)
+                iterateHere(nextData, 0, indexPath)
+                
 
-              // check if it matches object type (go back to the start)
+                // check if it matches object type (go back to the start)
+              }
             }
+              
           }
           if (data === undefined) {
-            errors.push(`${variableName} must be a valid object`)
+            errors.push(`${path.join('')} must be a valid object`)
           } else {
-            checkType(data[variableName], type, variableName)
+            checkType(data[variableName], type, variableName, 0, path.concat(['.' + variableName]))
           }
         }
       })
     }
 
-    objectIterate(type, data)
+    objectIterate(type, data, [])
 
     return errors
+  }
+
+  getPathIndex (path) {
+    const end = path.length - 1
+    let startIndex
+    for (let i = end; i >= 0; i--) {
+      if (!path[i].includes('[')) {
+        startIndex = i + 1
+        break
+      }
+    }
+
+    const copy = JSON.parse(JSON.stringify(path))
+    return copy.splice(startIndex, end - startIndex + 1).map(value => Number(value.match(/\[(.*?)\]/)[1]))
+  }
+
+  pathConvert (path) {
+    return 
   }
 
   assignDefaults (code) {
@@ -196,19 +217,26 @@ song: {
 author: {
   name TEXT
   => name
+  : Author must have a name
 }
 `
 )
 
 console.log(db.validate('song', {
-  names: [
+  names: [],
+  authors: [
     {
-      name: 'hey'
+      author: 1,
+      reference: 0  
+    },
+    {
+      author: 1,
+      reference: null
     }
   ],
-  authors: [],
   link: '',
-  unofficialNames: []
+  files: [],
+  unofficialNames: [ 'hello' ]
 }))
 
 module.exports = db
