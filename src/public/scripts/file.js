@@ -14,7 +14,7 @@ import { createElement, getTakenVariable } from './utils.js'
 
 class FileModel extends EditorModel {
   constructor () {
-    super('file', { meta: {}})
+    super('file', { meta: {} })
   }
 
   getSongName = async () => await this.getNameFromId('song_names', this.data.songId)

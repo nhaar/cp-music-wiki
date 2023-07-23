@@ -4,8 +4,8 @@ const app = express()
 
 const indexRouter = require('./routes/index')
 
-const db = require('./app/database')
-db.initializeDatabase()
+// const db = require('./app/database')
+// db.initializeDatabase()
 
 const SERVER_PORT = 5000
 

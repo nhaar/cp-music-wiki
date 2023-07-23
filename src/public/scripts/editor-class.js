@@ -30,9 +30,9 @@ export class EditorModel {
    */
   async getData () {
     if (this.id) {
-      this.data = await this.getFromDatabase()
+      this.data = (await this.getFromDatabase()).data
     } else {
-      this.data = this.defaultData
+      this.data = await this.getDefault()
     }
     return this.data
   }
@@ -41,7 +41,7 @@ export class EditorModel {
    * Submits the data to update the item in the database
    * @param {ItemData} data
    */
-  update (data) { postJSON('api/update', { type: this.type, data }) }
+  update (data) { postJSON('api/update', { type: this.type, info: { id: Number(this.id), data } }) }
 
   /**
    * Asynchronously gets the data for the current item if editting
@@ -49,6 +49,16 @@ export class EditorModel {
    */
   async getFromDatabase () {
     const response = await postJSON('api/get', { type: this.type, id: this.id })
+    if (response.status === 200) {
+      const data = await response.json()
+      return data
+    } else {
+      return null
+    }
+  }
+
+  async getDefault () {
+    const response = await postJSON('api/default', { type: this.type, id: this.id })
     if (response.status === 200) {
       const data = await response.json()
       return data

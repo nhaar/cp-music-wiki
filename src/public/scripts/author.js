@@ -14,8 +14,6 @@ class AuthorModel extends EditorModel {
 }
 
 class AuthorView extends EditorView {
-  constructor () { super(undefined) }
-
   /**
    * Author buildEditor
    * @param {Row} author - Database row
@@ -36,7 +34,7 @@ class AuthorController extends EditorController {
    * @returns {AuthorData}
    */
   getUserData () {
-    return { authorId: this.model.id, name: this.view.nameInput.value }
+    return { name: this.view.nameInput.value }
   }
 }
 

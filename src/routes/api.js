@@ -5,13 +5,15 @@ const multer = require('multer')
 
 const path = require('path')
 
-const db = require('../app/database')
-const gen = require('../app/lists')
+// const db = require('../app/database')
+const pg = require('../app/test')
+// const gen = require('../app/lists')
 
 router.post('/update', async (req, res) => {
-  const { data, type } = req.body
-  await db.updateType(type, data)
-  gen.updateLists()
+  const { info, type } = req.body
+  console.log(info)
+  await pg.updateType(type, info)
+  // gen.updateLists()
 
   res.sendStatus(200)
 })
@@ -40,8 +42,16 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
 
 router.post('/get', async (req, res) => {
   const { type, id } = req.body
-  const response = await db.getDataById(type, id)
+  const response = await pg.getDataById(type, id)
 
+  res.status(200).send(response)
+})
+
+router.post('/default', async (req, res) => {
+  const { type, id } = req.body
+  const response = await pg.getDefault(type, id)
+
+  console.log(response)
   res.status(200).send(response)
 })
 
