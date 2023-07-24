@@ -1,7 +1,6 @@
 /* eslint no-eval: 0 */
 
 const { Pool } = require('pg')
-const pluralize = require('pluralize')
 
 /**
  * Represents MWL code, used for creating the database (read docs for syntax)
@@ -17,7 +16,7 @@ const pluralize = require('pluralize')
  */
 
 /**
- * Represent the name of an object defining a table in the database
+ * Represent the name of an object defining a table in the database, which has the same name as the type
  * @typedef {string} TypeName
  */
 
@@ -47,7 +46,15 @@ const pluralize = require('pluralize')
  */
 
 /**
- * Class containing the methods that directly communicate with the Postgres database
+ * An array containing values for a row in the following order:
+ *
+ * * Index 0 is the JSON string of `TypeData`
+ * * Index 1 is the string for the query words
+ * @typedef {string[]} TypeValues
+ */
+
+/**
+ * Class containing the methods to communicate with the database
  * and to interpret the MWL code
  */
 class WikiDatabase {
@@ -56,12 +63,7 @@ class WikiDatabase {
    * @param {WikiDatabaseCode} code - Code to define the database
    */
   constructor (code) {
-    this.pool = new Pool({
-      user: 'postgres',
-      password: 'password',
-      database: 'musicwiki',
-      port: '5432'
-    })
+    this.handler = new SQLHandler()
 
     this.assignDefaults(code)
     this.queryIndexing()
@@ -69,14 +71,11 @@ class WikiDatabase {
 
   /**
    * Get the data from an object type give the id
-   * @param {TypeName} name - Name of the type to get
+   * @param {TypeName} type - Name of the type to get
    * @param {number} id - Id of the row to get
    * @returns {Row} Data retrieved from the database
    */
-  async getDataById (name, id) {
-    const result = await this.pool.query(`SELECT * FROM ${pluralize(name)} WHERE id = $1`, [id])
-    return result.rows[0]
-  }
+  getDataById = async (type, id) => await this.handler.selectId(type, id)
 
   /**
    * Check if the object for a type follows the rules defined and returns a list of all the errors found
@@ -91,20 +90,14 @@ class WikiDatabase {
 
   /**
    * Add or update a row in the database for a specific type to match the data given
-   * @param {TypeName} name - Name of the type being updated
+   * @param {TypeName} type - Name of the type being updated
    * @param {TypeInfo} row - Info for the row
    */
-  async updateType (name, row) {
-    const id = row.id
-    let data = row.data
-    const querywords = this.getQueryWords(name, data)
-    data = JSON.stringify(row.data)
-    const table = pluralize(name)
-    if (!id) {
-      await this.pool.query(`INSERT INTO ${table} (data, querywords) VALUES ($1, $2)`, [data, querywords])
-    } else {
-      await this.pool.query(`UPDATE ${table} SET data = $1, querywords = $2 WHERE id = $3`, [data, querywords, id])
-    }
+  async updateType (type, row) {
+    const { id, data } = row
+    const typeValues = [JSON.stringify(data), this.getQueryWords(type, data)]
+    if (!id) await this.handler.insertData(type, typeValues)
+    else await this.handler.update(type, id, typeValues)
   }
 
   /**
@@ -112,9 +105,7 @@ class WikiDatabase {
    * @param {TypeName} type - Type to target
    * @returns {TypeData} Object representing default structure
    */
-  getDefault (type) {
-    return this.defaults[type]
-  }
+  getDefault = type => this.defaults[type]
 
   /**
    * Create the default object for each type and store it in this object
@@ -220,15 +211,14 @@ class WikiDatabase {
     const iterator = (value, path, current) => {
       const type = path[current]
       current++
-      if (type.includes('[')) {
+      if (current === path.length + 1) results.push(value)
+      else if (type.includes('[')) {
         value.forEach(element => {
-          if (current === path.length) results.push(element)
-          else iterator(element, path, current)
+          iterator(element, path, current)
         })
       } else {
         const nextValue = value[type]
-        if (current === path.length) results.push(nextValue)
-        else iterator(nextValue, path, current)
+        iterator(nextValue, path, current)
       }
     }
 
@@ -246,9 +236,9 @@ class WikiDatabase {
    * @returns {object} Object that maps ids into expressions/names for the rows
    */
   async getByName (type, keyword) {
-    const response = await this.pool.query(`SELECT id, querywords FROM ${pluralize(type)} WHERE querywords LIKE $1`, [`%${keyword}%`])
+    const response = await this.handler.selectLike(type, 'querywords', [keyword])
     const results = {}
-    response.rows.forEach(row => {
+    response.forEach(row => {
       const { id, querywords } = row
       const phrases = querywords.split('&&')
       for (let i = 0; i < phrases.length; i++) {
@@ -289,10 +279,89 @@ class WikiDatabase {
    * @param {number} id - Id of the row to get
    * @returns {string} First query word in the row
    */
-  async getQueryNameById (type, id) {
-    const response = await this.pool.query(`SELECT querywords FROM ${pluralize(type)} WHERE id = $1`, [id])
-    return response.rows[0].querywords.split('&&')[0]
+  getQueryNameById = async (type, id) => (await this.handler.selectId(type, id, 'querywords')).querywords.split('&&')[0]
+}
+
+/**
+ * Class that connects to the Postgres database and runs
+ * the SQL queries
+ */
+class SQLHandler {
+  constructor () {
+    this.pool = new Pool({
+      user: 'postgres',
+      password: 'password',
+      database: 'musicwiki',
+      port: '5432'
+    })
+
+    this.columns = 'data, querywords'
   }
+
+  /**
+   * Select all rows from a table which a column is equal to a value
+   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} column - Name of the column to look for
+   * @param {string | number} value - Value for the column to match
+   * @param {string} selecting - The columns to to include, separated by commas, or leave blank for all columns
+   * @returns {Row[]} All the rows from the database
+   */
+  select = async (type, column, value, selecting = '*') => (await this.pool.query(`SELECT ${selecting} FROM ${type} WHERE ${column} = $1`, [value])).rows
+
+  /**
+   * Select the row matchin an id in a table
+   * @param {TypeName} type - Type of the data associated with the table
+   * @param {number} id - Id of the row
+   * @param {string} selecting - Columns to select, separated by commas, or leave blank for all columns
+   * @returns {Row}
+   */
+  selectId = async (type, id, selecting = '*') => (await this.select(type, 'id', id, selecting))[0]
+
+  /**
+   * Insert a row into a table
+   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} columns - Name of all the columns to insert, comma separated
+   * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
+   */
+  insert = async (type, columns, values) => (await this.pool.query(
+    `INSERT INTO ${type} (${columns}) VALUES (${values.map((value, i) => `$${i + 1}`)})`, values
+  ))
+
+  /**
+   * Insert a row into a table associated with a `TypeData`
+   * @param {TypeName} type - Name of the type associated with the table
+   * @param {TypeValues} values - Values for the type
+   * @returns
+   */
+  insertData = async (type, values) => (await this.insert(type, this.columns, values))
+
+  /**
+   * Update a row inside a table which a column matches a value
+   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} setting - Name of all the columns to update, comma separated
+   * @param {string} column - Name of the column to match
+   * @param {*[]} values - Array where the first element is the value to be matched, and the other values are the ones to update each column in the order the columns are written
+   */
+  update = async (type, setting, column, values) => (await this.pool.query(
+    `UPDATE ${type} SET ${setting.split(',').map((setter, i) => `${setter.trim()} = $${i + 2}`).join(', ')} WHERE ${column} = $1`, values
+  ))
+
+  /**
+   * Update a row inside a table associated with a `TypeData`
+   * @param {TypeName} type - Type of the data associated with the table
+   * @param {number} id - Id of the row to update
+   * @param {TypeValues} values - Values to update
+   */
+  updateData = async (type, id, values) => (await this.update(type, this.columns, id, [id].concat(values)))
+
+  /**
+   * Select all rows in a table where a column matches a certain value
+   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} column - Name of the column to match the value
+   * @param {string} matching - String to be matched
+   * @returns {Row[]}
+   */
+  selectLike = async (type, column, matching) => (await this.pool.query(`SELECT * FROM ${type} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
 }
 
 /**
@@ -468,5 +537,7 @@ wiki_reference: {
 }
 `
 )
+
+db.getDataById('song', 1).then(result => console.log(result))
 
 module.exports = db
