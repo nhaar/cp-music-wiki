@@ -14,7 +14,6 @@ class SourceModel extends EditorModel {
 }
 
 class SourceView extends EditorView {
-
   /**
    * Source buildEditor
    * @param {Row} source Database row

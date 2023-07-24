@@ -1,858 +1,326 @@
-// const path = require('path')
-// const { compareObjects, youtubify } = require('./utils')
-// const { TestInterpreter } = require('./test')
-// const sqlite3 = require('sqlite3').verbose()
-
-// /**
-//  * Object containing information from a row
-//  * @typedef {object} Row
-//  */
-
-// /**
-//  * Class that handles the database
-//  */
-// class WikiDatabase {
-//   constructor () {
-//     this.interpreter = new TestInterpreter(`
-//       song: {
-//         names song_name
-//         authors song_author[]
-//         link TEXT
-//         files INT[]
-//       }
-
-//       *song_name: {
-//         name TEXT[]
-//         reference_id INT
-//         pt localization_name
-//         fr localization_name
-//         es localization_name
-//         de localization_name
-//         ru localization_name
-//       }
-
-//       *localization_name: {
-//         name TEXT
-//         reference_id INT
-//         translation_notes TEXT
-//       }
-
-//       *song_author: {
-//         author_id INT
-//         reference_id INT
-//       }
-//       `, this)
-//     this.db = new sqlite3.Database(path.join(__dirname, '../../database/database.db'))
-//   }
-
-//   /**
-//    * Creates the tables if they don't exist
-//    */
-//   async initializeDatabase () {
-//     const tables = [
-//       `
-//         songs (
-//           song_id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           link TEXT
-//         )
-//       `,
-//       `
-//         authors (
-//           author_id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           name TEXT
-//         )
-//       `,
-//       `
-//         song_names (
-//           song_id INTEGER,
-//           pos INTEGER,
-//           name TEXT,
-//           reference_id INTEGER,
-//           pt_name TEXT,
-//           pt_reference_id INTEGER,
-//           pt_translation_notes TEXT,
-//           fr_name TEXT,
-//           fr_reference_id INTEGER,
-//           fr_translation_notes TEXT,
-//           es_name TEXT,
-//           es_reference_id INTEGER,
-//           es_translation_notes TEXT,
-//           de_name TEXT,
-//           de_reference_id INTEGER,
-//           de_translation_notes TEXT,
-//           ru_name TEXT,
-//           ru_reference_id INTEGER,
-//           ru_translation_notes TEXT,
-//           PRIMARY KEY (song_id, pos)
-//           FOREIGN KEY (song_id) REFERENCES songs(song_id)
-//         )
-//       `,
-//       `
-//         song_author (
-//           song_id INTEGER,
-//           author_id INTEGER,
-//           pos INTEGER,
-//           reference_id, INTEGER,
-//           PRIMARY KEY (song_id, pos),
-//           FOREIGN KEY (song_id) REFERENCES songs(song_id)
-//           FOREIGN KEY (author_id) REFERENCES authors(author_id)
-//         )
-//       `,
-//       `
-//         sources (
-//           source_id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           name TEXT
-//         )
-//       `,
-//       `
-//         files (
-//           file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           source_id INTEGER,
-//           song_id INTEGER,
-//           song_pos INTEGER,
-//           filename TEXT,
-//           originalname TEXT,
-//           source_link TEXT,
-//           is_hq INTEGER
-//         )
-//       `,
-//       `
-//         flash_rooms (
-//           room_id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           name TEXT,
-//           release_date TEXT,
-//           is_release_estimate INTEGER,
-//           closure_date TEXT,
-//           is_closure_estimate INTEGER
-//         )
-//       `,
-//       `
-//         room_song (
-//           room_id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           pos INTEGER,
-//           is_unused INTEGER,
-//           date_start TEXT,
-//           is_start_estimate INTEGER,
-//           date_end TEXT,
-//           is_end_estimate INTEGER,
-//           song_id INTEGER
-//         )
-//       `,
-//       `
-//         wiki_references (
-//           reference_id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           name TEXT,
-//           description TEXT,
-//           link TEXT
-//         )
-//       `
-//     ]
-
-//     tables.forEach(command => {
-//       this.createTable(command)
-//     })
-//   }
-
-//   /**
-//    * Shorthand for creating a table if it doesn't exist
-//    * @param {string} command
-//    * Must be of the format "table name (...everything that goes into creating a table)"
-//    */
-//   createTable = async (command) => await this.runDatabaseMethod(callback => this.db.run(`CREATE TABLE IF NOT EXISTS ${command}`, [], callback))
-
-//   /**
-//    * Shorthand for INSERT INTO ... (...) VALUES (...)
-//    * @param {string} command A command of of format "table (columns...)""
-//    * @param {*[]} values Array of values respective to each column
-//    */
-//   async runInsert (command, values) {
-//     const questionMarks = values.map(() => '?')
-//     await this.runDatabaseMethod(callback => this.db.run(`INSERT INTO ${command} VALUES (${questionMarks})`, values, callback))
-//   }
-
-//   insertDefault = async (table) => await this.runDatabaseMethod(callback => this.db.run(`INSERT INTO ${table} DEFAULT VALUES`, [], callback))
-
-//   async insertBlankGetId (table) {
-//     await this.insertDefault(table)
-//     const seq = await this.getTableCell('sqlite_sequence', 'name', table, 'seq')
-//     return seq
-//   }
-
-//   async getTableCell (table, column, value, targetColumn) {
-//     const row = await this.getFromTable(table, column, value)
-//     if (!row) return null
-//     return row[targetColumn]
-//   }
-
-//   /**
-//    * Asynchronously get the row in a table based on a property
-//    * @param {string} table - Name of the table
-//    * @param {string} column - Name of the column (eg name)
-//    * @param {string} value - Value to search in the property
-//    * @returns {Row | null} Row info or null if doesn't exist
-//    */
-//   getFromTable = async (table, column, value) => await this.get(table, column, [value])
-
-//   selectBase = async (method, table, condition, values, columns) => {
-//     const response = await this.runSelectMethod(
-//       callback => {
-//         condition = makeConditionProper(condition)
-//         method(`SELECT ${columns} FROM ${table} WHERE ${condition}`, values, callback)
-//       }
-//     )
-//     return response
-//     // return camelfySelected(response)
-//   }
-
-//   all = async (table, condition, values, columns = '*') => await this.selectBase((x, y, z) => this.db.all(x, y, z), table, condition, values, columns)
-
-//   get = async (table, condition, values, columns = '*') => await this.selectBase((x, y, z) => this.db.get(x, y, z), table, condition, values, columns)
-
-//   getById = async (table, id, columns = '*') => {
-//     let idName
-//     switch (table) {
-//       case 'songs':
-//       case 'authors':
-//       case 'files':
-//       case 'sources': {
-//         idName = `${table.slice(0, table.length - 1)}_id`
-//         break
-//       }
-//       case 'flash_rooms': {
-//         idName = 'room_id'
-//         break
-//       }
-//       case 'wiki_references': {
-//         idName = 'reference_id'
-//         break
-//       }
-//     }
-//     return await this.get(table, idName, [id], columns)
-//   }
-
-//   getCellById = async (table, id, column) => (await this.getById(table, id, column))[snakeToCamel(column)]
-
-//   getByPos = async (table, id, pos, columns = '*') => {
-//     let idName
-//     switch (table) {
-//       case 'room_song': {
-//         idName = 'room_id'
-//         break
-//       }
-//       case 'song_names':
-//       case 'song_author':
-//       case 'files': {
-//         idName = 'song_id'
-//         break
-//       }
-//     }
-//     const posName = table === 'files' ? 'song_pos' : 'pos'
-//     return await this.get(table, `${idName}, ${posName}`, [id, pos], columns)
-//   }
-
-//   allOrdered = async (table, condition, orderColumn, values, columns = '*') => {
-//     const response = await this.runSelectMethod(
-//       callback => this.db.all(`SELECT ${columns} FROM ${table} WHERE ${makeConditionProper(condition)} ORDER BY ${orderColumn} ASC`, values, callback)
-//     )
-//     return response
-//     return camelfySelected(response)
-//   }
-
-//   /**
-//    * Asynchronously gets the data for a song based on its id
-//    * @param {string} songId
-//    * @returns {import('../public/scripts/editor').Song | null} Song object or null if doesn't exist
-//    */
-//   async getSongById (songId) {
-//     const row = await this.getById('songs', songId)
-
-//     // names
-//     const names = await this.callAsyncResult(() => this.allOrderedBySong(songId, 'song_names'),
-//       rows => rows.map(row => {
-//         const variables = ['name', 'referenceId', 'translationNotes']
-//         const name = destructureVariables(row, variables[0], variables[1])
-//         const codes = ['pt', 'fr', 'es', 'de', 'ru']
-//         codes.forEach(code => {
-//           const codeObject = {}
-//           variables.forEach(variable => {
-//             const localizedVariable = `${code}${variable.charAt(0).toUpperCase()}${variable.slice(1)}`
-//             codeObject[variable] = row[localizedVariable]
-//           })
-//           Object.assign(name, {
-//             [code]: codeObject
-//           })
-//         })
-//         return name
-//       })
-//     )
-
-//     let referenceIdNames = []
-//     for (let i = 0; i < names.length; i++) {
-//       const name = names[i]
-//       referenceIdNames.push(name.referenceId)
-
-//       const codes = ['pt', 'fr', 'es', 'de', 'ru']
-//       for (let j = 0; j < codes.length; j++) {
-//         const code = codes[j]
-//         referenceIdNames.push(name[code].referenceId)
-//       }
-//     }
-
-//     // authors
-//     let authorIdNames = []
-//     const authors = await this.callAsyncResult(() => this.allOrderedBySong(songId, 'song_author'),
-//       rows => rows.map(row => {
-//         const { authorId } = row
-//         const { referenceId } = row
-//         referenceIdNames.push(authorId)
-//         authorIdNames.push(authorId)
-//         return { authorId, referenceId }
-//       })
-//     )
-
-//     // link
-//     const link = row.link ? youtubify(row.link) : ''
-
-//     // files and metada
-//     const fileRows = await this.allOrdered('files', 'song_id', 'song_pos', [songId])
-//     const files = []
-//     const fileNames = {}
-//     const fileOriginalNames = {}
-//     fileRows.forEach(row => {
-//       const { fileId } = row
-//       files.push(fileId)
-//       fileNames[fileId] = row.filename
-//       fileOriginalNames[fileId] = row.originalname
-//     })
-
-//     authorIdNames = removeDuplicates(authorIdNames)
-//     referenceIdNames = removeDuplicates(referenceIdNames)
-
-//     const referenceNames = await this.mapIdToValue(referenceIdNames, 'wiki_references', 'name')
-//     const authorNames = await this.mapIdToValue(authorIdNames, 'authors', 'name')
-
-//     const song = { names, authors, link, files, meta: { fileNames, fileOriginalNames, authorNames, referenceNames } }
-//     return song
-//   }
-
-//   async mapIdToValue (ids, table, nameColumn) {
-//     const map = {}
-//     for (let i = 0; i < ids.length; i++) {
-//       const id = ids[i]
-//       const name = await this.getCellById(table, id, nameColumn)
-//       map[id] = name
-//     }
-//     return map
-//   }
-
-//   /**
-//    * Asynchronously get the row for an author based on its id
-//    * @param {string} authorId
-//    * @returns {Row | null} Row info or null if doesn't exist
-//    */
-
-//   getAuthorById = async id => await this.getById('authors', id)
-
-//   /**
-//    * Asynchronously get the row for a source
-//    * @param {string} sourceId
-//    * @returns {import('../public/scripts/file').FileData | null} Row or null if doesn't exist
-//    */
-//   getSourceById = async sourceId => await this.callAsyncResult(
-//     () => this.getFromTable('sources', 'source_id', sourceId),
-//     row => ({ sourceId, name: row.name })
-//   )
-
-//   /**
-//    * Asynchronously run a select SQLITE method with the .get method
-//    * @param {string} command - The SQL code to run
-//    * @param {*[]} values - Array of values to use
-//    */
-
-//   /**
-//    * Gets the file data for a file id
-//    * @param {number} fileId
-//    * @returns {import('../public/scripts/file').FileData}
-//    */
-//   async getFileById (fileId) {
-//     const row = await this.getFromTable('files', 'file_id', fileId)
-//     const songName = await this.getTableCell('song_names', 'song_id', row.song_id, 'name')
-//     const sourceName = await this.getTableCell('sources', 'source_id', row.source_id, 'name')
-
-//     return {
-//       sourceId: row.source_id,
-//       filename: row.file_name,
-//       originalname: row.original_name,
-//       sourceLink: row.source_link,
-//       isHQ: Boolean(row.is_hq),
-//       meta: { songId: row.song_id, songName: songName.name, sourceName: sourceName.name }
-//     }
-//   }
-
-//   /**
-//    * Get a reference's data from the database
-//    * @param {string} referenceId
-//    * @returns {import('../public/scripts/reference').ReferenceData}
-//    */
-//   getReferenceById = async referenceId => await this.callAsyncResult(
-//     () => this.getFromTable('wiki_references', 'reference_id', referenceId),
-//     row => ({
-//       referenceId,
-//       name: row.name,
-//       link: row.link,
-//       description: row.description
-//     })
-//   )
-
-//   async getFlashRoomById (roomId) {
-//     const row = await this.getFromTable('flash_rooms', 'room_id', roomId)
-//     const useRows = await this.allOrdered('room_song', 'room_id', 'pos', [roomId])
-
-//     const data = {
-//       name: row.name,
-//       releaseDate: row.release_date,
-//       isReleaseEstimate: row.is_release_estimate,
-//       closureDate: row.closureDate,
-//       isClosureEstimate: row.isClosureEstimate,
-//       songUses: []
-//     }
-//     for (let i = 0; i < useRows.length; i++) {
-//       const row = useRows[i]
-//       const songName = await this.getTableCell('song_names', 'song_id', row.song_id, 'name')
-//       data.songUses.push({
-//         songId: row.song_id,
-//         isUnused: row.is_unused,
-//         startDate: row.start_date,
-//         isStartEstimate: row.is_start_estimate,
-//         endDate: row.end_date,
-//         isEndEstimate: row.is_end_estimate,
-//         meta: { songName }
-//       })
-//     }
-
-//     return data
-//   }
-
-//   typeMethods = {
-//     song: {
-//       get: x => this.getSongById(x),
-//       update: (x, y) => this.updateSong(x, y)
-//     },
-//     author: {
-//       get: x => this.getAuthorById(x),
-//       update: x => this.updateAuthor(x)
-//     },
-//     source: {
-//       get: x => this.getSourceById(x),
-//       update: x => this.updateSource(x)
-//     },
-//     reference: {
-//       get: x => this.getReferenceById(x),
-//       update: x => this.updateReference(x)
-//     },
-//     'flash-room': {
-//       get: x => this.getFlashRoomById(x),
-//       update: x => this.updateFlashRoom(x)
-//     }
-//   }
-
-//   updateType = async (type, data) => await this.typeMethods[type].update(data, type)
-
-//   /**
-//    * Get the data object from a certain type and id
-//    * @param {string} type - Description of type
-//    * @param {string} id - Id of the data in the database
-//    * @returns {object} - Object representing the data type
-//    */
-//   getDataById = async (type, id) => await this.typeMethods[type].get(id)
-
-//   update = async (table, setting, condition, values) => await this.runDatabaseMethod(callback =>
-//     this.db.run(`UPDATE ${table} SET ${setting} WHERE ${condition}`, values, callback)
-//   )
-
-//   delete = async (table, condition, values) => await this.runDatabaseMethod(callback => {
-//     this.db.run(`DELETE ${table} WHERE ${condition}`, values, callback)
-//   })
-
-//   async updateBase (data, table, idName, callback) {
-//     const id = data[idName]
-//     if (!id || id === 'undefined') {
-//       data[idName] = await this.insertBlankGetId(table)
-//     }
-//     await callback(data)
-//   }
-
-//   /**
-//    * Updates a song
-//    * @param {import('../public/scripts/editor').Song} data - Song object with new data to be used
-//    */
-//   updateSong = async (data, type) => await this.updateBase(data, 'songs', 'songId', async data => {
-//     const { songId, names, authors, link, files } = data
-//     const oldData = await this.typeMethods[type].get(songId)
-//     // authors
-//     this.updateSongAuthors(songId, authors, oldData.authors)
-
-//     // names
-//     this.updateNames(songId, names, oldData.names)
-
-//     // link
-//     this.update('songs', 'link = ?', 'song_id = ?', [extractVideoCode(link), songId])
-
-//     // update file orders
-//     files.forEach((file, i) => this.update('files', 'song_pos = ?', 'file_id = ?', [i + 1, file]))
-//   })
-
-//   updateAuthor = async (data) => await this.updateBase(data, 'authors', 'authorId', async data => {
-//     const { authorId, name } = data
-//     this.update('authors', 'name = ?', 'author_id = ?', [name, authorId])
-//   })
-//   /**
-//    * Updates an author with a new row info
-//    * @param {Row} data - Row info with new data to be used
-//    */
-
-//   /**
-//    * Update a source with new info
-//    * @param {Row} data - New row info
-//    */
-
-//   updateSource = async (data) => await this.updateBase(data, 'sources', 'sourceId', async data => {
-//     const { sourceId, name } = data
-//     this.update('sources', 'name = ?', 'source_id = ?', [name, sourceId])
-//   })
-
-//   /**
-//    * Create a new (music) file
-//    * @param {string} songId - Song the file belongs to
-//    * @param {string} sourceId - Source the file belongs to
-//    * @param {string} originalName - Original file name from the user upload
-//    * @param {string} name - File name as is stored in the database
-//    */
-//   updateFile = async (data) => await this.updateBase(data, 'files', 'fileId', async data => {
-//     const { meta, sourceId, originalname, filename, fileId, sourceLink, isHQ } = data
-//     this.update(
-//       'files',
-//       'song_id = ?, source_id = ?, original_name = ?, file_name = ?, source_link = ?, is_hq = ?',
-//       'file_id = ?',
-//       [meta.songId, sourceId, originalname, filename, sourceLink, Number(isHQ), fileId]
-//     )
-//   })
-
-//   /**
-//    * Update a reference in the database
-//    * @param {import('../public/scripts/reference').ReferenceData} data
-//    */
-
-//   updateReference = async (data) => await this.updateBase(data, 'wiki_references', 'referenceId', async data => {
-//     const { referenceId, name, link, description } = data
-//     this.update(
-//       'wiki_references',
-//       'name = ?, link = ?, description = ?',
-//       'reference_id = ?',
-//       [name, link, description, referenceId]
-//     )
-//   })
-
-//   async updateFlashRoom (data) {
-//     await this.updateBase(data, 'flash_rooms', 'roomId', async data => {
-//       const { roomId, name, releaseDate, isReleaseEstimate, closureDate, isClosureEstimate, songUses } = data
-//       this.update(
-//         'flash_rooms',
-//         'release_date = ?, is_release_estimate = ?, closure_date = ?, is_closure_estimate = ?',
-//         'room_id = ?', [name, releaseDate, isReleaseEstimate, closureDate, isClosureEstimate, roomId]
-//       )
-
-//       const oldData = await this.getRoomSongUses(roomId)
-//       await this.updatePositionalSimpleCallback(
-//         oldData, songUses, roomId, 'room_song',
-//         ['is_unused', 'date_start', 'is_start_estimate', 'date_end', 'is_end_estimate'],
-//         ['isUnused', 'dateStart', 'isStartEstimate', 'dateEnd', 'isEndEstimate', 'songId'],
-//         'room_id', 'pos', (oldData, newData, i) => compareObjects(oldData[i], newData[i])
-//       )
-//     })
-//   }
-
-//   /**
-//    * Updates the list of authors for a song
-//    * @param {number} songId
-//    * @param {import('../public/scripts/author').AuthorData[]} newData
-//    */
-//   async updateSongAuthors (songId, newData, oldData) {
-//     const comparisonCallback = (oldData, newData, i) => !compareObjects(oldData[i], newData[i])
-//     await this.updatePositionalSimpleCallback(oldData, newData, songId, 'song_author', ['author_id', 'reference_id'], ['authorId', 'referenceId'], 'song_id', 'pos', comparisonCallback)
-//   }
-
-//   async updatePositionalSimpleCallback (oldData, newData, id, table, valueNames, propertyNames, idName, posName, comparisonCallback) {
-//     await this.updatePositionalTableBase(
-//       oldData, newData, id, table, valueNames,
-//       propertyNames.map(name => (data => data[name])),
-//       idName, posName, comparisonCallback
-//     )
-//   }
-
-//   async updatePositionalTableBase (oldData, newData, id, table, valueNames, valueCallbacks, idName, posName, comparisonCallback) {
-//     valueNames = valueNames
-//     const condition = `${idName} = ? AND ${posName} = ?`
-//     const getValues = i => {
-//       const data = newData[i]
-//       return valueCallbacks.map(callback => callback(data)).concat([id, i + 1])
-//     }
-
-//     if (oldData.length < newData.length) {
-//       for (let i = oldData.length; i < newData.length; i++) {
-//         const insertVariables = valueNames.concat([idName, posName]).join(', ')
-//         const values = getValues(i)
-//         this.runInsert(`${table} (${insertVariables})`, values)
-//       }
-//     } else if (oldData.length > newData.length) {
-//       for (let i = newData.length; i < oldData.length; i++) {
-//         this.delete(table, condition, [id, i + 1])
-//       }
-//     }
-
-//     for (let i = 0; i < newData.length && i < oldData.length; i++) {
-//       if (comparisonCallback(oldData, newData, i)) {
-//         const settingVariables = valueNames.map(name => `${name} = ?`).join(', ')
-//         const values = getValues(i)
-
-//         this.update(table, settingVariables, condition, values)
-//       }
-//     }
-//   }
-
-//   /**
-//    * Saves all the names of a song into the database
-//    * @param {string} songId
-//    * @param {import('../public/scripts/song').Name} newData
-//    */
-//   async updateNames (songId, newData, oldData) {
-//     const langCodes = ['pt', 'fr', 'es', 'de', 'ru']
-
-//     const valueNames = ['name', 'reference_id']
-//     const sqlVariables = ['name', 'reference_id', 'translation_notes']
-//     langCodes.forEach(code => {
-//       sqlVariables.forEach(variable => valueNames.push(`${code}_${variable}`))
-//     })
-//     const valueCallbacks = ['name', 'referenceId'].map(variable => (data => data[variable]))
-//     const variables = ['name', 'referenceId', 'translationNotes']
-//     langCodes.forEach(code => variables.forEach(variable => valueCallbacks.push(data => data[code][variable])))
-
-//     await this.updatePositionalTableBase(
-//       oldData, newData, songId, 'song_names', valueNames, valueCallbacks, 'song_id', 'pos',
-//       (oldData, newData, i) => {
-//         if (oldData[i].name !== newData[i].name || oldData[i].reference_id !== newData[i].referenceId) return true
-//         for (let j = 0; j < langCodes.length; j++) {
-//           const code = langCodes[j]
-//           const localizationChanges =
-//               oldData[i][code + '_name'] === newData[i][code].name &&
-//               oldData[i][code + '_reference_id'] === newData[i][code].referenceId &&
-//               oldData[i][code + '_translation_notes'] === newData[i][code].translationNotes
-
-//           if (!localizationChanges) return true
-//         }
-//         return false
-//       }
-//     )
-//   }
-
-//   /**
-//    * Get all file rows linked to a song
-//    * @param {string} songId
-//    * @returns {Row[]}
-//    */
-//   // getFileData = async songId => this.callAsyncResult(
-//   //   this.all('files', 'song_id = ?', [songId]),
-//   //   rows => rows.map(row => ({  }))
-//   // )
-//   // async getFileData (songId) {
-//   //   const rows = await this.runSelectMethod(callback => {
-//   //     this.db.all('SELECT * FROM files WHERE song_id = ?', [songId], callback)
-//   //   })
-//   //   console.log(rows)
-//   //   return rows
-//   // }
-
-//   /**
-//    * Gets an array with the rows of a positional table ordered for a single song
-//    * @param {number} songId
-//    * @param {string} table - Table name
-//    * @returns {Row[]} Array with all the rows ordered
-//    */
-//   allOrderedBySong = async (songId, table) => await this.allOrdered(table, 'song_id', 'pos', [songId])
-
-//   /**
-//    * Get all the authors from a song in an ordered array
-//    * @param {string} songId
-//    * @returns {import('../public/scripts/song').SongAuthor[]}
-//    */
-
-//   /**
-//    * Get all names from a song ordered
-//    * @param {string} songId
-//    * @returns {Row[]} All the name rows for a song ordered
-//    */
-//   // async getSongNames (songId) {
-//   //   const names =
-//   //   return names
-//   // }
-
-//   /**
-//    * Get all unnoficial names from a song ordered
-//    * @param {string} songId
-//    * @returns {Row[]} All the unnoficial rows for a song ordered
-//    */
-
-//   /**
-//    * Gets the medias object for a song
-//    * @param {string} songId
-//    * @returns {import('../public/scripts/editor').Medias}
-//    */
-
-//   /**
-//    * Gets all the features that are being used inside a medias object
-//    * @param {import('../public/scripts/editor').Medias} medias
-//    * @returns {string} List of feature ids
-//    */
-
-//   /**
-//    * Convert a medias into an object that maps feature id to its media
-//    * @param {import('../public/scripts/editor').Medias} medias
-//    * @returns {object}
-//    */
-
-//   /**
-//    * Shorthand for SELECT * FROM ... WHERE ... LIKE ...
-//    * @param {string} table - Table name
-//    * @param {*} column - Column name
-//    * @param {*} keyword - Keyword for column to be like
-//    * @returns {Row[]}
-//    */
-//   selectLike = async (table, column, keyword) => await this.runSelectMethod(
-//     callback => this.db.all(`SELECT * FROM ${table} WHERE ${column} LIKE '%' || ? || '%'`, [keyword], callback)
-//   )
-
-//   /**
-//    * Gets rows for a table based on filtering names by keyword
-//    * @param {string} table
-//    * @param {string} keyword
-//    * @returns {Row[]}
-//    */
-//   getByKeyword = async (table, keyword) => await this.selectLike(table, getNameColumn(table), keyword)
-
-//   /**
-//    * Runs an asynchronous SQL method automatically handling resolving and rejecting
-//    * the promise
-//    * @param {function(function) : *} methodCallback
-//    * A function that runs a sqlite3 method, taking as argument the callback
-//    * that is used in the third argument for the sqlite method
-//    * eg .run(*, *, callback)
-//    * @returns {*} Outcome of the method
-//    */
-//   async runDatabaseMethod (methodCallback) {
-//     return await new Promise((resolve, reject) => {
-//       methodCallback((err, result) => {
-//         if (err) reject(err)
-//         else {
-//           if (result) {
-//             resolve(result)
-//           } else {
-//             resolve(null)
-//           }
-//         }
-//       })
-//     })
-//   }
-
-//   /**
-//    * Runs a certain SELECT method which returns data from the database
-//    * @param {function(function)} methodCallback
-//    * A function that runs .get or .all (to select from database)
-//    * and uses for its callback the argument being passed
-//    * @returns {Row | Row[]} - Single data row or multiple depending on method
-//    */
-//   runSelectMethod = async (methodCallback) => await this.runDatabaseMethod(methodCallback)
-
-//   async callAsyncResult (asyncMethod, callback) {
-//     const result = await asyncMethod()
-//     return callback(result)
-//   }
-
-//   /**
-//    * Helper function that gets all the name data for a song
-//    * @param {string} songId
-//    * @returns {import('../public/scripts/song').Name[]}
-//    */
-// }
-
-// /**
-//  * Transforms a youtube link/blank string
-//  * and gets either the video code or nothing
-//  * @param {string} link - Link string
-//  * @returns {string | null} Video code or null if blank
-//  */
-// function extractVideoCode (link) {
-//   if (link === '') return null
-
-//   if (link.includes('youtube')) return link.match('(?<=v=)[^&]+')[0]
-//   else return link.match('(?<=be/)[^&^?]+')[0]
-// }
-
-// /**
-//  * Gets the name column for a table
-//  * @param {string} table
-//  * @returns {string}
-//  */
-// function getNameColumn (table) {
-//   switch (table) {
-//     case 'song_names': {
-//       return 'name'
-//     }
-//     case 'files': {
-//       return 'originalname'
-//     }
-//     default: {
-//       return 'name'
-//     }
-//   }
-// }
-
-// function removeDuplicates (array) {
-//   return [...new Set(array)]
-// }
-
-// function snakeToCamel(str) {
-//   return str.replace(/(_\w)/g, match =>  match[1].toUpperCase())
-// }
-
-// function camelfyObject (object) {
-//   const newObject = {}
-//   for (const key in object) {
-//     newObject[snakeToCamel(key)] = object[key]
-//   }
-//   return newObject
-// }
-
-// function camelfySelected (response) {
-//   if (Array.isArray(response)) {
-//     response.forEach((element, i) => {
-//       response[i] = camelfyObject(element)
-//     })
-//     return response
-//   } else return camelfyObject(response)
-// }
-
-// function destructureVariables(object, ...variables) {
-//   const newObj = {}
-//   variables.forEach(variable => {
-//     newObj[variable] = object[variable]
-//   })
-//   return newObj
-// }
-
-// function makeConditionProper (condition) {
-//   return condition.replace(/\s/g, '').split(',').map(variable => `${variable} = ?`).join(' AND ')
-// }
-
-// const db = new WikiDatabase()
-
-// module.exports = db
+/* eslint no-eval: 0 */
+
+const { Pool } = require('pg')
+const pluralize = require('pluralize')
+
+class WikiDatabase {
+  constructor (code) {
+    this.pool = new Pool({
+      user: 'postgres',
+      password: 'password',
+      database: 'musicwiki',
+      port: '5432'
+    })
+
+    this.assignDefaults(code)
+    this.queryIndexing()
+  }
+
+  async getDataById (name, id) {
+    const result = await this.pool.query(`SELECT * FROM ${pluralize(name)} WHERE id = $1`, [id])
+    return result.rows[0]
+  }
+
+  validate (type, data) {
+    const validator = new DataValidator(this)
+    return validator.validate(type, data)
+  }
+
+  async updateType (name, row) {
+    const id = row.id
+    let data = row.data
+    const querywords = this.getQueryWords(name, data)
+    data = JSON.stringify(row.data)
+    const table = pluralize(name)
+    if (!id) {
+      await this.pool.query(`INSERT INTO ${table} (data, querywords) VALUES ($1, $2)`, [data, querywords])
+    } else {
+      await this.pool.query(`UPDATE ${table} SET data = $1, querywords = $2 WHERE id = $3`, [data, querywords, id])
+    }
+  }
+
+  getDefault (type) {
+    return this.defaults[type]
+  }
+
+  assignDefaults (code) {
+    this.defaults = {}
+    const standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
+    this.standardVariables = standardVariables
+    const dividedVariables = code.match(/\*\w+(?=:)|\w+(?=:)|\{([^}]+)\}/g)
+    const vars = {}
+    this.vars = vars
+    if (dividedVariables.length % 2 === 1) throw new Error('Invalid variables')
+    for (let i = 0; i < dividedVariables.length; i += 2) {
+      vars[dividedVariables[i]] = dividedVariables[i + 1]
+    }
+
+    for (const v in vars) {
+      if (!v.includes('*')) {
+        const defaultObject = {}
+        const iterate = (object, code) => {
+          const definitions = this.getVariableLines(code)
+          definitions.forEach(def => {
+            const varAndType = def.match(/\w+\[\]|\w+/g)
+            const variableName = varAndType[0]
+            const type = varAndType[1]
+            if (type.includes('[')) object[variableName] = []
+            else if (standardVariables.includes(type)) object[variableName] = null
+            else {
+              object[variableName] = {}
+              iterate(object[variableName], vars[`*${type}`])
+            }
+          })
+        }
+
+        iterate(defaultObject, vars[v])
+
+        this.defaults[v] = defaultObject
+      }
+    }
+  }
+
+  queryIndexing () {
+    this.queryIndex = {}
+
+    for (const v in this.vars) {
+      if (!v.includes('*')) {
+        this.queryIndex[v] = []
+
+        const iterate = (name, path) => {
+          const code = this.vars[name]
+          const definitions = this.getVariableLines(code)
+          definitions.forEach(def => {
+            const names = this.getPropertyAndTypeNames(def)
+            const property = names[0]
+            const type = names[1]
+
+            const newPath = JSON.parse(JSON.stringify(path)).concat([property])
+            const dimension = this.getDimension(type)
+            for (let i = 0; i < dimension; i++) {
+              newPath.push('[]')
+            }
+            const arrayless = type.replace(/(\[\])*/g, '')
+            if (arrayless === 'QUERY') {
+              this.queryIndex[v].push(newPath)
+            } else if (!this.standardVariables.includes(arrayless)) {
+              iterate(`*${arrayless}`, newPath)
+            }
+          })
+        }
+        iterate(v, [])
+      }
+    }
+  }
+
+  getPropertyAndTypeNames (definition) {
+    return definition.match(/\w+\[\]|\w+/g)
+  }
+
+  getQueryWords (type, data) {
+    const results = []
+    const paths = this.queryIndex[type]
+    const iterator = (value, path, current) => {
+      const type = path[current]
+      current++
+      if (type.includes('[')) {
+        value.forEach(element => {
+          if (current === path.length) results.push(element)
+          else iterator(element, path, current)
+        })
+      } else {
+        const nextValue = value[type]
+        if (current === path.length) results.push(nextValue)
+        else iterator(nextValue, path, current)
+      }
+    }
+
+    paths.forEach(path => {
+      iterator(data, path, 0)
+    })
+
+    return results.join('&&')
+  }
+
+  async getByName (type, keyword) {
+    const response = await this.pool.query(`SELECT id, querywords FROM ${pluralize(type)} WHERE querywords LIKE $1`, [`%${keyword}%`])
+    const results = {}
+    response.rows.forEach(row => {
+      const { id, querywords } = row
+      const phrases = querywords.split('&&')
+      for (let i = 0; i < phrases.length; i++) {
+        const phrase = phrases[i]
+        if (phrase.match(new RegExp(keyword, 'i'))) {
+          results[id] = phrase
+          break
+        }
+      }
+    })
+    return results
+  }
+
+  getDimension (type) {
+    const matches = type.match(/\[\]/g)
+    if (matches) return matches.length
+    else return 0
+  }
+
+  getVariableLines (code) {
+    return code.split('\n').filter(line => !line.includes('{') && !line.includes('}') && !line.includes('=>') && !line.includes(':')).map(line => line.trim())
+  }
+
+  async getQueryNameById (type, id) {
+    const response = await this.pool.query(`SELECT querywords FROM ${pluralize(type)} WHERE id = $1`, [id])
+    return response.rows[0].querywords.split('&&')[0]
+  }
+}
+
+class DataValidator {
+  constructor (db) {
+    this.db = db
+  }
+
+  validate (type, data) {
+    this.errors = []
+    this.iterateObject(type, data, [`[${type} Object]`])
+    return this.errors
+  }
+
+  iterateObject = (type, data, path) => {
+    const code = this.db.vars[type]
+    const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
+      .map(line => line.trim())
+    definitions.forEach((def, i) => {
+      if (def.includes('=>')) {
+        // am unsure of a simple replacement for this eval
+        // without making a custom minilanguage
+        if (!eval(def.replace(/=>/, '').replace(/\$/g, 'data.'))) {
+          this.errors.push(definitions[i + 1].replace(/:/, '').trim())
+        }
+      } else if (!def.includes(':')) {
+        const names = def.match(/\w+(\[\])*/g)
+        const property = names[0]
+        const type = names[1]
+        this.checkType(data[property], type, path.concat([`.${property}`]))
+      }
+    })
+  }
+
+  checkType = (value, type, path) => {
+    if (type.includes('[')) {
+      // figure out dimension
+      const dimension = this.db.getDimension(type)
+      const realType = type.slice(0, type.length - 2 * dimension)
+      const dimensionIterator = (array, level) => {
+        if (Array.isArray(array)) {
+          for (let i = 0; i < array.length; i++) {
+            const newPath = JSON.parse(JSON.stringify(path))
+            newPath.push(`[${i}]`)
+            if (level === 1) {
+              this.checkType(array[i], realType, newPath)
+            } else {
+              dimensionIterator(array[i], level - 1)
+            }
+          }
+        } else {
+          this.errors.push(`${path.join('')} is not an array`)
+        }
+      }
+      dimensionIterator(value, dimension)
+    } else {
+      const errorMsg = indefiniteDescription => this.errors.push(`${path.join('')} must be ${indefiniteDescription}`)
+
+      if (this.db.standardVariables.includes(type)) {
+        if (type === 'QUERY') {
+          if (typeof value !== 'string' || !value) {
+            this.errors.push(`Must give a name (error at ${path.join('')})`)
+          }
+        } else if (value === null) return
+
+        if (type === 'TEXT') {
+          if (typeof value !== 'string') {
+            errorMsg('a text string')
+          }
+        } else if (type === 'INT') {
+          if (!Number.isInteger(value)) {
+            errorMsg('an integer number')
+          }
+        } else if (type === 'BOOLEAN') {
+          if (typeof value !== 'boolean') {
+            errorMsg('a boolean value')
+          } else if (type === 'DATE') {
+            if (!value.match(/\d+-\d{2}-\d{2}/)) {
+              errorMsg('a valid date string (YYYY-MM-DD)')
+            }
+          }
+        }
+      } else {
+        if (!value) errorMsg('a valid object')
+        else this.iterateObject(`*${type}`, value, path)
+      }
+    }
+  }
+}
+
+const db = new WikiDatabase(
+`
+song: {
+  names NAME[]
+  authors SONG_AUTHOR[]
+  link TEXT
+  files INT[]
+  unofficialNames QUERY[]
+  => $names.length > 0 || $unofficialNames.length > 0
+  : A song must have at least one name or one unofficial name
+  => $link === '' || $link.includes('youtube.com/watch&v=') || $link.includes('youtu.be/')
+  : A song link must be a valid YouTube link
+}
+
+*NAME: {
+  name QUERY
+  reference INT
+  pt LOCALIZATION_NAME
+  fr LOCALIZATION_NAME
+  es LOCALIZATION_NAME
+  de LOCALIZATION_NAME
+  ru LOCALIZATION_NAME
+}
+
+*LOCALIZATION_NAME: {
+  name TEXT
+  reference INT
+  translationNotes TEXT
+  => ($reference || $translationNotes) && $name || (!$reference && !$translationNotes && !$name)
+  : Localization name contains reference or translation notes but contains no actual name
+}
+
+*SONG_AUTHOR: {
+  author INT
+  reference INT
+}
+
+author: {
+  name QUERY
+}
+
+source: {
+  name QUERY
+}
+
+file: {
+  originalname QUERY
+  filename TEXT
+  source INT
+  isHQ BOOLEAN
+  sourceLink TEXT
+}
+
+wiki_reference: {
+  name QUERY
+  link TEXT
+  description TEXT
+}
+`
+)
+
+module.exports = db

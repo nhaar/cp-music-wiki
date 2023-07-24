@@ -1,7 +1,7 @@
 import { EditorModel } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
 import { types } from './type-info.js'
-import { selectElement, getTakenVariable, createElement } from './utils.js'
+import { selectElement, createElement } from './utils.js'
 
 class Model extends EditorModel {
   constructor () { super('') }
@@ -11,7 +11,7 @@ class View {
   constructor () {
     this.select = selectElement('type-select')
     types.forEach((info, i) => {
-      createElement({parent: this.select, tag: 'option', value: i + '', innerHTML: info.name})
+      createElement({ parent: this.select, tag: 'option', value: i + '', innerHTML: info.name })
     })
 
     this.input = selectElement('id-input')
@@ -30,7 +30,6 @@ class Controller {
    */
   setupPage () {
     this.view.select.addEventListener('change', () => {
-       
       this.model.type = Number(this.view.select.value)
       const { type } = types[this.model.type]
       // reset query

@@ -1,6 +1,4 @@
-import { createSearchQuery } from './query-options.js'
-import { Blocker } from './submit-block.js'
-import { createElement, selectElements } from './utils.js'
+import { createElement } from './utils.js'
 
 export class OrderedRowsElement {
   /**

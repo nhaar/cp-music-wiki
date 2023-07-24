@@ -3,8 +3,6 @@ import { Song } from './song.js'
 import { Author } from './author.js'
 import { Source } from './source.js'
 import { File } from './file.js'
-import { Media } from './media.js'
-import { Feature } from './feature.js'
 import { Reference } from './reference.js'
 import { FlashRoom } from './flash_room.js'
 

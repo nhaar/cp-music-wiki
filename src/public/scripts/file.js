@@ -95,9 +95,6 @@ class FileController extends EditorController {
    * @returns {object}
    */
   getUserData () {
-    const songVar = this.songVar
-    const sourceVar = this.sourceVar
-
     const source = this.view.sourceInput.dataset.id
     const sourceLink = this.view.linkInput.value
     const isHQ = this.view.checkbox.checked
@@ -119,16 +116,11 @@ class FileController extends EditorController {
    * File setupEditor
    */
   setupEditor () {
-    const songVar = this.songVar
-    const sourceVar = this.sourceVar
-    const fileVar = 'file'
-
     if (!this.model.id) {
       this.view.filePreview.classList.add('hidden')
     } else {
       this.view.fileInput.classList.add('hidden')
     }
-
 
     createSearchQuery(
       this.view.sourceInput,

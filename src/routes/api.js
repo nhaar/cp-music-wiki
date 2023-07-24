@@ -5,8 +5,7 @@ const multer = require('multer')
 
 const path = require('path')
 
-// const db = require('../app/database')
-const pg = require('../app/test')
+const db = require('../app/database')
 // const gen = require('../app/lists')
 
 router.post('/update', async (req, res) => {
@@ -14,13 +13,12 @@ router.post('/update', async (req, res) => {
   const { data } = info
   console.log(data)
   if (!info) res.status(400).send('No data was found')
-  const validationErrors = pg.validate(type, data)
+  const validationErrors = db.validate(type, data)
   if (validationErrors.length === 0) {
-
-    await pg.updateType(type, info)
+    await db.updateType(type, info)
     res.sendStatus(200)
   } else {
-    res.status(400).send( { errors: validationErrors })
+    res.status(400).send({ errors: validationErrors })
   }
 })
 
@@ -46,22 +44,22 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
     id,
     data: { source, originalname, filename, sourceLink, isHQ: Boolean(isHQ) }
   }
-  
+
   console.log(info)
-  await pg.updateType('file', info)
+  await db.updateType('file', info)
   res.sendStatus(200)
 })
 
 router.post('/get', async (req, res) => {
   const { type, id } = req.body
-  const response = await pg.getDataById(type, id)
+  const response = await db.getDataById(type, id)
 
   res.status(200).send(response)
 })
 
 router.post('/default', async (req, res) => {
   const { type, id } = req.body
-  const response = await pg.getDefault(type, id)
+  const response = await db.getDefault(type, id)
 
   res.status(200).send(response)
 })
@@ -76,33 +74,14 @@ router.post('/default', async (req, res) => {
  */
 router.post('/get-by-name', async (req, res) => {
   const { keyword, type } = req.body
-  const results = await pg.getByName(type, keyword)
+  const results = await db.getByName(type, keyword)
   res.status(200).send(results)
-})
-
-router.post('/get-in-media', async (req, res) => {
-  const { keyword, mediaId } = req.body
-  const rows = await db.getFeatureInMedia(keyword, mediaId)
-  res.status(200).send(rows)
 })
 
 router.post('/get-name', async (req, res) => {
   const { type, id } = req.body
-  const name = await pg.getQueryNameById(type, id)
+  const name = await db.getQueryNameById(type, id)
   res.status(200).send({ name })
-})
-
-/**
- * @route POST /api/get-file-data
- *
- * Gives all the files for a song
- * @param {string} body.songId
- * @returns {import('../app/database').Row[]} - 200
- */
-router.post('/get-file-data', async (req, res) => {
-  const { songId } = req.body
-  const rows = await db.getFileData(songId)
-  res.status(200).send(rows)
 })
 
 module.exports = router

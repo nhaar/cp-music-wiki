@@ -2,7 +2,6 @@ import { EditorModel, EditorView, EditorController, EditorType } from './editor-
 import { generateAudio } from './file.js'
 import { OrderedRowsElement } from './ordered-rows.js'
 import { createSearchQuery } from './query-options.js'
-import { Blocker } from './submit-block.js'
 import { createElement, findInObject, postAndGetJSON, selectElement, selectElements } from './utils.js'
 
 /**
@@ -219,7 +218,7 @@ class SongView extends EditorView {
         this.authors,
         row => {
           const reference = row.reference || ''
-          const author =  row.author || ''
+          const author = row.author || ''
 
           return `
             <input data-author-id="${author}">
@@ -390,7 +389,7 @@ class SongController extends EditorController {
       obj => {
         // it ends up becoming button for some reason
         // if (selectElement(this.submitBlocker.blockedClass, obj.div).tagName === 'BUTTON') {
-          
+
         // }
       }
     )
@@ -443,14 +442,6 @@ class SongController extends EditorController {
   }
 
   /**
-   * Adds controls for the youtube link input
-   */
-  setupLink () {
-    const blockVar = 'link'
-
-  }
-
-  /**
    * Adds control to the media rows
    */
   setupMedias () {
@@ -483,35 +474,6 @@ class SongController extends EditorController {
         return featureRows.div
       }
     )
-  }
-
-  /**
-   * Adds controls to the feature editor inside a media row
-   * @param {HTMLDivElement} parent
-   */
-  setupFeature (parent) {
-    const checkbox = parent.querySelector('input')
-    const innerDiv = parent.querySelector('div')
-
-  }
-
-  /**
-   * Adds control to the date picker inside a feature editor in a media row
-   * @param {HTMLDivElement} parent
-   */
-  setupFeatureDate (parent) {
-    const checkbox = parent.querySelector('input')
-  }
-
-  /**
-   * Base function for the addCallback to run
-   * in the ordered rows which block/unblock the submit button
-   * @param {OrderedRowsElement} orderedRows
-   * @param {string} variable - Blocking variable
-   */
-  addRowCallback (orderedRows, variable) {
-    const headers = orderedRows.div.querySelectorAll(`.${orderedRows.headerClass}.${orderedRows.identifierClass}`)
-
   }
 
   /**
@@ -887,19 +849,6 @@ class MoveableRowsElement {
 }
 
 /**
- * Helper function that checks if a link
- * is valid to submit to the database
- * @param {string} link
- * @returns {boolean} True if valid
- */
-function isValidLink (link) {
-  const validFull = link.includes('youtube') && link.includes('watch')
-  const validShortened = link.includes('youtu.be/')
-  const notLink = link === ''
-  return validFull || validShortened || notLink
-}
-
-/**
  * Helper function to get the index of a child
  * inside an element (0-indexed)
  * @param {HTMLElement} parent - Parent element
@@ -909,20 +858,4 @@ function isValidLink (link) {
  */
 function indexOfChild (parent, child) {
   return [...parent.children].indexOf(child)
-}
-
-/**
- * Get a map of id -> row based of an array of rows
- * @param {import('../../app/database.js').Row[]} rows
- * @param {string} idName - Name of the id column/property
- * @returns {IdMap} Map of id -> row
- */
-function rowsToIdMap (rows, idName) {
-  const map = {}
-  rows.forEach(row => {
-    const id = row[idName]
-    map[id] = row
-  })
-
-  return map
 }

@@ -23,7 +23,7 @@ import { createElement, postAndGetJSON } from './utils.js'
  */
 export async function createSearchQuery (input, type) {
   // for when taken function and blockers are useless
-  
+
   console.log(input)
   const { id } = input.dataset
   if (id) {
@@ -50,8 +50,7 @@ export async function createSearchQuery (input, type) {
   const updateQuery = () => {
     setPosition()
 
-    postAndGetJSON('api/get-by-name', { type, keyword: input.value}).then(data => {
-
+    postAndGetJSON('api/get-by-name', { type, keyword: input.value }).then(data => {
       queryOptions.innerHTML = ''
       for (const id in data) {
         const optionElement = createElement({ parent: queryOptions, innerHTML: data[id] })
@@ -59,7 +58,6 @@ export async function createSearchQuery (input, type) {
           queryOptions.innerHTML = ''
           input.dataset.id = id
           input.value = data[id]
-
         })
       }
     })
