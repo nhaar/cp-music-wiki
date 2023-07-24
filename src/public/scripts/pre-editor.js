@@ -1,5 +1,6 @@
 import { EditorModel } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
+import { types } from './type-info.js'
 import { selectElement, getTakenVariable, createElement } from './utils.js'
 
 class Model extends EditorModel {
@@ -9,6 +10,10 @@ class Model extends EditorModel {
 class View {
   constructor () {
     this.select = selectElement('type-select')
+    types.forEach((info, i) => {
+      createElement({parent: this.select, tag: 'option', value: i + '', innerHTML: info.name})
+    })
+
     this.input = selectElement('id-input')
     this.edit = selectElement('edit-button')
     this.create = selectElement('create-button')
@@ -25,70 +30,16 @@ class Controller {
    */
   setupPage () {
     this.view.select.addEventListener('change', () => {
-      this.model.type = this.view.select.value
-      let databaseVar
-      let databaseValue
-      let fetchDataFunction
-      switch (this.model.type) {
-        case '0': {
-          databaseVar = 'song_id'
-          databaseValue = 'name_text'
-          fetchDataFunction = a => this.model.getSongNames(a)
-          break
-        }
-        case '1' : {
-          databaseVar = 'author_id'
-          databaseValue = 'name'
-          fetchDataFunction = a => this.model.getAuthorNames(a)
-          break
-        }
-        case '2': {
-          databaseVar = 'source_id'
-          databaseValue = 'name'
-          fetchDataFunction = a => this.model.getSourceNames(a)
-          break
-        }
-        case '3': {
-          databaseVar = 'file_id'
-          databaseValue = 'original_name'
-          fetchDataFunction = a => this.model.getFileNames(a)
-          break
-        }
-        case '4': {
-          databaseVar = 'media_id'
-          databaseValue = 'name'
-          fetchDataFunction = a => this.model.getMediaNames(a)
-          break
-        }
-        case '5': {
-          databaseVar = 'feature_id'
-          databaseValue = 'name'
-          fetchDataFunction = a => this.model.getFeatureNames(a)
-          break
-        }
-        case '6': {
-          databaseVar = 'reference_id'
-          databaseValue = 'name'
-          fetchDataFunction = a => this.model.getReferenceNames(a)
-        }
-        case '7': {
-          databaseVar = 'room_id'
-          databaseValue = 'name'
-          fetchDataFunction = a => this.model.getRoomNames(a)
-        }
-      }
-
+       
+      this.model.type = Number(this.view.select.value)
+      const { type } = types[this.model.type]
       // reset query
       this.view.input.innerHTML = ''
       const input = createElement({ parent: this.view.input, tag: 'input' })
 
       createSearchQuery(
         input,
-        'id',
-        databaseVar,
-        databaseValue,
-        fetchDataFunction,
-        () => getTakenVariable(input, databaseVar)
+        type
       )
     })
 

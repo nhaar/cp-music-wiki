@@ -143,7 +143,6 @@ class SongView extends EditorView {
    */
   renderNamesDiv () {
     this.langDiv = 'lang-div'
-    console.log(this.song)
     const references = this.song.meta.referenceNames
 
     const langCodes = {

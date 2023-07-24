@@ -13,6 +13,8 @@ class WikiDatabase {
     })
 
     this.assignDefaults(code)
+    this.queryIndexing()
+
   }
 
   async getDataById (name, id) {
@@ -27,12 +29,14 @@ class WikiDatabase {
 
   async updateType (name, row) {
     const id = row.id
-    const data = JSON.stringify(row.data)
+    let data = row.data
+    const querywords = this.getQueryWords(name, data)
+    data = JSON.stringify(row.data)
     const table = pluralize(name)
     if (!id) {
-      await this.pool.query(`INSERT INTO ${table} (data) VALUES ($1)`, [data])
+      await this.pool.query(`INSERT INTO ${table} (data, querywords) VALUES ($1, $2)`, [data, querywords])
     } else {
-      await this.pool.query(`UPDATE ${table} SET data = $1 WHERE id = $2`, [data, id])
+      await this.pool.query(`UPDATE ${table} SET data = $1, querywords = $2 WHERE id = $3`, [data, querywords, id])
     }
   }
 
@@ -40,11 +44,9 @@ class WikiDatabase {
     return this.defaults[type]
   }
 
- 
-
   assignDefaults (code) {
     this.defaults = {}
-    const standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE']
+    const standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
     this.standardVariables = standardVariables
     const dividedVariables = code.match(/\*\w+(?=:)|\w+(?=:)|\{([^}]+)\}/g)
     const vars = {}
@@ -58,7 +60,7 @@ class WikiDatabase {
       if (!v.includes('*')) {
         const defaultObject = {}
         const iterate = (object, code) => {
-          const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}') && !line.includes('=>') && !line.includes(':')).map(line => line.trim())
+          const definitions = this.getVariableLines(code)
           definitions.forEach(def => {
             const varAndType = def.match(/\w+\[\]|\w+/g)
             const variableName = varAndType[0]
@@ -77,6 +79,99 @@ class WikiDatabase {
         this.defaults[v] = defaultObject
       }
     }
+  }
+
+  queryIndexing () {
+    this.queryIndex = {}
+
+    for (const v in this.vars) {
+      
+      if (!v.includes('*')) {
+        this.queryIndex[v] = []
+
+        const iterate = (name, path) => {
+          const code = this.vars[name]
+          const definitions = this.getVariableLines(code)
+          definitions.forEach(def => {
+            const names = this.getPropertyAndTypeNames(def)
+            const property = names[0]
+            const type = names[1]
+    
+            const newPath = JSON.parse(JSON.stringify(path)).concat([property])
+            const dimension = this.getDimension(type)
+            for (let i = 0; i < dimension; i++) {
+              newPath.push('[]')
+            }
+            const arrayless = type.replace(/(\[\])*/g, '')
+            if (arrayless === 'QUERY') {
+              this.queryIndex[v].push(newPath)
+            } else if (!this.standardVariables.includes(arrayless)) {
+              iterate(`*${arrayless}`, newPath)
+            }
+          })
+        }
+        iterate(v, [])
+      }
+
+    }
+
+  }
+
+  getPropertyAndTypeNames (definition) {
+    return definition.match(/\w+\[\]|\w+/g)
+  }
+
+  getQueryWords (type, data) {
+    const results = []
+    const paths = this.queryIndex[type]
+    const iterator = (value, path, current) => {
+
+      const type = path[current]
+      current++
+      if (type.includes('[')) {
+        value.forEach(element => {
+          if (current === path.length) results.push(element)
+          else iterator(element, path, current)
+        })
+      } else {
+        const nextValue = value[type]
+        if (current === path.length) results.push(nextValue)
+        else iterator(nextValue, path, current)
+      }      
+    }
+
+    paths.forEach(path => {
+      iterator(data, path, 0)
+    })
+
+    return results.join('&&')
+  }
+
+  async getByName (type, keyword) {
+    const response = await this.pool.query(`SELECT id, querywords FROM ${pluralize(type)} WHERE querywords LIKE $1`, [`%${keyword}%`])
+    const results = {}
+    response.rows.forEach(row => {
+      const { id, querywords } = row
+      const phrases = querywords.split('&&')
+      for (let i = 0; i < phrases.length; i++) {
+        const phrase = phrases[i]
+        if (phrase.match(new RegExp(keyword, 'i'))) {
+          results[id] = phrase
+          break
+        }
+      }
+    })
+    return results
+  }
+
+  getDimension (type) {
+    const matches = type.match(/\[\]/g) 
+    if (matches) return matches.length
+    else return 0
+  }
+
+  getVariableLines(code) {
+    return code.split('\n').filter(line => !line.includes('{') && !line.includes('}') && !line.includes('=>') && !line.includes(':')).map(line => line.trim())
   }
 }
 
@@ -115,7 +210,7 @@ class DataValidator {
   checkType = (value, type, path) => {
     if (type.includes('[')) {
       // figure out dimension
-      const dimension = type.match(/\[\]/g).length
+      const dimension = this.db.getDimension(type)
       const realType = type.slice(0, type.length - 2 * dimension)
       const dimensionIterator = (array, level) => {
         
@@ -138,13 +233,19 @@ class DataValidator {
       const errorMsg = indefiniteDescription => this.errors.push(`${path.join('')} must be ${indefiniteDescription}`)
 
       if (this.db.standardVariables.includes(type)) {
-        if (value === null) return
+        
+        if (type === 'QUERY') {
+          if (typeof value !== 'string' || !value) {
+            this.errors.push(`Must give a name (error at ${path.join('')})`)
+          }
+          
+        } else if (value === null) return
 
 
         if (type === 'TEXT') {
           if (typeof value !== 'string') {
             errorMsg('a text string')
-          }
+          } 
         } else if (type === 'INT') {
           if (!Number.isInteger(value)) {
             errorMsg('an integer number')
@@ -174,7 +275,7 @@ song: {
   authors SONG_AUTHOR[]
   link TEXT
   files INT[]
-  unofficialNames TEXT[]
+  unofficialNames QUERY[]
   => $names.length > 0 || $unofficialNames.length > 0
   : A song must have at least one name or one unofficial name
   => $link === '' || $link.includes('youtube.com/watch&v=') || $link.includes('youtu.be/')
@@ -182,15 +283,13 @@ song: {
 }
 
 *NAME: {
-  name TEXT
+  name QUERY
   reference INT
   pt LOCALIZATION_NAME
   fr LOCALIZATION_NAME
   es LOCALIZATION_NAME
   de LOCALIZATION_NAME
   ru LOCALIZATION_NAME
-  => $name
-  : A song name must contain a non empty text for its name
 }
 
 *LOCALIZATION_NAME: {
@@ -207,17 +306,18 @@ song: {
 }
 
 author: {
-  name TEXT
-  => $name
-  : Author must have a non empty name
+  name QUERY
 }
 `
 )
 
-console.log(db.validate('song', {
+const testSong = {
   names: [
     {
-      name: 'hello'
+      name: 'cellbit and somethigneigneige',
+    },
+    {
+      name: 'not so funny now'
     }
   ],
   authors: [
@@ -232,7 +332,7 @@ console.log(db.validate('song', {
   ],
   link: '',
   files: [],
-  unofficialNames: [ 'hello' ]
-}))
+  unofficialNames: [ 'goodbye' ]
+}
 
 module.exports = db

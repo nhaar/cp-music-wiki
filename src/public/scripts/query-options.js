@@ -1,4 +1,4 @@
-import { createElement } from './utils.js'
+import { createElement, postAndGetJSON } from './utils.js'
 
 /**
  * Object with information about the
@@ -21,17 +21,11 @@ import { createElement } from './utils.js'
  * Function that gets taken info relative to the input element(s)
  * @param {import("./submit-block").Blocker} blocker - If the query is associated with a button to block, the blocker object of the button
  */
-export function createSearchQuery (input, dataVar, databaseVar, databaseValue, fetchDataFunction, checkTakenFunction, blocker) {
+export function createSearchQuery (input, type) {
   // for when taken function and blockers are useless
-  if (!checkTakenFunction) checkTakenFunction = () => ({ hasUntakenId: true, takenIds: [] })
 
   // element to have the available options
   const queryOptions = createElement({ parent: input.parentElement, className: 'query-options' })
-
-  // default block when created if no variable
-  if (blocker) {
-    if (!input.value) blocker.blockElement(dataVar, input)
-  }
 
   const setPosition = () => {
     queryOptions.style.top = input.offsetHeight + input.offsetTop + 'px'
@@ -49,38 +43,25 @@ export function createSearchQuery (input, dataVar, databaseVar, databaseValue, f
   const updateQuery = () => {
     setPosition()
 
-    fetchDataFunction(input.value).then(data => {
-      // fetching all taken data
-      const { hasUntakenId, takenIds } = checkTakenFunction(input)
-      if (blocker) {
-        if (hasUntakenId) blocker.blockElement(dataVar, input)
-      }
+    postAndGetJSON('api/get-by-name', { type, keyword: input.value}).then(data => {
 
       queryOptions.innerHTML = ''
-      data.forEach(option => {
-        // filtering taken options
-        if (!takenIds.includes(option[databaseVar] + '')) {
-          const optionElement = createElement({ parent: queryOptions, innerHTML: option[databaseValue] })
-          optionElement.addEventListener('click', () => {
-            queryOptions.innerHTML = ''
-            input.dataset[dataVar] = option[databaseVar]
-            input.value = option[databaseValue]
+      for (const id in data) {
+        const optionElement = createElement({ parent: queryOptions, innerHTML: data[id] })
+        optionElement.addEventListener('click', () => {
+          queryOptions.innerHTML = ''
+          input.dataset.id = id
+          input.value = data[id]
 
-            if (blocker) {
-              const { hasUntakenId } = checkTakenFunction(input)
-              if (!hasUntakenId) blocker.unblockElement(dataVar, input)
-            }
-          })
-        }
-      })
+        })
+      }
     })
   }
 
   input.addEventListener('input', () => {
     updateQuery()
     // reset ID if altered anything
-    input.dataset[dataVar] = ''
-    if (blocker) blocker.addBlockedClass(input)
+    input.dataset.id = ''
   })
   input.addEventListener('focus', () => updateQuery())
   input.addEventListener('blur', () => {

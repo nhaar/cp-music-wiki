@@ -11,11 +11,16 @@ const pg = require('../app/test')
 
 router.post('/update', async (req, res) => {
   const { info, type } = req.body
-  console.log(info)
-  await pg.updateType(type, info)
-  // gen.updateLists()
+  const { data } = info
+  if (!info) res.status(400).send('No data was found')
+  const validationErrors = pg.validate(type, data)
+  if (validationErrors.length === 0) {
 
-  res.sendStatus(200)
+    await pg.updateType(type, info)
+    res.sendStatus(200)
+  } else {
+    res.status(400).send( { errors: validationErrors })
+  }
 })
 
 const upload = multer({ dest: path.join(__dirname, '../public/music/') })
@@ -51,7 +56,6 @@ router.post('/default', async (req, res) => {
   const { type, id } = req.body
   const response = await pg.getDefault(type, id)
 
-  console.log(response)
   res.status(200).send(response)
 })
 
@@ -64,9 +68,9 @@ router.post('/default', async (req, res) => {
  * @returns {import('../app/database').Row[]}
  */
 router.post('/get-by-name', async (req, res) => {
-  const { keyword, table } = req.body
-  const rows = await db.getByKeyword(table, keyword)
-  res.status(200).send(rows)
+  const { keyword, type } = req.body
+  const results = await pg.getByName(type, keyword)
+  res.status(200).send(results)
 })
 
 router.post('/get-in-media', async (req, res) => {
