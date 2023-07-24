@@ -1,10 +1,8 @@
-/* eslint no-eval: 0 */
-
 const { Pool } = require('pg')
 
 /**
- * Represents MWL code, used for creating the database (read docs for syntax)
- * @typedef {string} WikiDatabaseCode
+ * Represents CPT code, used to define the properties of the database objects
+ * @typedef {string} CPT
  */
 
 /**
@@ -18,11 +16,6 @@ const { Pool } = require('pg')
 /**
  * Represent the name of an object defining a table in the database, which has the same name as the type
  * @typedef {string} TypeName
- */
-
-/**
- * Represents a type in MWL
- * @typedef {string} MWLType
  */
 
 /**
@@ -55,17 +48,19 @@ const { Pool } = require('pg')
 
 /**
  * Class containing the methods to communicate with the database
- * and to interpret the MWL code
+ * via a defined database structure
  */
 class WikiDatabase {
   /**
-   * Connect to the database using the given code
-   * @param {WikiDatabaseCode} code - Code to define the database
+   * Connects to the database using the type definitions given
+   * @param {object} databaseTypes - Object mapping `TypeName` to `ObjectType`, and defines all the database types used
+   * @param {object} propertyTypes - Object mapping names to `ObjectType` which are meant to be helper object structures to be used as properties in other objects
    */
-  constructor (code) {
+  constructor (databaseTypes, propertyTypes) {
     this.handler = new SQLHandler()
+    Object.assign(this, { databaseTypes, propertyTypes })
 
-    this.assignDefaults(code)
+    this.assignDefaults()
     this.queryIndexing()
   }
 
@@ -88,90 +83,82 @@ class WikiDatabase {
     const db = this
 
     // iterate through each property and each validation statement in the object to validate it
-    const iterateObject = (type, data, path) => {
-      const code = db.vars[type]
-      const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
-        .map(line => line.trim())
-      definitions.forEach((def, i) => {
-        if (def.includes('=>')) {
-          // am unsure of a simple replacement for this eval
-          // without making a more advanced interpreter
-          try {
-            if (!eval(def.replace(/=>/, '').replace(/\$/g, 'data.'))) {
-              errors.push(definitions[i + 1].replace(/:/, '').trim())
-            }
-          } catch (error) {
-            errors.push(`Validation exception at ${path.join()}\n${error}`)
-          }
-        } else if (!def.includes(':')) {
-          const names = def.match(/\w+(\[\])*/g)
-          const property = names[0]
-          const type = names[1]
+    const iterateObject = (code, validators, data, path) => {
+      validators.forEach(validator => {
+        try {
+          if (!validator.f(data)) errors.push(validator.msg)
+        } catch (error) {
+          errors.push(`Validation exception at ${path.join()}\n${error}`)
+        }
+      })
+      this.iterateDeclarations(code, (property, type) => {
+        // check if the type of a property is the same as it was defined
+        const checkType = (value, type, path) => {
+          if (type.includes('[')) {
+            // figure out dimension
+            const dimension = db.getDimension(type)
+            const realType = type.slice(0, type.length - 2 * dimension)
 
-          // check if the type of a property is the same as it was defined
-          const checkType = (value, type, path) => {
-            if (type.includes('[')) {
-              // figure out dimension
-              const dimension = db.getDimension(type)
-              const realType = type.slice(0, type.length - 2 * dimension)
-
-              // iterate through all the nested arrays to find all destination paths
-              const dimensionIterator = (array, level) => {
-                if (Array.isArray(array)) {
-                  for (let i = 0; i < array.length; i++) {
-                    const newPath = JSON.parse(JSON.stringify(path))
-                    newPath.push(`[${i}]`)
-                    if (level === 1) {
-                      checkType(array[i], realType, newPath)
-                    } else {
-                      dimensionIterator(array[i], level - 1)
-                    }
-                  }
-                } else {
-                  errors.push(`${path.join('')} is not an array`)
-                }
-              }
-              dimensionIterator(value, dimension)
-            } else {
-              const errorMsg = indefiniteDescription => errors.push(`${path.join('')} must be ${indefiniteDescription}`)
-
-              if (db.standardVariables.includes(type)) {
-                if (type === 'QUERY') {
-                  if (typeof value !== 'string' || !value) {
-                    errors.push(`Must give a name (error at ${path.join('')})`)
-                  }
-                } else if (value === null) return
-
-                if (type === 'TEXT') {
-                  if (typeof value !== 'string') {
-                    errorMsg('a text string')
-                  }
-                } else if (type === 'INT') {
-                  if (!Number.isInteger(value)) {
-                    errorMsg('an integer number')
-                  }
-                } else if (type === 'BOOLEAN') {
-                  if (typeof value !== 'boolean') {
-                    errorMsg('a boolean value')
-                  } else if (type === 'DATE') {
-                    if (!value.match(/\d+-\d{2}-\d{2}/)) {
-                      errorMsg('a valid date string (YYYY-MM-DD)')
-                    }
+            // iterate through all the nested arrays to find all destination paths
+            const dimensionIterator = (array, level) => {
+              if (Array.isArray(array)) {
+                for (let i = 0; i < array.length; i++) {
+                  const newPath = JSON.parse(JSON.stringify(path))
+                  newPath.push(`[${i}]`)
+                  if (level === 1) {
+                    checkType(array[i], realType, newPath)
+                  } else {
+                    dimensionIterator(array[i], level - 1)
                   }
                 }
               } else {
-                if (!value) errorMsg('a valid object')
-                else iterateObject(`*${type}`, value, path)
+                errors.push(`${path.join('')} is not an array`)
+              }
+            }
+            dimensionIterator(value, dimension)
+          } else {
+            const errorMsg = indefiniteDescription => errors.push(`${path.join('')} must be ${indefiniteDescription}`)
+
+            if (db.standardVariables.includes(type)) {
+              if (type === 'QUERY') {
+                if (typeof value !== 'string' || !value) {
+                  errors.push(`Must give a name (error at ${path.join('')})`)
+                }
+              } else if (value === null) return
+
+              if (type === 'TEXT') {
+                if (typeof value !== 'string') {
+                  errorMsg('a text string')
+                }
+              } else if (type === 'INT') {
+                if (!Number.isInteger(value)) {
+                  errorMsg('an integer number')
+                }
+              } else if (type === 'BOOLEAN') {
+                if (typeof value !== 'boolean') {
+                  errorMsg('a boolean value')
+                } else if (type === 'DATE') {
+                  if (!value.match(/\d+-\d{2}-\d{2}/)) {
+                    errorMsg('a valid date string (YYYY-MM-DD)')
+                  }
+                }
+              }
+            } else {
+              if (!value) errorMsg('a valid object')
+              else {
+                const propertyType = db.propertyTypes[type]
+                iterateObject(propertyType.code, propertyType.validators, value, path)
               }
             }
           }
-
-          checkType(data[property], type, path.concat([`.${property}`]))
         }
+
+        checkType(data[property], type, path.concat([`.${property}`]))
       })
     }
 
-    iterateObject(type, data, [`[${type} Object]`])
+    const databaseType = db.databaseTypes[type]
+    iterateObject(databaseType.code, databaseType.validators, data, [`[${type} Object]`])
 
     return errors
   }
@@ -196,44 +183,29 @@ class WikiDatabase {
   getDefault = type => this.defaults[type]
 
   /**
-   * Create the default object for each type and store it in this object
-   * based on the MWL code
-   * @param {WikiDatabaseCode} code - Code to base defaults from
+   * Create and save the default object structure for each database type, where every array is replaced with an empty array, every object is expanded with its properties, and every other variable is kept null
    */
-  assignDefaults (code) {
+  assignDefaults () {
     this.defaults = {}
-    const standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
-    this.standardVariables = standardVariables
-    const dividedVariables = code.match(/\*\w+(?=:)|\w+(?=:)|\{([^}]+)\}/g)
-    const vars = {}
-    this.vars = vars
-    if (dividedVariables.length % 2 === 1) throw new Error('Invalid variables')
-    for (let i = 0; i < dividedVariables.length; i += 2) {
-      vars[dividedVariables[i]] = dividedVariables[i + 1]
-    }
+    this.standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
+    const databaseTypes = this.databaseTypes
 
-    for (const v in vars) {
-      if (!v.includes('*')) {
-        const defaultObject = {}
-        const iterate = (object, code) => {
-          const definitions = this.getVariableLines(code)
-          definitions.forEach(def => {
-            const varAndType = def.match(/\w+\[\]|\w+/g)
-            const variableName = varAndType[0]
-            const type = varAndType[1]
-            if (type.includes('[')) object[variableName] = []
-            else if (standardVariables.includes(type)) object[variableName] = null
-            else {
-              object[variableName] = {}
-              iterate(object[variableName], vars[`*${type}`])
-            }
-          })
-        }
-
-        iterate(defaultObject, vars[v])
-
-        this.defaults[v] = defaultObject
+    for (const v in databaseTypes) {
+      const defaultObject = {}
+      const iterate = (object, code) => {
+        this.iterateDeclarations(code, (property, type) => {
+          if (type.includes('[')) object[property] = []
+          else if (this.standardVariables.includes(type)) object[property] = null
+          else {
+            object[property] = {}
+            iterate(object[property], this.propertyTypes[type].code)
+          }
+        })
       }
+
+      iterate(defaultObject, databaseTypes[v].code)
+
+      this.defaults[v] = defaultObject
     }
   }
 
@@ -244,46 +216,44 @@ class WikiDatabase {
    * This object is used to avoid repeating this operation each search query request
    */
   queryIndexing () {
-    this.queryIndex = {}
+    const queryIndex = {}
+    Object.assign(this, { queryIndex })
 
-    for (const v in this.vars) {
-      if (!v.includes('*')) {
-        this.queryIndex[v] = []
+    for (const v in this.databaseTypes) {
+      queryIndex[v] = []
 
-        const iterate = (name, path) => {
-          const code = this.vars[name]
-          const definitions = this.getVariableLines(code)
-          definitions.forEach(def => {
-            const names = this.getPropertyAndTypeNames(def)
-            const property = names[0]
-            const type = names[1]
-
-            const newPath = JSON.parse(JSON.stringify(path)).concat([property])
-            const dimension = this.getDimension(type)
-            for (let i = 0; i < dimension; i++) {
-              newPath.push('[]')
-            }
-            const arrayless = type.replace(/(\[\])*/g, '')
-            if (arrayless === 'QUERY') {
-              this.queryIndex[v].push(newPath)
-            } else if (!this.standardVariables.includes(arrayless)) {
-              iterate(`*${arrayless}`, newPath)
-            }
-          })
-        }
-        iterate(v, [])
+      const iterate = (code, path) => {
+        this.iterateDeclarations(code, (property, type) => {
+          const newPath = JSON.parse(JSON.stringify(path)).concat([property])
+          const dimension = this.getDimension(type)
+          for (let i = 0; i < dimension; i++) {
+            newPath.push('[]')
+          }
+          const arrayless = type.replace(/(\[\])*/g, '')
+          if (arrayless === 'QUERY') {
+            queryIndex[v].push(newPath)
+          } else if (!this.standardVariables.includes(arrayless)) {
+            iterate(this.propertyTypes[arrayless].code, newPath)
+          }
+        })
       }
+      iterate(this.databaseTypes[v].code, [])
     }
   }
 
   /**
-   * Helper function to get the property and the type name for a given
-   * MWL property definition
-   * @param {string} definition - MWL code for a property definition
-   * @returns {string[]} Two element array, the first being the property and the second the type
+   * Iterate through every property declared in a CPT code snippet and run a function while iterating
+   * @param {CPT} code - Code snippet with declarations
+   * @param {function(string, string) : void} callbackfn - Callback function for each iteration which takes as the first argument the name of the property in the declaration and as the second argument the type of the property being declared
    */
-  getPropertyAndTypeNames (definition) {
-    return definition.match(/\w+\[\]|\w+/g)
+  iterateDeclarations (code, callbackfn) {
+    const declarations = code.split('\n').map(line => line.trim()).filter(line => line)
+    declarations.forEach(declr => {
+      const names = declr.match(/\w+(\[\])*/g)
+      const property = names[0]
+      const type = names[1]
+      callbackfn(property, type)
+    })
   }
 
   /**
@@ -349,16 +319,6 @@ class WikiDatabase {
     const matches = type.match(/\[\]/g)
     if (matches) return matches.length
     else return 0
-  }
-
-  /**
-   * Get all the property declarations for the MWL code for a single
-   * data type declaration
-   * @param {WikiDatabaseCode} code - Code for a data type declaration
-   * @returns {string[]} Array of the property declarations inside the code
-   */
-  getVariableLines (code) {
-    return code.split('\n').filter(line => !line.includes('{') && !line.includes('}') && !line.includes('=>') && !line.includes(':')).map(line => line.trim())
   }
 
   /**
@@ -452,66 +412,93 @@ class SQLHandler {
   selectLike = async (type, column, matching) => (await this.pool.query(`SELECT * FROM ${type} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
 }
 
-// creating using the code for the music wiki types
-const db = new WikiDatabase(
-`
-song: {
-  names NAME[]
-  authors SONG_AUTHOR[]
-  link TEXT
-  files INT[]
-  unofficialNames QUERY[]
-  => $names.length > 0 || $unofficialNames.length > 0
-  : A song must have at least one name or one unofficial name
-  => $link === '' || $link.includes('youtube.com/watch&v=') || $link.includes('youtu.be/')
-  : A song link must be a valid YouTube link
+/**
+ * Class that handles validating data within an object type
+ */
+class Validator {
+  /**
+   *
+   * @param {function(TypeData) : boolean} f - Takes as argument an object that follows an object type's structure, and returns true if the object is following the rule assigned to this validator, else it returns false, indicating the data is not valid
+   * @param {string} msg - Error message to display for the data if it is invalid
+   */
+  constructor (f, msg) {
+    Object.assign(this, { f, msg })
+  }
 }
 
-*NAME: {
-  name QUERY
-  reference INT
-  pt LOCALIZATION_NAME
-  fr LOCALIZATION_NAME
-  es LOCALIZATION_NAME
-  de LOCALIZATION_NAME
-  ru LOCALIZATION_NAME
+/**
+ * General class for a database or property type
+ */
+class ObjectType {
+  /**
+   * Assigns both values to the object
+   * @param {CPT} code - The code snippet which contains the declaration for all properties within this object type
+   * @param {Validator[]} validators - A list of all data validators for this object type
+   */
+  constructor (code, validators = []) {
+    Object.assign(this, { code, validators })
+  }
 }
 
-*LOCALIZATION_NAME: {
-  name TEXT
-  reference INT
-  translationNotes TEXT
-  => ($reference || $translationNotes) && $name || (!$reference && !$translationNotes && !$name)
-  : Localization name contains reference or translation notes but contains no actual name
-}
-
-*SONG_AUTHOR: {
-  author INT
-  reference INT
-}
-
-author: {
-  name QUERY
-}
-
-source: {
-  name QUERY
-}
-
-file: {
-  originalname QUERY
-  filename TEXT
-  source INT
-  isHQ BOOLEAN
-  sourceLink TEXT
-}
-
-wiki_reference: {
-  name QUERY
-  link TEXT
-  description TEXT
-}
-`
-)
+const db = new WikiDatabase({
+  song: new ObjectType(`
+    names NAME[]
+    authors SONG_AUTHOR[]
+    link TEXT
+    files INT[]
+    unofficialNames QUERY[]
+  `, [
+    new Validator(
+      o => o.names.length > 0 || o.unofficialNames.length > 0,
+      'A song must have at least one name or one unofficial name'
+    ),
+    new Validator(
+      o => o.link === '' || o.link.includes('youtube.com/watch&v=') || o.link.includes('youtu.be/'),
+      'A song link must be a valid YouTube link'
+    )
+  ]),
+  author: new ObjectType(`
+    name QUERY
+  `),
+  source: new ObjectType(`
+    name QUERY
+  `),
+  file: new ObjectType(`
+    originalname QUERY
+    filename TEXT
+    source INT
+    isHQ BOOLEAN
+    sourceLink TEXT
+  `),
+  wiki_reference: new ObjectType(`
+    name QUERY
+    link TEXT
+    description TEXT
+  `)
+}, {
+  NAME: new ObjectType(`
+    name QUERY
+    reference INT
+    pt LOCALIZATION_NAME
+    fr LOCALIZATION_NAME
+    es LOCALIZATION_NAME
+    de LOCALIZATION_NAME
+    ru LOCALIZATION_NAME
+  `),
+  LOCALIZATION_NAME: new ObjectType(`
+    name TEXT
+    reference INT
+    translationNotes TEXT
+  `, [
+    new Validator(
+      o => ((o.reference || o.translationNotes) && o.name) || (!o.reference && !o.translationNotes && !o.name),
+      'Localization name contains reference or translation notes but contains no actual name'
+    )
+  ]),
+  SONG_AUTHOR: new ObjectType(`
+    author INT
+    reference INT
+  `)
+})
 
 module.exports = db
