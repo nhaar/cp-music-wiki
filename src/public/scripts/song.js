@@ -104,7 +104,7 @@ class SongView extends EditorView {
    * @param {Row[]} data.files - All the files belonging to this song
    */
   buildEditor (data) {
-    const { song, authorMap, referenceMap, files } = data
+    const { song } = data
 
     if (song) {
       // set up template rows
@@ -118,7 +118,7 @@ class SongView extends EditorView {
 
       // filter and order author names
 
-      Object.assign(this, { names, authors, link, files, song })
+      Object.assign(this, { names, authors, link, song })
 
       this.renderNamesDiv()
       this.renderAuthors()
@@ -143,7 +143,6 @@ class SongView extends EditorView {
    */
   renderNamesDiv () {
     this.langDiv = 'lang-div'
-    const references = this.song.meta.referenceNames
 
     const langCodes = {
       pt: 'Portuguese Names',
@@ -155,16 +154,11 @@ class SongView extends EditorView {
 
     this.renderRow('Names', wrapper => {
       const rowGenerator = row => {
-        let referenceName = ''
-        let referenceId = ''
-        if (row.referenceId) {
-          referenceId = row.referenceId
-          referenceName = references[referenceId]
-        }
+        const reference = row.reference || ''
         let html = `
             <div>
               <input value="${row.name}">
-              <input value="${referenceName}" data-reference-id="${referenceId}">
+              <input" data-id="${reference}">
             </div>
             <div>
               <select>
@@ -182,23 +176,19 @@ class SongView extends EditorView {
         html += '<div>'
         for (const code in langCodes) {
           let name = ''
-          let referenceName = ''
-          let referenceId = ''
+          let reference = ''
           let translationNotes = ''
 
           // avoid breaking on new rows
-          if (row[code]) {
-            name = row[code].name
-            referenceId = row[code].referenceId
-            translationNotes = row[code].translationNotes
+          const codeRow = row[code]
+          if (codeRow) {
+            ({ name, reference, translationNotes } = codeRow)
           }
-
-          if (references && referenceId) referenceName = references[referenceId].name
 
           html += `
               <div class="hidden ${this.langDiv}">
                 <input value="${name}">  
-                <input value="${referenceName}" data-reference-id="${referenceId}">
+                <input data-id="${reference}">
                 <textarea>${translationNotes}</textarea>
               </div>
             `
@@ -224,27 +214,16 @@ class SongView extends EditorView {
    */
   renderAuthors () {
     this.renderRow('Authors', wrapper => {
-      const { referenceNames, authorNames } = this.song.meta
       this.authorsDiv = new MoveableRowsElement(
         'authors-div',
         this.authors,
         row => {
-          let referenceName = ''
-          let referenceId = ''
-          if (row.referenceId) {
-            referenceId = row.referenceId
-            referenceName = referenceNames[referenceId]
-          }
-          let authorId = ''
-          let authorName = ''
-          if (row.authorId) {
-            authorId = row.authorId
-            authorName = authorNames[authorId]
-          }
+          const reference = row.reference || ''
+          const author =  row.author || ''
 
           return `
-            <input value="${authorName}" data-author-id="${authorId}">
-            <input value="${referenceName}" data-reference-id="${referenceId}">
+            <input data-author-id="${author}">
+            <input data-reference-id="${reference}">
           `
         }
       )
@@ -385,10 +364,7 @@ class SongController extends EditorController {
         references.forEach(input => {
           createSearchQuery(
             input,
-            'referenceId',
-            'reference_id',
-            'name',
-            x => this.model.getReferenceNames(x)
+            'wiki_reference'
           )
         })
         const select = row.querySelector('select')
@@ -410,12 +386,12 @@ class SongController extends EditorController {
     // author controls
     this.view.authorsDiv.setupControls({ authorId: '' },
       a => this.setupAuthorQuery(a),
-      () => this.submitBlocker.block('authorId'),
+      () => null,
       obj => {
         // it ends up becoming button for some reason
-        if (selectElement(this.submitBlocker.blockedClass, obj.div).tagName === 'BUTTON') {
-          this.submitBlocker.unblock('authorId')
-        }
+        // if (selectElement(this.submitBlocker.blockedClass, obj.div).tagName === 'BUTTON') {
+          
+        // }
       }
     )
 
@@ -472,12 +448,6 @@ class SongController extends EditorController {
   setupLink () {
     const blockVar = 'link'
 
-    this.view.linkInput.addEventListener('input', () => {
-      this.submitBlocker.ternaryBlock(
-        !isValidLink(this.view.linkInput.value),
-        blockVar, this.view.linkInput
-      )
-    })
   }
 
   /**
@@ -523,17 +493,6 @@ class SongController extends EditorController {
     const checkbox = parent.querySelector('input')
     const innerDiv = parent.querySelector('div')
 
-    checkbox.addEventListener('change', () => {
-      this.submitBlocker.ternaryBlock(
-        !checkbox.checked,
-        this.dateVar, parent,
-        () => {
-          this.view.renderFeatureDate(innerDiv)
-          this.setupFeatureDate(innerDiv)
-        },
-        () => (innerDiv.innerHTML = '')
-      )
-    })
   }
 
   /**
@@ -542,12 +501,6 @@ class SongController extends EditorController {
    */
   setupFeatureDate (parent) {
     const checkbox = parent.querySelector('input')
-    checkbox.addEventListener('change', () => {
-      this.submitBlocker.ternaryBlock(
-        checkbox.value === '',
-        this.dateVar, parent.parentElement
-      )
-    })
   }
 
   /**
@@ -559,10 +512,6 @@ class SongController extends EditorController {
   addRowCallback (orderedRows, variable) {
     const headers = orderedRows.div.querySelectorAll(`.${orderedRows.headerClass}.${orderedRows.identifierClass}`)
 
-    this.submitBlocker.ternaryBlock(
-      headers.length === 0,
-      variable, orderedRows.div.children[0].children[0]
-    )
   }
 
   /**
@@ -575,8 +524,9 @@ class SongController extends EditorController {
     const authors = this.collectAuthorData(this.view.authorsDiv.rowsDiv, true, 'authorId')
     const link = this.view.linkInput.value
     const files = this.collectFilesData()
+    const unofficialNames = []
 
-    return { songId: this.model.id, names, authors, link, files }
+    return { names, authors, link, files, unofficialNames }
   }
 
   /**
@@ -608,7 +558,7 @@ class SongController extends EditorController {
 
       const name = {
         name: mainDiv.children[0].value,
-        referenceId: mainDiv.children[1].dataset.referenceId
+        reference: Number(mainDiv.children[1].dataset.id) || null
       }
 
       const codes = ['pt', 'fr', 'es', 'de', 'ru']
@@ -617,7 +567,7 @@ class SongController extends EditorController {
         const localizationName = {
           [code]: {
             name: localizationDiv.children[0].value,
-            referenceId: localizationDiv.children[1].dataset.referenceId,
+            reference: Number(localizationDiv.children[1].dataset.id) || null,
             translationNotes: localizationDiv.children[2].value
           }
         }
@@ -642,8 +592,8 @@ class SongController extends EditorController {
     const authors = []
     authorInputs.forEach((authorInput, i) => {
       authors.push({
-        authorId: Number(authorInput.dataset.authorId),
-        referenceId: Number(referenceInputs[i].dataset.referenceId) || null
+        author: Number(authorInput.dataset.id),
+        reference: Number(referenceInputs[i].dataset.id) || null
       })
     })
 
@@ -758,10 +708,7 @@ class SongController extends EditorController {
     const input = row.children[0].children[1]
     createSearchQuery(
       input,
-      'referenceId',
-      'reference_id',
-      'name',
-      a => this.model.getReferenceNames(a)
+      'wiki_reference'
     )
   }
 
@@ -772,22 +719,15 @@ class SongController extends EditorController {
   setupAuthorQuery (row) {
     const input = row.querySelector('input:first-child')
     const referenceInput = row.querySelector('input:nth-child(2)')
+
     createSearchQuery(
       input,
-      'authorId',
-      'author_id',
-      'name',
-      a => this.model.getAuthorNames(a),
-      () => this.getAllTakenAuthors(),
-      this.submitBlocker
+      'author'
     )
 
     createSearchQuery(
       referenceInput,
-      'referenceId',
-      'reference_id',
-      'name',
-      a => this.model.getReferenceNames(a)
+      'wiki_reference'
     )
   }
 }

@@ -12,6 +12,7 @@ const pg = require('../app/test')
 router.post('/update', async (req, res) => {
   const { info, type } = req.body
   const { data } = info
+  console.log(data)
   if (!info) res.status(400).send('No data was found')
   const validationErrors = pg.validate(type, data)
   if (validationErrors.length === 0) {

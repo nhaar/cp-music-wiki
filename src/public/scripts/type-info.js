@@ -14,5 +14,9 @@ export const types = [
   {
     type: 'file',
     name: 'File'
+  },
+  {
+    type: 'wiki_reference',
+    name: 'Reference'
   }
 ]

@@ -39,10 +39,8 @@ class Controller {
       1: Author,
       2: Source,
       3: File,
-      4: Media,
-      5: Feature,
-      6: Reference,
-      7: FlashRoom
+      4: Reference,
+      5: FlashRoom
     }
 
     const Class = typeRelation[type]

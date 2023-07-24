@@ -325,6 +325,12 @@ file: {
   isHQ BOOLEAN
   sourceLink TEXT
 }
+
+wiki_reference: {
+  name QUERY
+  link TEXT
+  description TEXT
+}
 `
 )
 

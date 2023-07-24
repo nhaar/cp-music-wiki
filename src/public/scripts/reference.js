@@ -10,7 +10,7 @@ import { createElement } from './utils.js'
  */
 
 class ReferenceModel extends EditorModel {
-  constructor () { super('reference') }
+  constructor () { super('wiki_reference') }
 }
 
 class ReferenceView extends EditorView {
@@ -40,7 +40,7 @@ class ReferenceController extends EditorController {
     const link = this.view.linkInput.value
     const description = this.view.descriptionArea.value
 
-    return { referenceId: this.model.id, name, link, description }
+    return { name, link, description }
   }
 }
 
