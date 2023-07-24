@@ -173,6 +173,11 @@ class WikiDatabase {
   getVariableLines(code) {
     return code.split('\n').filter(line => !line.includes('{') && !line.includes('}') && !line.includes('=>') && !line.includes(':')).map(line => line.trim())
   }
+
+  async getQueryNameById (type, id) {
+    const response = await this.pool.query(`SELECT querywords FROM ${pluralize(type)} WHERE id = $1`, [id])
+    return response.rows[0].querywords.split('&&')[0]
+  }
 }
 
 class DataValidator {
@@ -308,6 +313,18 @@ song: {
 author: {
   name QUERY
 }
+
+source: {
+  name QUERY
+}
+
+file: {
+  originalname QUERY
+  filename TEXT
+  source INT
+  isHQ BOOLEAN
+  sourceLink TEXT
+}
 `
 )
 
@@ -334,5 +351,6 @@ const testSong = {
   files: [],
   unofficialNames: [ 'goodbye' ]
 }
+
 
 module.exports = db

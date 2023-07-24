@@ -14,7 +14,6 @@ class SourceModel extends EditorModel {
 }
 
 class SourceView extends EditorView {
-  constructor () { super(undefined) }
 
   /**
    * Source buildEditor
@@ -36,7 +35,7 @@ class SourceController extends EditorController {
    * @returns {SourceData}
    */
   getUserData () {
-    return { sourceId: this.model.id, name: this.view.nameInput.value }
+    return { name: this.view.nameInput.value }
   }
 }
 

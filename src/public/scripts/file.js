@@ -27,7 +27,7 @@ class FileModel extends EditorModel {
    * @property {object} data.file - User file from the file input
    */
   update (data) {
-    const { fileId, songId, sourceId, file, filename, originalname, sourceLink, isHQ } = data
+    const { source, file, filename, originalname, sourceLink, isHQ } = data
     const formData = new FormData()
     if (file) {
       formData.append('file', file)
@@ -35,9 +35,8 @@ class FileModel extends EditorModel {
       formData.append('filename', filename)
       formData.append('originalname', originalname)
     }
-    formData.append('fileId', fileId)
-    formData.append('songId', songId)
-    formData.append('sourceId', sourceId)
+    formData.append('id', this.id)
+    formData.append('source', source)
     formData.append('sourceLink', sourceLink)
     const stringBool = isHQ ? '1' : ''
     formData.append('isHQ', stringBool)
@@ -59,11 +58,10 @@ class FileView extends EditorView {
    */
   buildEditor (data) {
     const { file } = data
-    const { sourceId, sourceLink, isHQ, meta } = file
-    const { songId, songName, sourceName } = meta
+    const { source, sourceLink, isHQ } = file
+    // const { songId, songName, sourceName } = meta
 
-    this.songInput = createElement({ parent: this.editor, tag: 'input', value: songName, dataset: { songId } })
-    this.sourceInput = createElement({ parent: this.editor, tag: 'input', value: sourceName, dataset: { sourceId } })
+    this.sourceInput = createElement({ parent: this.editor, tag: 'input', dataset: { id: source } })
     this.fileInput = createElement({ parent: this.editor, tag: 'input', type: 'file' })
     this.filePreview = createElement({ parent: this.editor, innerHTML: generateAudio(file) })
     this.linkInput = createElement({ parent: this.editor, tag: 'input', value: sourceLink })
@@ -100,8 +98,7 @@ class FileController extends EditorController {
     const songVar = this.songVar
     const sourceVar = this.sourceVar
 
-    const songId = this.view.songInput.dataset[songVar]
-    const sourceId = this.view.sourceInput.dataset[sourceVar]
+    const source = this.view.sourceInput.dataset.id
     const sourceLink = this.view.linkInput.value
     const isHQ = this.view.checkbox.checked
 
@@ -115,7 +112,7 @@ class FileController extends EditorController {
       filename = audioElement.src.match(/\/([^/]+)$/)[1]
     }
 
-    return { fileId: this.model.id, songId, sourceId, file, originalname, filename, sourceLink, isHQ }
+    return { source, file, originalname, filename, sourceLink, isHQ }
   }
 
   /**
@@ -127,37 +124,15 @@ class FileController extends EditorController {
     const fileVar = 'file'
 
     if (!this.model.id) {
-      this.submitBlocker.blockVarElements([fileVar, songVar, sourceVar], [this.view.fileInput, this.view.songInput, this.view.sourceInput])
-
-      this.view.fileInput.addEventListener('change', e => {
-        this.submitBlocker.ternaryBlock(
-          e.target.files.length === 0 && !this.model.id,
-          fileVar, this.view.fileInput
-        )
-      })
       this.view.filePreview.classList.add('hidden')
     } else {
       this.view.fileInput.classList.add('hidden')
     }
 
-    createSearchQuery(
-      this.view.songInput,
-      songVar,
-      'song_id',
-      'name_text',
-      a => this.model.getSongNames(a),
-      a => this.getTakenSong(a),
-      this.submitBlocker
-    )
 
     createSearchQuery(
       this.view.sourceInput,
-      sourceVar,
-      'source_id',
-      'name',
-      a => this.model.getSourceNames(a),
-      a => this.getTakenSource(a),
-      this.submitBlocker
+      'source'
     )
   }
 

@@ -45,13 +45,13 @@ class Controller {
 
     // to create a new entry
     this.view.create.addEventListener('click', () => {
-      if (this.model.type) window.location.href = this.getEditorParam()
+      if (Number.isInteger(this.model.type)) window.location.href = this.getEditorParam()
     })
 
     // edit existing entry
     this.view.edit.addEventListener('click', () => {
       const input = this.view.input.querySelector('input')
-      if (this.model.type && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
+      if (Number.isInteger(this.model.type) && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
     })
   }
 

@@ -6,5 +6,13 @@ export const types = [
   {
     type: 'author',
     name: 'Author'
+  },
+  {
+    type: 'source',
+    name: 'Source'
+  },
+  {
+    type: 'file',
+    name: 'File'
   }
 ]

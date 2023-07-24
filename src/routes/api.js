@@ -38,10 +38,16 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
   let filename
   if (req.file) ({ originalname, filename } = req.file)
   else ({ originalname, filename } = req.body)
-  const { songId, sourceId, fileId, sourceLink, isHQ } = req.body
-  const data = { fileId, meta: { songId }, sourceId, originalname, filename, sourceLink, isHQ: Boolean(isHQ) }
-  await db.updateFile(data)
-  gen.updateLists()
+  const { source, sourceLink, isHQ } = req.body
+  let { id } = req.body
+  if (id === 'undefined') id = null
+  const info = {
+    id,
+    data: { source, originalname, filename, sourceLink, isHQ: Boolean(isHQ) }
+  }
+  
+  console.log(info)
+  await pg.updateType('file', info)
   res.sendStatus(200)
 })
 
@@ -80,8 +86,8 @@ router.post('/get-in-media', async (req, res) => {
 })
 
 router.post('/get-name', async (req, res) => {
-  const { table, id } = req.body
-  const name = await db.getNameFromId(table, id)
+  const { type, id } = req.body
+  const name = await pg.getQueryNameById(type, id)
   res.status(200).send({ name })
 })
 
