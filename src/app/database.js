@@ -84,8 +84,96 @@ class WikiDatabase {
    * @returns {string[]} Array where each element is a string describing an error
    */
   validate (type, data) {
-    const validator = new DataValidator(this)
-    return validator.validate(type, data)
+    const errors = []
+    const db = this
+
+    // iterate through each property and each validation statement in the object to validate it
+    const iterateObject = (type, data, path) => {
+      const code = db.vars[type]
+      const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
+        .map(line => line.trim())
+      definitions.forEach((def, i) => {
+        if (def.includes('=>')) {
+          // am unsure of a simple replacement for this eval
+          // without making a more advanced interpreter
+          try {
+            if (!eval(def.replace(/=>/, '').replace(/\$/g, 'data.'))) {
+              errors.push(definitions[i + 1].replace(/:/, '').trim())
+            }
+          } catch (error) {
+            errors.push(`Validation exception at ${path.join()}\n${error}`)
+          }
+        } else if (!def.includes(':')) {
+          const names = def.match(/\w+(\[\])*/g)
+          const property = names[0]
+          const type = names[1]
+
+          // check if the type of a property is the same as it was defined
+          const checkType = (value, type, path) => {
+            if (type.includes('[')) {
+              // figure out dimension
+              const dimension = db.getDimension(type)
+              const realType = type.slice(0, type.length - 2 * dimension)
+
+              // iterate through all the nested arrays to find all destination paths
+              const dimensionIterator = (array, level) => {
+                if (Array.isArray(array)) {
+                  for (let i = 0; i < array.length; i++) {
+                    const newPath = JSON.parse(JSON.stringify(path))
+                    newPath.push(`[${i}]`)
+                    if (level === 1) {
+                      checkType(array[i], realType, newPath)
+                    } else {
+                      dimensionIterator(array[i], level - 1)
+                    }
+                  }
+                } else {
+                  errors.push(`${path.join('')} is not an array`)
+                }
+              }
+              dimensionIterator(value, dimension)
+            } else {
+              const errorMsg = indefiniteDescription => errors.push(`${path.join('')} must be ${indefiniteDescription}`)
+
+              if (db.standardVariables.includes(type)) {
+                if (type === 'QUERY') {
+                  if (typeof value !== 'string' || !value) {
+                    errors.push(`Must give a name (error at ${path.join('')})`)
+                  }
+                } else if (value === null) return
+
+                if (type === 'TEXT') {
+                  if (typeof value !== 'string') {
+                    errorMsg('a text string')
+                  }
+                } else if (type === 'INT') {
+                  if (!Number.isInteger(value)) {
+                    errorMsg('an integer number')
+                  }
+                } else if (type === 'BOOLEAN') {
+                  if (typeof value !== 'boolean') {
+                    errorMsg('a boolean value')
+                  } else if (type === 'DATE') {
+                    if (!value.match(/\d+-\d{2}-\d{2}/)) {
+                      errorMsg('a valid date string (YYYY-MM-DD)')
+                    }
+                  }
+                }
+              } else {
+                if (!value) errorMsg('a valid object')
+                else iterateObject(`*${type}`, value, path)
+              }
+            }
+          }
+
+          checkType(data[property], type, path.concat([`.${property}`]))
+        }
+      })
+    }
+
+    iterateObject(type, data, [`[${type} Object]`])
+
+    return errors
   }
 
   /**
@@ -364,118 +452,6 @@ class SQLHandler {
   selectLike = async (type, column, matching) => (await this.pool.query(`SELECT * FROM ${type} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
 }
 
-/**
- * Class that stores the methods for validating `TypeData` objects and interpret the MWL validation statements
- */
-class DataValidator {
-  /**
-   * Create validator based on a database object
-   * @param {WikiDatabase} db - Database the validator will conform to
-   */
-  constructor (db) {
-    this.db = db
-  }
-
-  /**
-   * Check if the object for a type follows the rules defined and returns a list of all the errors found
-   * @param {TypeName} type - Type to validate
-   * @param {TypeData} data - Object to validate
-   * @returns {string[]} Array where each element is a string describing an error
-   */
-  validate (type, data) {
-    this.errors = []
-    this.iterateObject(type, data, [`[${type} Object]`])
-    return this.errors
-  }
-
-  /**
-   * Iterate through an object considering its data and type to validate all properties and validation statements
-   * @param {MWLType} type - Type of the object being validated
-   * @param {TypeData} data - Object with the data
-   * @param {PropertyPath} path - Path to reach this property relative to the non helper type
-    */
-  iterateObject = (type, data, path) => {
-    const code = this.db.vars[type]
-    const definitions = code.split('\n').filter(line => !line.includes('{') && !line.includes('}'))
-      .map(line => line.trim())
-    definitions.forEach((def, i) => {
-      if (def.includes('=>')) {
-        // am unsure of a simple replacement for this eval
-        // without making a more advanced interpreter
-        if (!eval(def.replace(/=>/, '').replace(/\$/g, 'data.'))) {
-          this.errors.push(definitions[i + 1].replace(/:/, '').trim())
-        }
-      } else if (!def.includes(':')) {
-        const names = def.match(/\w+(\[\])*/g)
-        const property = names[0]
-        const type = names[1]
-        this.checkType(data[property], type, path.concat([`.${property}`]))
-      }
-    })
-  }
-
-  /**
-   * Check if a value conforms to the type it is assigned
-   * @param {*} value - Value to be checked
-   * @param {MWLType} type - Expected type for the value
-   * @param {PropertyPath} path - Path reaching the property that gives the value
-   */
-  checkType = (value, type, path) => {
-    if (type.includes('[')) {
-      // figure out dimension
-      const dimension = this.db.getDimension(type)
-      const realType = type.slice(0, type.length - 2 * dimension)
-      const dimensionIterator = (array, level) => {
-        if (Array.isArray(array)) {
-          for (let i = 0; i < array.length; i++) {
-            const newPath = JSON.parse(JSON.stringify(path))
-            newPath.push(`[${i}]`)
-            if (level === 1) {
-              this.checkType(array[i], realType, newPath)
-            } else {
-              dimensionIterator(array[i], level - 1)
-            }
-          }
-        } else {
-          this.errors.push(`${path.join('')} is not an array`)
-        }
-      }
-      dimensionIterator(value, dimension)
-    } else {
-      const errorMsg = indefiniteDescription => this.errors.push(`${path.join('')} must be ${indefiniteDescription}`)
-
-      if (this.db.standardVariables.includes(type)) {
-        if (type === 'QUERY') {
-          if (typeof value !== 'string' || !value) {
-            this.errors.push(`Must give a name (error at ${path.join('')})`)
-          }
-        } else if (value === null) return
-
-        if (type === 'TEXT') {
-          if (typeof value !== 'string') {
-            errorMsg('a text string')
-          }
-        } else if (type === 'INT') {
-          if (!Number.isInteger(value)) {
-            errorMsg('an integer number')
-          }
-        } else if (type === 'BOOLEAN') {
-          if (typeof value !== 'boolean') {
-            errorMsg('a boolean value')
-          } else if (type === 'DATE') {
-            if (!value.match(/\d+-\d{2}-\d{2}/)) {
-              errorMsg('a valid date string (YYYY-MM-DD)')
-            }
-          }
-        }
-      } else {
-        if (!value) errorMsg('a valid object')
-        else this.iterateObject(`*${type}`, value, path)
-      }
-    }
-  }
-}
-
 // creating using the code for the music wiki types
 const db = new WikiDatabase(
 `
@@ -537,7 +513,5 @@ wiki_reference: {
 }
 `
 )
-
-db.getDataById('song', 1).then(result => console.log(result))
 
 module.exports = db
