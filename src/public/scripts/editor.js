@@ -56,10 +56,10 @@ class Controller {
 
     // t corresponds to the type, guide is below
     // id is for the id of whatever type is being editted
-    const type = Number(params.t) || null
+    const type = params.t ? Number(params.t) : null
     const id = Number(params.id)
     const typeInfo = types[type]
-    
+    console.log(type)
     const response = await postAndGetJSON('api/get', { type: typeInfo.type, id, request: typeInfo.input })
     const editor = new typeInfo.editor(this.view.editor, response)
     editor.build()

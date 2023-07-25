@@ -1,4 +1,4 @@
-import {  nameOnlyEditor } from "./editor-modules.js"
+import {  ReferenceEditor, SongEditor, TestEditor, nameOnlyEditor } from "./editor-modules.js"
 
 nameOnlyEditor
 
@@ -12,17 +12,12 @@ export const types = [
   new TypeInfo(
     'song',
     'Song',
-    {
-      file: `
-        SELECT file
-        WHERE song = @id
-      `
-    }
+    SongEditor
   ),
   new TypeInfo(
     'author',
     'Author',
-    nameOnlyEditor('author')
+    TestEditor
   ),
   new TypeInfo(
     'source',
@@ -33,8 +28,9 @@ export const types = [
     type: 'file',
     name: 'File'
   },
-  {
-    type: 'wiki_reference',
-    name: 'Reference'
-  }
+  new TypeInfo(
+    'wiki_reference',
+    'Reference',
+    ReferenceEditor
+  )
 ]

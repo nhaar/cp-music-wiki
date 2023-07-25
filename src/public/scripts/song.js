@@ -847,15 +847,3 @@ class MoveableRowsElement {
     if (this.controlCallback) this.controlCallback(row)
   }
 }
-
-/**
- * Helper function to get the index of a child
- * inside an element (0-indexed)
- * @param {HTMLElement} parent - Parent element
- * @param {HTMLElement} child - Child to finx index of
- * @param {boolean} - True if represents an input (the text changing)
- * @returns {number} Index
- */
-function indexOfChild (parent, child) {
-  return [...parent.children].indexOf(child)
-}
