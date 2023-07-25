@@ -54,6 +54,7 @@ class Controller {
     console.log(type)
     const response = await postAndGetJSON('api/get', { type: typeInfo.type, id, request: typeInfo.input })
     const EditorClass = typeInfo.editor 
+    console.log(EditorClass)
     const editor = new EditorClass(this.view.editor, response)
     editor.build()
     editor.input()

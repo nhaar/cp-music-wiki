@@ -15,7 +15,7 @@ export const types = [
   new TypeInfo(
     'author',
     'Author',
-    TestEditor
+    nameOnlyEditor('author')
   ),
   new TypeInfo(
     'source',

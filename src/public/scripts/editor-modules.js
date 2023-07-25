@@ -2,89 +2,82 @@ import { generateAudio } from './file.js'
 import { createSearchQuery } from './query-options.js'
 import { createElement, selectElement } from './utils.js'
 
+class Pointer {
+  constructor (reference, property) {
+    this.r = reference
+    this.p = property
+   }
+
+  assign (value) { this.r[this.p] = value }
+
+  read = () => this.r[this.p]
+
+  exchange (pointer) { pointer.assign(this.read()) }
+}
+
 class EditorModule {
   constructor (parent, reference, property) {
     Object.assign(this, { parent })
-    this.refOne = reference
-    this.propOne = property
+    this.out = new Pointer(reference, property)
     this.modules = this.createModules()
   }
 
-  createModules () {
-    return []
-  }
+  createModules () { return [] }
 
-  build () {
-    this.modules.forEach(module => module.build())
-  }
+  iterateModules (fn) { console.log('hello', this.modules); this.modules.forEach(module => {
+    console.log(module)
+    module[fn]()
+  }) }
+  
+
+  build () { this.iterateModules('build') }
 
   input () {
-    const { refTwo } = this
-    if (refTwo) {
-      refTwo[this.propTwo] = this.refOne[this.propOne]
-    }
-    this.modules.forEach(module => module.input())
+    const { int } = this 
+    if (int) this.out.exchange(int)
+    this.iterateModules('input')
   }
 
-  setup () {
-    this.modules.forEach(module => module.setup())
-  }
+  setup () { this.iterateModules('setup') }
 
-  callbackfn () {
-
-  }
+  callbackfn () {}
 
   output () {
-    this.modules.forEach(module => module.output())
+    this.iterateModules('output')
     this.callbackfn()
-    const { refTwo } = this
-    if (refTwo) {
-      this.refOne[this.propOne] = refTwo[this.propTwo]
-    }
-    return this.refOne
+    const { int, out } = this
+    if (int) int.exchange(out)
+    return int.r
   }
 }
 
 export class TextInputModule extends EditorModule {
-  build () {
-    this.textInput = createElement({ parent: this.parent, tag: 'input' })
-    this.refTwo = this.textInput
-    this.propTwo = 'value'
+  build () { this.textInput = createElement({ parent: this.parent, tag: 'input' }) }
+
+  input () {
+    this.int = new Pointer(this.textInput, 'value')
+    super.input()
   }
 }
 
 class TextAreaModule extends EditorModule {
-  build () {
-    this.textArea = createElement({ parent: this.parent, tag: 'textarea' })
-    this.refTwo = this.textArea
-    this.propTwo = 'innerHTML'
+  build () { this.textArea = createElement({ parent: this.parent, tag: 'textarea' }) }
+
+  input () {
+    this.int = new Pointer(this.textArea, 'innerHTML')
+    super.input()
   }
 }
 
 export function nameOnlyEditor (type) {
   class NameEditor extends EditorModule {
-    createModules () {
-      return [
-        new TextInputModule(this.parent, this.refOne[type].data, 'name')
-      ]
-    }
+    createModules () { return [
+      new TextInputModule(this.parent, this.out.r[type].data, 'name')
+    ]}
   }
 
   return NameEditor
 }
-
-// export function moveableRowsEditor (childModule, options = {
-//   useDelete: true,
-//   useAdd: true
-// }) {
-//   class MoveableRowsEditor extends MoveableRowsModule {
-//     constructor (parent, reference, property) {
-//       super(parent, reference, property, childModule, options)
-//     }
-//   }
-
-//   return MoveableRowsEditor
-// }
 
 /**
  * Helper function to get the index of a child
@@ -104,6 +97,8 @@ class MoveableRowsModule extends EditorModule {
     useAdd: true
   }) {
     super(parent, reference, property)
+    console.log(reference, property)
+
 
     this.ChildModule = childModule
     this.options = options
@@ -123,10 +118,10 @@ class MoveableRowsModule extends EditorModule {
       this.addButton = createElement({ parent: this.rowsDiv, tag: 'button', innerHTML: 'ADD' })
     }
     this.data = []
-    this.refTwo = this
-    this.propTwo = 'data'
+    this.int = new Pointer(this, 'data')
 
-    this.refOne[this.propOne].forEach(row => {
+    console.log(this.out)
+    this.out.read().forEach(row => {
       this.addRow(row)
     })
   }
@@ -157,7 +152,6 @@ class MoveableRowsModule extends EditorModule {
   }
 
   addRow (value) {
-    console.log(value)
     const newRow = createElement({ })
     const childElement = createElement({ parent: newRow })
     createElement({ parent: newRow, tag: 'button', className: this.delClass, innerHTML: 'DELETE' })
@@ -233,14 +227,13 @@ function newSearchQueryModule (parent, property, reference, type) {
         this.inputElement,
         type
       )
-      this.refTwo = this.inputElement.dataset
-      this.propTwo = 'id'
+      this.int = new Pointer(this.inputElement.dataset, 'id')
     }
 
     output () {
       super.output()
-      const id = this.refTwo[this.propTwo]
-      this.refOne[this.propOne] = id ? Number(id) : null
+      const id = this.int.read()
+      this.out.assign(id ? Number(id) : null)
     }
   }
 
@@ -255,9 +248,8 @@ export class TestEditor extends MoveableRowsModule {
 
 class LocalizationNameModule extends EditorModule {
   createModules () {
-    this.data = this.refOne[this.propOne]
-    this.refTwo = this
-    this.propTwo = 'data'
+    this.data = this.out.read()
+    this.int = new Pointer(this, 'data')
     return [
       new TextInputModule(this.parent, this.data, 'name'),
       newSearchQueryModule(this.parent, this.data, 'reference', 'wiki_reference'),
@@ -274,13 +266,11 @@ class SongNameModule extends EditorModule {
   build () {
     console.log(this.modules)
     super.build()
-    this.refTwo = this
-    this.propTwo = 'name'
+    this.int = new Pointer(this, 'name')
   }
 
   createModules () {
-    this.name = this.refOne[this.propOne] || {}
-    console.log(this.name)
+    this.name = this.out.read() || {}
 
     return [
       new TextInputModule(this.parent, this.name, 'name'),
@@ -297,13 +287,11 @@ class SongNameModule extends EditorModule {
 class SongAuthorModule extends EditorModule {
   build () {
     super.build()
-    this.refTwo = this
-    this.propTwo = 'author'
+    this.int = new Pointer(this, 'author')
   }
 
   createModules () {
-    this.author = this.refOne[this.propOne] || {}
-    console.log(this.author)
+    this.author = this.out.read() || {}
 
     return [
       newSearchQueryModule(this.parent, this.author, 'author', 'author'),
@@ -315,28 +303,26 @@ class SongAuthorModule extends EditorModule {
 class AudioFileModule extends EditorModule {
   build() {
     super.build()
-    this.audioParent = createElement({ parent: this.parent, innerHTML: generateAudio(this.refOne[this.propOne]) })
-    this.refTwo = this
-    this.propTwo = 'data'
-    this.data = this.refOne[this.propOne] || {}
+    this.audioParent = createElement({ parent: this.parent, innerHTML: generateAudio(this.out.read()) })
+    this.int = new Pointer(this, 'data')
+    this.data = this.modules.read() || {}
   }
 }
 
 export class SongEditor extends EditorModule {
   createModules () {
-    console.log(this.refOne.song.data)
     return [
-      new MoveableRowsModule(this.parent, this.refOne.song.data, 'names', SongNameModule),
-      new MoveableRowsModule(this.parent, this.refOne.song.data, 'authors', SongAuthorModule),
-      new TextInputModule(this.parent, this.refOne.song.data, 'link'),
-      new MoveableRowsModule(this.parent, this.refOne.song.data, 'files', AudioFileModule)
+      new MoveableRowsModule(this.parent, this.out.r.song.data, 'names', SongNameModule),
+      new MoveableRowsModule(this.parent, this.out.r.song.data, 'authors', SongAuthorModule),
+      new TextInputModule(this.parent, this.out.r.song.data, 'link'),
+      new MoveableRowsModule(this.parent, this.out.r.song.data, 'files', AudioFileModule)
     ]
   }
 }
 
 export class ReferenceEditor extends EditorModule {
   createModules () {
-    const data = this.refOne.wiki_reference.data
+    const data = this.out.r.wiki_reference.data
     const parent = this.parent
     return [
       new TextInputModule(parent, data, 'name'),
@@ -350,17 +336,16 @@ class CheckboxModule extends EditorModule {
   build () {
     super.build()
     this.checkbox = createElement({ parent: this.parent, tag: 'input', type: 'checkbox' })
-    this.refTwo = this.checkbox
-    this.propTwo = 'checked'
+    this.int = new Pointer(this.checkbox, 'checked')
   }
 }
 
 export class FileEditor extends EditorModule {
   createModules () {
     return [
-      newSearchQueryModule(this.parent, this.refOne.file, 'source', 'source'),
-      new TextAreaModule(this.parent, this.refOne.file, 'sourceLink'),
-      new CheckboxModule(this.parent, this.refOne.file, 'isHQ')
+      newSearchQueryModule(this.parent, this.out.r.file, 'source', 'source'),
+      new TextAreaModule(this.parent, this.out.r.file, 'sourceLink'),
+      new CheckboxModule(this.parent, this.out.r.file, 'isHQ')
     ]
   } 
 }
