@@ -72,6 +72,37 @@ class WikiDatabase {
    */
   getDataById = async (type, id) => await this.handler.selectId(type, id)
 
+  async getEditData (request) {
+    const { type, id } = request
+    let data
+    if (id) {
+      data = await this.getDataById(type, id)
+    } else {
+      data = { id, data: this.getDefault(type) }
+    }
+    const response = {
+      [type]: data
+    }
+
+    for (const type in request.request) {
+      //do something soon
+    }
+
+    console.log(response)
+    return response
+  }
+
+  async updateEdit (type, update) {
+    this.updateType(type, update[type])
+    for (const key in update) {
+      if (key !== type) {
+        update[key].forEach(data => {
+          this.updateType(key, data)
+        })
+      }
+    }
+  }
+
   /**
    * Check if the object for a type follows the rules defined and returns a list of all the errors found
    * @param {TypeName} type - Type to validate
@@ -172,7 +203,7 @@ class WikiDatabase {
     const { id, data } = row
     const typeValues = [JSON.stringify(data), this.getQueryWords(type, data)]
     if (!id) await this.handler.insertData(type, typeValues)
-    else await this.handler.update(type, id, typeValues)
+    else await this.handler.updateData(type, id, typeValues)
   }
 
   /**
@@ -400,7 +431,11 @@ class SQLHandler {
    * @param {number} id - Id of the row to update
    * @param {TypeValues} values - Values to update
    */
-  updateData = async (type, id, values) => (await this.update(type, this.columns, id, [id].concat(values)))
+  async updateData (type, id, values) { 
+    console.log('helloooooooo', this.columns)
+    await this.update(type, this.columns, id, [id].concat(values))
+  
+  }
 
   /**
    * Select all rows in a table where a column matches a certain value
@@ -500,5 +535,42 @@ const db = new WikiDatabase({
     reference INT
   `)
 })
+
+const test = {
+  type: 'song',
+  properties: {
+    files: `
+      SELECT originalname, filename
+      FROM file
+      WHERE id IN main.files
+    `,
+    authors: `
+      SELECT name
+      FROM author
+      WHERE id IN main.authors[*].author
+    `,
+    reference: `
+      SELECT name
+      FROM wiki_reference
+      WHERE id IN main.names[*].reference
+      OR id IN main.names[*].pt.reference
+      OR id IN main.names[*].fr.reference
+      OR id IN main.names[*].es.reference
+      OR id IN main.names[*].de.reference
+      OR id IN main.names[*].ru.reference
+    `
+  }
+}
+
+// song editor module receives that data
+// create module (song[0].names)
+
+// module has input function, output function, render function, setup function
+// build function renders the elements
+// input function adds information to the elements given an input
+// setup function gives control to the elements
+// output function takes all the data from the elements and passes as output
+
+// 
 
 module.exports = db

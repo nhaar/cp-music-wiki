@@ -1,14 +1,23 @@
-import { selectElement } from './utils.js'
+import { createElement, postAndGetJSON, postJSON, selectElement } from './utils.js'
 import { Song } from './song.js'
 import { Author } from './author.js'
 import { Source } from './source.js'
 import { File } from './file.js'
 import { Reference } from './reference.js'
 import { FlashRoom } from './flash_room.js'
+import { types } from './type-info.js'
 
 class View {
   constructor () {
     this.editor = selectElement('js-editor')
+  }
+
+  
+  /**
+   * Renders the button for submitting the data at the end of the page
+   */
+  renderSubmitButton () {
+    this.submitButton = createElement({ parent: document.body, tag: 'button', innerHTML: 'Submit' })
   }
 }
 
@@ -18,34 +27,65 @@ class Controller {
    */
   constructor (view) { this.view = view }
 
+
+  /**
+   * Add controls to the submit button
+   */
+  setupSubmitButton (editorModule, response, type) {
+    this.view.submitButton.addEventListener('click', () => {
+      editorModule.output()
+      postJSON('api/update', { type, update: response })
+      console.log(response)
+    })
+    // this.submitBlocker.button = this.view.submitButton
+    // this.submitBlocker.clickCallback = () => {
+    //   const data = this.getUserData()
+    //   this.model.update(data)
+    // }
+    // this.submitBlocker.addListeners()
+  }
+
   /**
    * Initializes the editor by handling the options from the URL
    * and initializing the editor for that type
    */
-  initializePage () {
+  async initializePage () {
     // get URL params
     const urlParams = new URLSearchParams(window.location.search)
     const params = this.paramsToObject(urlParams)
 
     // t corresponds to the type, guide is below
     // id is for the id of whatever type is being editted
-    const type = params.t
-    const id = params.id
+    const type = Number(params.t) || null
+    const id = Number(params.id)
+    const typeInfo = types[type]
+    
+    const response = await postAndGetJSON('api/get', { type: typeInfo.type, id, request: typeInfo.input })
+    const editor = new typeInfo.editor(this.view.editor, response)
+    editor.build()
+    editor.input()
+    editor.setup()
+    // make a request including type, id, request type
 
-    const typeRelation = {
-      0: Song,
-      1: Author,
-      2: Source,
-      3: File,
-      4: Reference,
-      5: FlashRoom
-    }
+    this.view.renderSubmitButton()
+    this.setupSubmitButton(editor, response, typeInfo.type)
 
-    const Class = typeRelation[type]
-    if (Class) {
-      const type = new Class(id)
-      type.initializeEditor(this.view.editor)
-    } else this.view.editor.innerHTML = 'ERROR'
+
+
+    // const typeRelation = {
+    //   0: Song,
+    //   1: Author,
+    //   2: Source,
+    //   3: File,
+    //   4: Reference,
+    //   5: FlashRoom
+    // }
+
+    // const Class = typeRelation[type]
+    // if (Class) {
+    //   const type = new Class(id)
+    //   type.initializeEditor(this.view.editor)
+    // } else this.view.editor.innerHTML = 'ERROR'
   }
 
   /**

@@ -9,8 +9,12 @@ const db = require('../app/database')
 // const gen = require('../app/lists')
 
 router.post('/update', async (req, res) => {
-  const { info, type } = req.body
-  const { data } = info
+  const { type, update } = req.body
+  
+  db.updateEdit(type, update)
+  res.sendStatus(200)
+  return
+  //
   console.log(data)
   if (!info) res.status(400).send('No data was found')
   const validationErrors = db.validate(type, data)
@@ -51,8 +55,7 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
 })
 
 router.post('/get', async (req, res) => {
-  const { type, id } = req.body
-  const response = await db.getDataById(type, id)
+  const response = await db.getEditData(req.body)
 
   res.status(200).send(response)
 })
