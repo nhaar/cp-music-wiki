@@ -6,20 +6,22 @@ const multer = require('multer')
 const path = require('path')
 
 const db = require('../app/database')
-// const gen = require('../app/lists')
 
 router.post('/update', async (req, res) => {
   const { type, update } = req.body
-  
-  db.updateEdit(type, update)
-  res.sendStatus(200)
-  return
-  //
-  console.log(data)
-  if (!info) res.status(400).send('No data was found')
-  const validationErrors = db.validate(type, data)
+  if (!type) res.status(400).send('No type was found')
+  if (!update || !update[type].data) res.status(400).send('No data was found')
+  const validationErrors = []
+  for (const key in update) {
+    let errors = []
+    if (key === type) errors = db.validate(type, update[type].data)
+    else {
+      update[key].forEach(info => db.validete(key, info.data))
+    }
+    validationErrors.push(...errors)
+  }
   if (validationErrors.length === 0) {
-    await db.updateType(type, info)
+    await db.updateEdit(type, update)
     res.sendStatus(200)
   } else {
     res.status(400).send({ errors: validationErrors })
@@ -28,14 +30,6 @@ router.post('/update', async (req, res) => {
 
 const upload = multer({ dest: path.join(__dirname, '../public/music/') })
 
-/**
- * @route POST /api/submit-file
- *
- * Submits a music file to add it to the database
- * @param {} file
- * @param {string} body.songId
- * @param {string} body.sourceId
- */
 router.post('/submit-file', upload.single('file'), async (req, res) => {
   let originalname
   let filename
@@ -67,14 +61,6 @@ router.post('/default', async (req, res) => {
   res.status(200).send(response)
 })
 
-/**
- * @route POST /api/get-by-name
- *
- * Gives all the rows of a table filtered by a keyword
- * @param {object} body.keyword
- * @param {object} body.table
- * @returns {import('../app/database').Row[]}
- */
 router.post('/get-by-name', async (req, res) => {
   const { keyword, type } = req.body
   const results = await db.getByName(type, keyword)

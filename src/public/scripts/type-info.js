@@ -1,6 +1,4 @@
-import {  ReferenceEditor, SongEditor, TestEditor, nameOnlyEditor } from "./editor-modules.js"
-
-nameOnlyEditor
+import { FileEditor, ReferenceEditor, SongEditor, TestEditor, nameOnlyEditor } from './editor-modules.js'
 
 class TypeInfo {
   constructor (type, name, editor, input = {}) {
@@ -24,10 +22,11 @@ export const types = [
     'Source',
     nameOnlyEditor('source')
   ),
-  {
-    type: 'file',
-    name: 'File'
-  },
+  new TypeInfo(
+    'file',
+    'File',
+    FileEditor
+  ),
   new TypeInfo(
     'wiki_reference',
     'Reference',

@@ -85,7 +85,7 @@ class WikiDatabase {
     }
 
     for (const type in request.request) {
-      //do something soon
+      // do something soon
     }
 
     console.log(response)
@@ -431,10 +431,9 @@ class SQLHandler {
    * @param {number} id - Id of the row to update
    * @param {TypeValues} values - Values to update
    */
-  async updateData (type, id, values) { 
+  async updateData (type, id, values) {
     console.log('helloooooooo', this.columns)
     await this.update(type, this.columns, id, [id].concat(values))
-  
   }
 
   /**
@@ -571,6 +570,6 @@ const test = {
 // setup function gives control to the elements
 // output function takes all the data from the elements and passes as output
 
-// 
+//
 
 module.exports = db

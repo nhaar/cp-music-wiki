@@ -1,5 +1,6 @@
-import { createSearchQuery } from "./query-options.js"
-import { createElement, selectElement } from "./utils.js"
+import { generateAudio } from './file.js'
+import { createSearchQuery } from './query-options.js'
+import { createElement, selectElement } from './utils.js'
 
 class EditorModule {
   constructor (parent, reference, property) {
@@ -46,7 +47,7 @@ class EditorModule {
 
 export class TextInputModule extends EditorModule {
   build () {
-    this.textInput = createElement({ parent: this.parent, tag: 'input'})
+    this.textInput = createElement({ parent: this.parent, tag: 'input' })
     this.refTwo = this.textInput
     this.propTwo = 'value'
   }
@@ -67,7 +68,7 @@ export function nameOnlyEditor (type) {
         new TextInputModule(this.parent, this.refOne[type].data, 'name')
       ]
     }
-  } 
+  }
 
   return NameEditor
 }
@@ -85,8 +86,6 @@ export function nameOnlyEditor (type) {
 //   return MoveableRowsEditor
 // }
 
-
-
 /**
  * Helper function to get the index of a child
  * inside an element (0-indexed)
@@ -99,7 +98,6 @@ function indexOfChild (parent, child) {
   return [...parent.children].indexOf(child)
 }
 
-
 class MoveableRowsModule extends EditorModule {
   constructor (parent, reference, property, childModule, options = {
     useDelete: true,
@@ -107,8 +105,7 @@ class MoveableRowsModule extends EditorModule {
   }) {
     super(parent, reference, property)
 
-    
-    this.childModule = childModule
+    this.ChildModule = childModule
     this.options = options
 
     this.rowClass = 'moveable-row'
@@ -121,10 +118,9 @@ class MoveableRowsModule extends EditorModule {
     this.seq = 0
     this.indexValue = {}
 
-
     this.rowsDiv = createElement({ parent: this.parent })
     if (this.options.useAdd) {
-      this.addButton = createElement({ parent: this.rowsDiv, tag: 'button', innerHTML: 'ADD'})
+      this.addButton = createElement({ parent: this.rowsDiv, tag: 'button', innerHTML: 'ADD' })
     }
     this.data = []
     this.refTwo = this
@@ -141,9 +137,8 @@ class MoveableRowsModule extends EditorModule {
     }
     this.setupMoving()
   }
-  
-  callbackfn () {
 
+  callbackfn () {
     this.data = []
     const rows = Array.from(this.rowsDiv.children).filter(child => child.tagName === 'DIV')
     rows.forEach(row => {
@@ -170,7 +165,7 @@ class MoveableRowsModule extends EditorModule {
     this.seq++
     newRow.dataset.seq = this.seq
     this.indexValue[this.seq] = value
-    const newModule = new this.childModule(childElement, this.indexValue, this.seq + '')
+    const newModule = new this.ChildModule(childElement, this.indexValue, this.seq + '')
     newModule.build()
     this.modules.push(newModule)
     this.addButton.parentElement.insertBefore(newRow, this.addButton)
@@ -204,7 +199,6 @@ class MoveableRowsModule extends EditorModule {
     if (this.controlCallback) this.controlCallback(row)
   }
 
-  
   /**
    * Adds control to all the current moveable rows
    */
@@ -234,7 +228,7 @@ class MoveableRowsModule extends EditorModule {
 function newSearchQueryModule (parent, property, reference, type) {
   class SearchQueryModule extends EditorModule {
     build () {
-      this.inputElement = createElement({ parent: this.parent, tag: 'input'})
+      this.inputElement = createElement({ parent: this.parent, tag: 'input' })
       createSearchQuery(
         this.inputElement,
         type
@@ -253,12 +247,11 @@ function newSearchQueryModule (parent, property, reference, type) {
   return new SearchQueryModule(parent, property, reference)
 }
 
-
 export class TestEditor extends MoveableRowsModule {
   constructor (parent, reference) {
     super(parent, reference.author.data, 'name', TextInputModule)
   }
-} 
+}
 
 class LocalizationNameModule extends EditorModule {
   createModules () {
@@ -267,7 +260,7 @@ class LocalizationNameModule extends EditorModule {
     this.propTwo = 'data'
     return [
       new TextInputModule(this.parent, this.data, 'name'),
-      new newSearchQueryModule(this.parent, this.data, 'reference', 'wiki_reference'),
+      newSearchQueryModule(this.parent, this.data, 'reference', 'wiki_reference'),
       new TextAreaModule(this.parent, this.data, 'translationNotes')
     ]
   }
@@ -286,12 +279,12 @@ class SongNameModule extends EditorModule {
   }
 
   createModules () {
-    this.name = this.refOne[this.propOne]
+    this.name = this.refOne[this.propOne] || {}
     console.log(this.name)
 
     return [
       new TextInputModule(this.parent, this.name, 'name'),
-      new newSearchQueryModule(this.parent, this.name, 'reference', 'wiki_reference'),
+      newSearchQueryModule(this.parent, this.name, 'reference', 'wiki_reference'),
       new LocalizationNameModule(this.parent, this.name, 'pt'),
       new LocalizationNameModule(this.parent, this.name, 'fr'),
       new LocalizationNameModule(this.parent, this.name, 'es'),
@@ -301,11 +294,42 @@ class SongNameModule extends EditorModule {
   }
 }
 
+class SongAuthorModule extends EditorModule {
+  build () {
+    super.build()
+    this.refTwo = this
+    this.propTwo = 'author'
+  }
+
+  createModules () {
+    this.author = this.refOne[this.propOne] || {}
+    console.log(this.author)
+
+    return [
+      newSearchQueryModule(this.parent, this.author, 'author', 'author'),
+      newSearchQueryModule(this.parent, this.author, 'reference', 'wiki_reference')
+    ]
+  }
+}
+
+class AudioFileModule extends EditorModule {
+  build() {
+    super.build()
+    this.audioParent = createElement({ parent: this.parent, innerHTML: generateAudio(this.refOne[this.propOne]) })
+    this.refTwo = this
+    this.propTwo = 'data'
+    this.data = this.refOne[this.propOne] || {}
+  }
+}
+
 export class SongEditor extends EditorModule {
   createModules () {
-    console.log (this.refOne.song.data)
+    console.log(this.refOne.song.data)
     return [
-      new MoveableRowsModule(this.parent, this.refOne.song.data, 'names', SongNameModule)
+      new MoveableRowsModule(this.parent, this.refOne.song.data, 'names', SongNameModule),
+      new MoveableRowsModule(this.parent, this.refOne.song.data, 'authors', SongAuthorModule),
+      new TextInputModule(this.parent, this.refOne.song.data, 'link'),
+      new MoveableRowsModule(this.parent, this.refOne.song.data, 'files', AudioFileModule)
     ]
   }
 }
@@ -320,4 +344,23 @@ export class ReferenceEditor extends EditorModule {
       new TextAreaModule(parent, data, 'description')
     ]
   }
+}
+
+class CheckboxModule extends EditorModule {
+  build () {
+    super.build()
+    this.checkbox = createElement({ parent: this.parent, tag: 'input', type: 'checkbox' })
+    this.refTwo = this.checkbox
+    this.propTwo = 'checked'
+  }
+}
+
+export class FileEditor extends EditorModule {
+  createModules () {
+    return [
+      newSearchQueryModule(this.parent, this.refOne.file, 'source', 'source'),
+      new TextAreaModule(this.parent, this.refOne.file, 'sourceLink'),
+      new CheckboxModule(this.parent, this.refOne.file, 'isHQ')
+    ]
+  } 
 }

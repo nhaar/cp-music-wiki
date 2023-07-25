@@ -1,10 +1,4 @@
 import { createElement, postAndGetJSON, postJSON, selectElement } from './utils.js'
-import { Song } from './song.js'
-import { Author } from './author.js'
-import { Source } from './source.js'
-import { File } from './file.js'
-import { Reference } from './reference.js'
-import { FlashRoom } from './flash_room.js'
 import { types } from './type-info.js'
 
 class View {
@@ -12,7 +6,6 @@ class View {
     this.editor = selectElement('js-editor')
   }
 
-  
   /**
    * Renders the button for submitting the data at the end of the page
    */
@@ -26,7 +19,6 @@ class Controller {
    * @param {View} view
    */
   constructor (view) { this.view = view }
-
 
   /**
    * Add controls to the submit button
@@ -61,7 +53,8 @@ class Controller {
     const typeInfo = types[type]
     console.log(type)
     const response = await postAndGetJSON('api/get', { type: typeInfo.type, id, request: typeInfo.input })
-    const editor = new typeInfo.editor(this.view.editor, response)
+    const EditorClass = typeInfo.editor 
+    const editor = new EditorClass(this.view.editor, response)
     editor.build()
     editor.input()
     editor.setup()
@@ -69,8 +62,6 @@ class Controller {
 
     this.view.renderSubmitButton()
     this.setupSubmitButton(editor, response, typeInfo.type)
-
-
 
     // const typeRelation = {
     //   0: Song,
