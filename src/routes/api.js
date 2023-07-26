@@ -12,6 +12,7 @@ router.post('/update', async (req, res) => {
   if (!type) res.status(400).send('No type was found')
   if (!update || !update[type].data) res.status(400).send('No data was found')
   const validationErrors = []
+  console.log(update[type].data)
   for (const key in update) {
     let errors = []
     if (key === type) errors = db.validate(type, update[type].data)
@@ -31,20 +32,19 @@ router.post('/update', async (req, res) => {
 const upload = multer({ dest: path.join(__dirname, '../public/music/') })
 
 router.post('/submit-file', upload.single('file'), async (req, res) => {
-  let originalname
-  let filename
-  if (req.file) ({ originalname, filename } = req.file)
-  else ({ originalname, filename } = req.body)
-  const { source, sourceLink, isHQ } = req.body
-  let { id } = req.body
-  if (id === 'undefined') id = null
-  const info = {
-    id,
-    data: { source, originalname, filename, sourceLink, isHQ: Boolean(isHQ) }
-  }
+  const { originalname, filename } = req.file
+  // const { source, sourceLink, isHQ } = req.body
 
-  await db.updateType('file', info)
-  res.sendStatus(200)
+  res.status(200).send({ originalname, filename })
+  // let { id } = req.body
+  // if (id === 'undefined') id = null
+  // const info = {
+  //   id,
+  //   data: { source, originalname, filename, sourceLink, isHQ: Boolean(isHQ) }
+  // }
+
+  // await db.updateType('file', info)
+  // res.sendStatus(200)
 })
 
 router.post('/get', async (req, res) => {

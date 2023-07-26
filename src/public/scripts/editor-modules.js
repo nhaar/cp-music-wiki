@@ -1,6 +1,6 @@
 import { generateAudio } from './file.js'
 import { createSearchQuery } from './query-options.js'
-import { createElement, selectElement } from './utils.js'
+import { createElement, postAndGetJSON, selectElement } from './utils.js'
 
 /**
  * A pointer representation to a variable that isn't necessarily a reference
@@ -123,11 +123,14 @@ class EditorModule {
   /**
    * Passes data stored in the module to outside (either parent module or to the backend)
    */
-  output () {
+  async output () {
+    for (let i = 0; i < this.modules.length; i++) {
+      await this.modules[i].output()
+    }
     this.iterateModules('output')
-    if (this.middleoutput) this.middleoutput()
+    if (this.middleoutput) await this.middleoutput()
     if (this.int) this.int.exchange(this.out)
-    if (this.postoutput) this.postoutput()
+    if (this.postoutput) await this.postoutput()
   }
 
   /**
@@ -612,7 +615,7 @@ class AudioFileModule extends EditorModule {
    * Create the internal pointer
    */
   postbuild () {
-    this.data = this.modules.read() || {}
+    this.data = this.out.read() || {}
     this.int = new Pointer(this, 'data')
   }
 }
@@ -632,7 +635,7 @@ export class SongEditor extends EditorModule {
       ['names', getEditorRowModule('Names', MoveableRowsModule, true, [SongNameModule, 'name-div']), this.out.r.song.data, this.parent],
       ['authors', getEditorRowModule('Authors', MoveableRowsModule, true, [SongAuthorModule, 'authors-div']), ...Array(2)],
       ['link', getEditorRowModule('YouTube Link', TextInputModule, true)],
-      ['files', getEditorRowModule('Song Files', MoveableRowsModule, true, [AudioFileModule, 'audios-div'])]
+      ['files', getEditorRowModule('Song Files', MoveableRowsModule, true, [AudioFileModule, 'audios-div', { useAdd: false, useDelete: false }])]
     ]
   }
 
@@ -674,15 +677,39 @@ class CheckboxModule extends EditorModule {
   postbuild () { this.int = new Pointer(this.checkbox, 'checked') }
 }
 
+class FileUploadModule extends EditorModule {
+  prebuild () {
+    this.fileUpload = createElement({ parent: this.parent, tag: 'input', type: 'file' })
+  }
+
+  async middleoutput () {
+    const file = this.fileUpload.files[0]
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await fetch('api/submit-file', {
+      method: 'POST',
+      body: formData
+    })
+    const fileData = await response.json()
+    console.log(fileData)
+    console.log(this.out)
+    this.out.read().originalname = fileData.originalname
+    this.out.read().filename = fileData.filename
+  }
+}
+
 /**
  * Module for the file editor
  */
 export class FileEditor extends EditorModule {
   basemodules () {
+    const id = this.out.r.file.id
+    const FileClass = id ? AudioFileModule : FileUploadModule
     return [
-      ['source', getSearchQueryModule('source'), this.out.r.file, this.parent],
-      ['sourceLink', TextAreaModule],
-      ['isHQ', CheckboxModule]
+      ['source', getSearchQueryModule('source'), this.out.r.file.data, this.parent],
+      ['sourceLink', TextInputModule],
+      ['isHQ', CheckboxModule],
+      ['data', FileClass, this.out.r.file]
     ]
   }
 }
