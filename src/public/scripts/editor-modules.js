@@ -69,9 +69,23 @@ class EditorModule {
    */
   constructor (parent, reference, property) {
     this.parent = parent
+    this.addcss()
     this.out = new Pointer(reference, property)
     if (this.initialize) this.initialize()
     this.modules = this.createModules()
+  }
+
+  parentcss () {}
+
+  addcss () {
+    const classes = this.parentcss()
+    if (typeof classes === 'string') {
+      this.parent.classList.add(classes)
+    } else if (Array.isArray(classes)) {
+      classes.forEach(className => {
+        this.parent.classList.add(className)
+      })
+    }
   }
 
   /**
@@ -161,7 +175,7 @@ class EditorModule {
    * @param {string} fn - Name of the function to call
    */
   iterateModules (fn) {
-    this.modules.forEach(module => { module[fn]() })
+    this.modules.forEach(module => module[fn]())
   }
 }
 
@@ -268,12 +282,13 @@ class MoveableRowsModule extends EditorModule {
    * @param {boolean} options.useDelete - True if wants to be able to delete rows. Defaults to true
    * @param {boolean} options.useAdd - True if wants to be able to add rows. Defaults to true
    */
-  constructor (parent, reference, property, childClass, options = {
+  constructor (parent, reference, property, childClass, divClass, options = {
     useDelete: true,
     useAdd: true
   }) {
     super(parent, reference, property)
 
+    this.divClass = divClass
     this.ChildClass = childClass
     this.options = options
 
@@ -292,7 +307,7 @@ class MoveableRowsModule extends EditorModule {
    * Build basic elements for handling the rows
    */
   prebuild () {
-    this.div = createElement({ parent: this.parent })
+    this.div = createElement({ parent: this.parent, className: this.divClass })
     if (this.options.useAdd) {
       this.addButton = createElement({ parent: this.div, tag: 'button', innerHTML: 'ADD' })
     }
@@ -477,13 +492,60 @@ class LocalizationNameModule extends EditorModule {
   initialize () {
     this.data = this.out.read() || {}
     this.int = new Pointer(this, 'data')
+    this.div = createElement({ classes: ['hidden', 'localization-name'] })
+  }
+
+  prebuild () {
+    this.parent.appendChild(this.div)
   }
 
   basemodules () {
     return [
-      ['name', TextInputModule, this.data, this.parent],
+      ['name', TextInputModule, this.data, this.div],
       ['reference', getReferenceSearchModule()],
       ['translationNotes', TextAreaModule]
+    ]
+  }
+}
+
+class LocalizationNamesModule extends EditorModule {
+  initialize () {
+    this.name = this.out.read() || {}
+    this.int = new Pointer(this, 'name')
+    this.div = createElement({ })
+  }
+
+  prebuild () {
+    const html = `
+      <option selected> [PICK LOCALIZATION] </option>
+      <option value="0"> Portuguese </option>
+      <option value="1"> French </option>
+      <option value="2"> Spanish </option>
+      <option value="3"> German </option>
+      <option value="4"> Russian </option>
+    `
+    this.langSelect = createElement({ parent: this.parent, tag: 'select', innerHTML: html })
+    this.parent.appendChild(this.div)
+  }
+
+  presetup () {
+    this.langSelect.addEventListener('change', () => {
+      const langNamesDiv = this.parent.children[3]
+      const targetElement = langNamesDiv.children[Number(this.langSelect.value)]
+      const previousElement = langNamesDiv.querySelector(':scope > div:not(.hidden)')
+
+      if (previousElement) previousElement.classList.add('hidden')
+      if (targetElement) targetElement.classList.remove('hidden')
+    })
+  }
+
+  basemodules () {
+    return [
+      ['pt', LocalizationNameModule, this.name, this.div],
+      ['fr'],
+      ['es'],
+      ['de'],
+      ['ru']
     ]
   }
 }
@@ -500,16 +562,18 @@ class SongNameModule extends EditorModule {
     this.int = new Pointer(this, 'name')
   }
 
+  parentcss () { return 'name-row' }
+
   basemodules () {
     return [
       ['name', TextInputModule, this.name, this.parent],
       ['reference', getReferenceSearchModule()],
-      ['pt', LocalizationNameModule],
-      ['fr'],
-      ['es'],
-      ['de'],
-      ['ru']
+      [this.out.p, LocalizationNamesModule, this.out.r]
     ]
+  }
+
+  postoutput () {
+    console.log(this.out.r)
   }
 }
 
@@ -561,14 +625,18 @@ export class SongEditor extends EditorModule {
    * Create children modules
    * @returns {EditorModule} List of children modules
    */
+  parentcss () { return 'song-editor' }
 
   basemodules () {
     return [
-      ['names', MoveableRowsModule, this.out.r.song.data, this.parent, [SongNameModule]],
-      ['authors', ...Array(3), [SongAuthorModule]],
-      ['link', TextInputModule],
-      ['files', MoveableRowsModule, ...Array(2), [AudioFileModule]]
+      ['names', getEditorRowModule('Names', MoveableRowsModule, true, [SongNameModule, 'name-div']), this.out.r.song.data, this.parent],
+      ['authors', getEditorRowModule('Authors', MoveableRowsModule, true, [SongAuthorModule, 'authors-div']), ...Array(2)],
+      ['link', getEditorRowModule('YouTube Link', TextInputModule, true)],
+      ['files', getEditorRowModule('Song Files', MoveableRowsModule, true, [AudioFileModule, 'audios-div'])]
     ]
+  }
+
+  postoutput () {
   }
 
   // modules () {
@@ -617,4 +685,55 @@ export class FileEditor extends EditorModule {
       ['isHQ', CheckboxModule]
     ]
   }
+}
+
+function getEditorRowModule (header, ChildClass, useExpand, args = []) {
+  class EditorRowModule extends EditorModule {
+    prebuild () {
+      createElement({ parent: this.parent, innerHTML: header })
+      const row = createElement({ parent: this.parent })
+      if (useExpand) {
+        this.expandButton = createElement({ parent: row, tag: 'button', innerHTML: 'expand' })
+      }
+      const childElement = createElement({ parent: row })
+      this.childModule = new ChildClass(childElement, this.out.r, this.out.p, ...args)
+    }
+
+    postbuild () {
+      this.childModule.build()
+      this.childModule.input()
+      this.childModule.setup()
+    }
+
+    presetup () {
+      this.modules.push(this.childModule)
+
+      if (useExpand) this.setupExpand()
+    }
+
+    setupExpand () {
+    // const currentStyle = this.view.editor.style.gridTemplateRows
+    // const rowStyles = currentStyle.split(' ')
+
+      // expandButtons.forEach((button, i) => {
+      const targetElement = this.expandButton.parentElement.children[1]
+      const hide = () => {
+      // this.swapTemplateRow(i + 1, '50px')
+        targetElement.classList.add('hidden')
+      }
+      hide()
+      this.expandButton.addEventListener('click', () => {
+        if (targetElement.classList.contains('hidden')) {
+          targetElement.classList.remove('hidden')
+          // this.swapTemplateRow(i + 1, rowStyles[i])
+          this.expandButton.classList.add('hidden')
+        } else {
+          hide()
+        }
+      })
+    // })
+    }
+  }
+
+  return EditorRowModule
 }

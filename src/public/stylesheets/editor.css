@@ -156,6 +156,11 @@ button:hover {
   grid-template-rows: 50px 50px 1fr;
 }
 
+.localization-name {
+  display: grid;
+  grid-template-rows: repeat(2, 50px) 100px;
+}
+
 .hidden {
   display: none;
   height: 0;
@@ -169,4 +174,9 @@ button:hover {
 .files-div .row-content {
   display: grid;
   grid-template-rows: 30px 80px;
+}
+
+.name-row {
+  display: grid;
+  grid-template-rows: repeat(3, 50px) 1fr ;
 }
