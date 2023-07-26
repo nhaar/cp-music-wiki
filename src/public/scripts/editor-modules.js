@@ -48,7 +48,7 @@ class Pointer {
  * The module consists of a pointer that brings data from outside, and a pointer that points to the user data,
  * which is stored in the page
  *
- * It also can store children modules. To give children modules, you need to overwrite the `createModules` method returning the list of the children modules
+ * It also can store children modules. To define the modules, you must overwrite the function `basemodules`, docs on how to do it are on the function docs
  *
  * The entry points for the class are the methods:
  * * `initialize` To run code in the construction, specifically before creating modules (last constructor step)
@@ -117,10 +117,44 @@ class EditorModule {
   }
 
   /**
-   * Default method returning an empty list
+   * Method that should return the children modules
+   *
+   * The base modules list should be an array of arrays, each array representing a different modules,
+   * and it can have up to 5 elements:
+   * * Index 0 - Name of the property for the external pointer
+   * * Index 1 - Constructor of the module class
+   * * Index 2 - Reference to the object for the external pointer
+   * * Index 3 - Parent HTML element
+   * * Index 4 - An array of extra arguments to feed to the class constructor
+   *
+   * If elements are repeated, they can be left empty/undefined (see examples)
+   * @returns {*[][]}
+   */
+  basemodules () { return [] }
+
+  /**
+   * Method that converts the output of the `basemodules` method and converts it into the children modules list
    * @returns {EditorModule[]} Empty list
    */
-  createModules () { return [] }
+  createModules () {
+    const modules = []
+    const memory = {}
+    this.basemodules().forEach(module => {
+      for (let i = 0; i < 4; i++) {
+        const element = module[i]
+
+        if (!element) {
+          module[i] = memory[i]
+        } else if (element) {
+          memory[i] = element
+        }
+      }
+      const args = module[4] || []
+      const Class = module[1]
+      modules.push(new Class(module[3], module[2], module[0], ...args))
+    })
+    return modules
+  }
 
   /**
    * Helper method to iterate through all the children modules and call a function from the modules
@@ -195,9 +229,9 @@ export function getNameOnlyEditor (type) {
    * Class for an editor that contains a single module which is a text input and only updates the name property inside the data object
    */
   class NameOnlyEditor extends EditorModule {
-    createModules () {
+    basemodules () {
       return [
-        new TextInputModule(this.parent, this.out.r[type].data, 'name')
+        ['name', TextInputModule, this.out.r[type].data, this.parent]
       ]
     }
   }
@@ -386,7 +420,7 @@ class MoveableRowsModule extends EditorModule {
  * @param {import('../../app/database.js').TypeName} type - Name of the type to search query
  * @returns {SearchQueryModule} Module with the search query for the type
  */
-function newSearchQueryModule (parent, reference, property, type) {
+function getSearchQueryModule (type) {
   /**
    * Class containing a search query element, using as the i/o data the id of the queried objects
    */
@@ -419,7 +453,7 @@ function newSearchQueryModule (parent, reference, property, type) {
     }
   }
 
-  return new SearchQueryModule(parent, reference, property)
+  return SearchQueryModule
 }
 
 /**
@@ -429,8 +463,8 @@ function newSearchQueryModule (parent, reference, property, type) {
  * @param {string} property - Name of the property in external pointer
  * @returns {EditorModule} Module with the search query for the wiki references
  */
-function newReferenceSearchModule (parent, reference, property) {
-  return newSearchQueryModule(parent, reference, property, 'wiki_reference')
+function getReferenceSearchModule () {
+  return getSearchQueryModule('wiki_reference')
 }
 
 /**
@@ -445,15 +479,11 @@ class LocalizationNameModule extends EditorModule {
     this.int = new Pointer(this, 'data')
   }
 
-  /**
-   * Create children modules
-   * @returns {EditorModule[]}
-   */
-  createModules () {
+  basemodules () {
     return [
-      new TextInputModule(this.parent, this.data, 'name'),
-      newReferenceSearchModule(this.parent, this.data, 'reference'),
-      new TextAreaModule(this.parent, this.data, 'translationNotes')
+      ['name', TextInputModule, this.data, this.parent],
+      ['reference', getReferenceSearchModule()],
+      ['translationNotes', TextAreaModule]
     ]
   }
 }
@@ -470,19 +500,15 @@ class SongNameModule extends EditorModule {
     this.int = new Pointer(this, 'name')
   }
 
-  /**
-   * Create children modules
-   * @returns
-   */
-  createModules () {
+  basemodules () {
     return [
-      new TextInputModule(this.parent, this.name, 'name'),
-      newReferenceSearchModule(this.parent, this.name, 'reference'),
-      new LocalizationNameModule(this.parent, this.name, 'pt'),
-      new LocalizationNameModule(this.parent, this.name, 'fr'),
-      new LocalizationNameModule(this.parent, this.name, 'es'),
-      new LocalizationNameModule(this.parent, this.name, 'de'),
-      new LocalizationNameModule(this.parent, this.name, 'ru')
+      ['name', TextInputModule, this.name, this.parent],
+      ['reference', getReferenceSearchModule()],
+      ['pt', LocalizationNameModule],
+      ['fr'],
+      ['es'],
+      ['de'],
+      ['ru']
     ]
   }
 }
@@ -499,14 +525,10 @@ class SongAuthorModule extends EditorModule {
     this.int = new Pointer(this, 'author')
   }
 
-  /**
-   * Create children modules
-   * @returns {EditorModule} List of children modules
-   */
-  createModules () {
+  basemodules () {
     return [
-      newSearchQueryModule(this.parent, this.author, 'author', 'author'),
-      newReferenceSearchModule(this.parent, this.author, 'reference')
+      ['author', getSearchQueryModule('author'), this.author, this.parent],
+      ['reference', getReferenceSearchModule()]
     ]
   }
 }
@@ -539,30 +561,30 @@ export class SongEditor extends EditorModule {
    * Create children modules
    * @returns {EditorModule} List of children modules
    */
-  createModules () {
+
+  basemodules () {
     return [
-      new MoveableRowsModule(this.parent, this.out.r.song.data, 'names', SongNameModule),
-      new MoveableRowsModule(this.parent, this.out.r.song.data, 'authors', SongAuthorModule),
-      new TextInputModule(this.parent, this.out.r.song.data, 'link'),
-      new MoveableRowsModule(this.parent, this.out.r.song.data, 'files', AudioFileModule)
+      ['names', MoveableRowsModule, this.out.r.song.data, this.parent, [SongNameModule]],
+      ['authors', ...Array(3), [SongAuthorModule]],
+      ['link', TextInputModule],
+      ['files', MoveableRowsModule, ...Array(2), [AudioFileModule]]
     ]
   }
+
+  // modules () {
+  //   return
+  // }
 }
 
 /**
  * Module for the reference editor
  */
 export class ReferenceEditor extends EditorModule {
-  /**
-   * Create children modules
-   * @returns {EditorModule} List of children modules
-   */
-  createModules () {
-    const { data } = this.out.r.wiki_reference
+  basemodules () {
     return [
-      new TextInputModule(this.parent, data, 'name'),
-      new TextInputModule(this.parent, data, 'link'),
-      new TextAreaModule(this.parent, data, 'description')
+      ['name', TextInputModule, this.out.r.wiki_reference, this.parent],
+      ['link'],
+      ['description', TextAreaModule]
     ]
   }
 }
@@ -588,15 +610,11 @@ class CheckboxModule extends EditorModule {
  * Module for the file editor
  */
 export class FileEditor extends EditorModule {
-  /**
-   * Create children modules
-   * @returns {EditorModule} List of children modules
-   */
-  createModules () {
+  basemodules () {
     return [
-      newSearchQueryModule(this.parent, this.out.r.file, 'source', 'source'),
-      new TextAreaModule(this.parent, this.out.r.file, 'sourceLink'),
-      new CheckboxModule(this.parent, this.out.r.file, 'isHQ')
+      ['source', getSearchQueryModule('source'), this.out.r.file, this.parent],
+      ['sourceLink', TextAreaModule],
+      ['isHQ', CheckboxModule]
     ]
   }
 }
