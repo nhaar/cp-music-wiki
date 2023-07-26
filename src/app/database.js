@@ -284,6 +284,7 @@ class WikiDatabase {
    * @param {function(string, string) : void} callbackfn - Callback function for each iteration which takes as the first argument the name of the property in the declaration and as the second argument the type of the property being declared
    */
   iterateDeclarations (code, callbackfn) {
+    console.log(code)
     const declarations = code.split('\n').map(line => line.trim()).filter(line => line)
     declarations.forEach(declr => {
       const names = declr.match(/\w+(\[\])*/g)
@@ -497,7 +498,16 @@ const db = new WikiDatabase({
     authors SONG_AUTHOR[]
     link TEXT
     files INT[]
-    unofficialNames QUERY[]
+    unofficialNames UNOFFICIAL_NAME[]
+    swf_music_numbers INT[]
+    first_paragraph TEXT
+    page TEXT
+    key_signature INT[]
+    genres INT[]
+    categories INT[]
+    versions VERSION[]
+    composed_date DATE
+    external_release_date DATE
   `, [
     new Validator(
       o => o.names.length > 0 || o.unofficialNames.length > 0,
@@ -529,6 +539,107 @@ const db = new WikiDatabase({
   genre: new ObjectType(`
     name QUERY
     link TEXT
+  `),
+  instrument: new ObjectType(`
+    name QUERY
+    link TEXT
+  `),
+  key_signature: new ObjectType(`
+    name QUERY
+    link TEXT
+  `),
+  page: new ObjectType(`
+    name QUERY
+    content TEXT
+    categories INT[]
+  `),
+  category: new ObjectType(`
+    name QUERY
+  `),
+  flash_room: new ObjectType(`
+    name QUERY
+    releaseDate DATE
+    isReleaseEstimate BOOLEAN
+    closureDate DATE
+    isClosureEstimate BOOLEAN
+    songUses SONG_APPEARANCE[]
+  `),
+  flash_party: new ObjectType(`
+    name QUERY
+    dateStart DATE
+    isStartEstimate BOOLEAN
+    dateEnd DATE
+    isEndEstimate BOOLEAN
+    partySongs PARTY_SONG[]
+  `),
+  music_catalogue: new ObjectType(`
+    name QUERY
+    description TEXT
+    date DATE
+    songs CATALOGUE_ITEM[][]
+    reference INT
+  `),
+  stage_play: new ObjectType(`
+    name QUERY
+    song INT
+    appearances STAGE_APPEARANCE[]
+  `),
+  flash_minigame: new ObjectType(`
+    name QUERY
+    releaseDate DATE
+    isReleaseEstimate BOOLEAN
+    closureDate DATE
+    isClosureEstimate BOOLEAN
+    songs GAME_SONG[]
+  `),
+  flash_misc: new ObjectType(`
+    isUnused BOOLEAN
+    name QUERY
+    description TEXT
+    startDate DATE
+    isStartEstimate BOOLEAN
+    endDate DATE
+    isEndEstimate BOOLEAN
+    song INT
+  `),
+  penguin_chat_appearance: new ObjectType(`
+    name QUERY
+    description TEXT
+    song INT
+    start_date DATE
+    isStartEstimate BOOLEAN
+    endDate DATE
+    isEndEstimate BOOLEAN
+  `),
+  exclusive_app_appearance: new ObjectType(`
+    song INT
+    name QUERY
+    description TEXT
+    startDate DATE
+    isStartEstimate BOOLEAN
+    endDate DATE
+    isEndEstimate BOOLEAN
+  `),
+  youtube_video: new ObjectType(`
+    name QUERY
+    publish_date DATE
+    appearances VIDEO_APPEARANCE[]
+  `),
+  tv_video: new ObjectType(`
+    name QUERY
+    earliestDate DATE
+    appearance VIDEO_APPEARANCE[]
+  `),
+  industry_release: new ObjectType(`
+    releaseDate DATE
+    songs INT[]
+  `),
+  screnenhog_comission: new ObjectType(`
+    comissioner TEXT
+    projectName TEXT
+    projectDescription TEXT
+    songs INT[]
+    availableDate DATE
   `)
 }, {
   NAME: new ObjectType(`
@@ -550,9 +661,63 @@ const db = new WikiDatabase({
       'Localization name contains reference or translation notes but contains no actual name'
     )
   ]),
+  UNOFFICIAL_NAME: new ObjectType(`
+    name QUERY
+    description TEXT
+  `),
   SONG_AUTHOR: new ObjectType(`
     author INT
     reference INT
+  `),
+  VERSION: new ObjectType(`
+    name TEXT
+    description TEXT
+  `),
+  SONG_APPEARANCE: new ObjectType(`
+    isUnused BOOLEAN
+    dateStart TEXT
+    isStartEstimate BOOLEAN
+    dateEnd TEXT
+    isEndEstimate BOOLEAN
+    song INT
+    reference INT
+  `),
+  PARTY_SONG: new ObjectType(`
+    isUnused BOOLEAN
+    type INT
+    usePartyDate BOOLEAN
+    dateStart DATE
+    isStartEstimate BOOLEAN
+    dateEnd DATE
+    isEndEstimate BOOLEAN
+    song INT
+  `),
+  CATALOGUE_ITEM: new ObjectType(`
+    displayName TEXT
+    song INT
+  `),
+  STAGE_APPEARANCE: new ObjectType(`
+    isUnused BOOLEAN
+    dateStart DATE
+    isStartEstimate BOOLEAN
+    dateEnd DATE
+    isEndEstimate BOOLEAN
+    reference INT
+  `),
+  GAME_SONG: new ObjectType(`
+    isUnused BOOLEAN
+    song INT
+    useMinigameDates BOOLEAN
+    releaseDate DATE
+    isReleaseEstimate BOOLEAN
+    removalDate DATE
+    isRemovalEstimate BOOLEAN
+  `),
+  VIDEO_APPEARANCE: new ObjectType(`
+    song INT
+    isEntireVideo BOOLEAN
+    startTime INT
+    endTime INT
   `)
 })
 
