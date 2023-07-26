@@ -53,6 +53,7 @@ class Pointer {
  * The entry points for the class are the methods:
  * * `initialize` To run code in the construction, specifically before creating modules (last constructor step)
  * * `prebuild` To render HTML elements specific to this class
+ * * `postbuild` To run code after rerendering the HTML elements
  * * `preinput` Code to run before updating the HTML elements with the database data
  * * `convertinput` Code to convert the input when exchanging from internal to external, if needed
  * * `presetup` To add controls specific to the HTML elements for this class
@@ -79,6 +80,7 @@ class EditorModule {
   build () {
     if (this.prebuild) this.prebuild()
     this.iterateModules('build')
+    if (this.postbuild) this.postbuild()
   }
 
   /**
@@ -88,7 +90,7 @@ class EditorModule {
     if (this.preinput) this.preinput()
     if (this.int) {
       if (this.convertinput) {
-        this.out.assign(this.convertinput(this.int.read()))
+        this.int.assign(this.convertinput(this.out.read()))
       } else {
         this.out.exchange(this.int)
       }
@@ -154,7 +156,7 @@ class SimpleTextModule extends EditorModule {
   /**
    * Create internal pointer
    */
-  preinput () { this.int = new Pointer(this.textInput, this.access) }
+  postbuild () { this.int = new Pointer(this.textInput, this.access) }
 }
 
 /**
@@ -284,7 +286,6 @@ class MoveableRowsModule extends EditorModule {
     this.int = new Pointer(this, 'data')
 
     const rows = Array.from(this.div.children).filter(child => child.tagName === 'DIV')
-    console.log(rows)
     rows.forEach(row => {
       this.data.push(this.indexValue[row.dataset.id])
     })
@@ -316,6 +317,8 @@ class MoveableRowsModule extends EditorModule {
     // create module
     const childModule = new this.ChildClass(childElement, this.indexValue, this.seq + '')
     childModule.build()
+    // childModule.input()
+    childModule.setup()
     this.modules.push(childModule)
 
     // finish row setup
@@ -398,7 +401,7 @@ function newSearchQueryModule (parent, reference, property, type) {
     /**
      * Create pointer to query
      */
-    preinput () { this.int = new Pointer(this.inputElement.dataset, 'id') }
+    postbuild () { this.int = new Pointer(this.inputElement.dataset, 'id') }
 
     convertinput (input) { return input || '' }
 
@@ -438,7 +441,7 @@ class LocalizationNameModule extends EditorModule {
    * Create internal pointer
    */
   initialize () {
-    this.data = this.out.read()
+    this.data = this.out.read() || {}
     this.int = new Pointer(this, 'data')
   }
 
@@ -522,7 +525,7 @@ class AudioFileModule extends EditorModule {
   /**
    * Create the internal pointer
    */
-  preinput () {
+  postbuild () {
     this.data = this.modules.read() || {}
     this.int = new Pointer(this, 'data')
   }
@@ -544,12 +547,6 @@ export class SongEditor extends EditorModule {
       new MoveableRowsModule(this.parent, this.out.r.song.data, 'files', AudioFileModule)
     ]
   }
-
-  postoutput () {
-    console.log(this.out.r)
-  }
-
-  initialize() { console.log(this.out.r) }
 }
 
 /**
@@ -584,7 +581,7 @@ class CheckboxModule extends EditorModule {
   /**
    * Create the internal pointer
    */
-  preinput () { this.int = new Pointer(this.checkbox, 'checked') }
+  postbuild () { this.int = new Pointer(this.checkbox, 'checked') }
 }
 
 /**
