@@ -250,10 +250,6 @@ class MoveableRowsModule extends EditorModule {
 
     /** Keeps track of the value of each id @type {object} */
     this.indexValue = {}
-
-    // array that will be used to store the i/o data of children modules
-    this.data = []
-    this.int = new Pointer(this, 'data')
   }
 
   /**
@@ -283,6 +279,10 @@ class MoveableRowsModule extends EditorModule {
    * Add the i/o data from the children to the i/o array
    */
   middleoutput () {
+    // array that will be used to store the i/o data of children modules
+    this.data = []
+    this.int = new Pointer(this, 'data')
+
     const rows = Array.from(this.div.children).filter(child => child.tagName === 'DIV')
     console.log(rows)
     rows.forEach(row => {
