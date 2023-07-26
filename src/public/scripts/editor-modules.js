@@ -1,6 +1,5 @@
-import { generateAudio } from './file.js'
 import { createSearchQuery } from './query-options.js'
-import { createElement, postAndGetJSON, selectElement } from './utils.js'
+import { createElement, selectElement } from './utils.js'
 
 /**
  * A pointer representation to a variable that isn't necessarily a reference
@@ -763,4 +762,34 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
   }
 
   return EditorRowModule
+}
+
+
+
+/**
+   * Generates HTML for an audio element based on a file
+   * @param {Row} file
+   * @returns {string}
+   */
+function generateAudio (file) {
+  const name = file.original_name || file.originalname || ''
+  const filePath = file.file_name || file.filename || ''
+  let extension = name.match(/\.(.*?)$/)
+  // in case there is no match
+  if (extension) extension = extension[1]
+
+  const validExtensions = [
+    'mp3',
+    'wav',
+    'flac',
+    'm4a',
+    'ogg'
+  ]
+
+  if (extension && validExtensions.includes(extension)) {
+    return `
+        <audio src="../music/${filePath}" controls data-name="${name}"></audio>
+      `
+  }
+  return '<div>Could not load</div>'
 }

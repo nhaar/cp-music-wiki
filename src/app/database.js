@@ -559,15 +559,4 @@ const test = {
   }
 }
 
-// song editor module receives that data
-// create module (song[0].names)
-
-// module has input function, output function, render function, setup function
-// build function renders the elements
-// input function adds information to the elements given an input
-// setup function gives control to the elements
-// output function takes all the data from the elements and passes as output
-
-//
-
 module.exports = db
