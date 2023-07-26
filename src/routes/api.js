@@ -12,7 +12,6 @@ router.post('/update', async (req, res) => {
   if (!type) res.status(400).send('No type was found')
   if (!update || !update[type].data) res.status(400).send('No data was found')
   const validationErrors = []
-  console.log(update[type].data)
   for (const key in update) {
     let errors = []
     if (key === type) errors = db.validate(type, update[type].data)

@@ -421,11 +421,10 @@ class SQLHandler {
    * @param {*[]} values - Array where the first element is the value to be matched, and the other values are the ones to update each column in the order the columns are written
    */
   update = async (type, setting, column, values) => {
-    console.log(`UPDATE ${type} SET ${setting.split(',').map((setter, i) => `${setter.trim()} = $${i + 2}`).join(', ')} WHERE ${column} = $1`)
-    console.log(values)
     await this.pool.query(
     `UPDATE ${type} SET ${setting.split(',').map((setter, i) => `${setter.trim()} = $${i + 2}`).join(', ')} WHERE ${column} = $1`, values
-  )}
+    )
+  }
 
   /**
    * Update a row inside a table associated with a `TypeData`

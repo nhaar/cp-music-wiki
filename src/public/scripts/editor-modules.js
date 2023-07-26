@@ -573,10 +573,6 @@ class SongNameModule extends EditorModule {
       [this.out.p, LocalizationNamesModule, this.out.r]
     ]
   }
-
-  postoutput () {
-    console.log(this.out.r)
-  }
 }
 
 /**
@@ -690,8 +686,6 @@ class FileUploadModule extends EditorModule {
       body: formData
     })
     const fileData = await response.json()
-    console.log(fileData)
-    console.log(this.out)
     this.out.read().originalname = fileData.originalname
     this.out.read().filename = fileData.filename
   }
@@ -763,8 +757,6 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
 
   return EditorRowModule
 }
-
-
 
 /**
    * Generates HTML for an audio element based on a file

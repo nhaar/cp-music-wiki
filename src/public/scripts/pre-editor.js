@@ -2,7 +2,7 @@ import { createSearchQuery } from './query-options.js'
 import { types } from './type-info.js'
 import { selectElement, createElement } from './utils.js'
 
-class Model  {
+class Model {
 }
 
 class View {
