@@ -60,8 +60,15 @@ class WikiDatabase {
     this.handler = new SQLHandler()
     Object.assign(this, { databaseTypes, propertyTypes })
 
+    this.initialize()
     this.assignDefaults()
     this.queryIndexing()
+  }
+
+  initialize () {
+    for (const type in this.databaseTypes) {
+      this.handler.createType(type)
+    }
   }
 
   /**
@@ -376,6 +383,16 @@ class SQLHandler {
     this.columns = 'data, querywords'
   }
 
+  create = async query => { await this.pool.query(`CREATE TABLE IF NOT EXISTS ${query}`) }
+
+  createType = async type => { await this.create(`
+    ${type} (
+      id SERIAL PRIMARY KEY,
+      data JSONB,
+      querywords TEXT
+    )
+  `)}
+
   /**
    * Select all rows from a table which a column is equal to a value
    * @param {TypeName} type - Type of the data associated with the table
@@ -508,6 +525,10 @@ const db = new WikiDatabase({
     name QUERY
     link TEXT
     description TEXT
+  `),
+  genre: new ObjectType(`
+    name QUERY
+    link TEXT
   `)
 }, {
   NAME: new ObjectType(`
