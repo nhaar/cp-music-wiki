@@ -88,7 +88,6 @@ class WikiDatabase {
       // do something soon
     }
 
-    console.log(response)
     return response
   }
 
@@ -432,7 +431,6 @@ class SQLHandler {
    * @param {TypeValues} values - Values to update
    */
   async updateData (type, id, values) {
-    console.log('helloooooooo', this.columns)
     await this.update(type, this.columns, id, [id].concat(values))
   }
 
@@ -525,7 +523,7 @@ const db = new WikiDatabase({
     translationNotes TEXT
   `, [
     new Validator(
-      o => ((o.reference || o.translationNotes) && o.name) || (!o.reference && !o.translationNotes && !o.name),
+      o => ((!o.reference && !o.translationNotes) || o.name),
       'Localization name contains reference or translation notes but contains no actual name'
     )
   ]),

@@ -9,6 +9,7 @@ const db = require('../app/database')
 
 router.post('/update', async (req, res) => {
   const { type, update } = req.body
+  console.log(update)
   if (!type) res.status(400).send('No type was found')
   if (!update || !update[type].data) res.status(400).send('No data was found')
   const validationErrors = []
@@ -43,7 +44,6 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
     data: { source, originalname, filename, sourceLink, isHQ: Boolean(isHQ) }
   }
 
-  console.log(info)
   await db.updateType('file', info)
   res.sendStatus(200)
 })
