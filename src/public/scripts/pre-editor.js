@@ -1,10 +1,8 @@
-import { EditorModel } from './editor-class.js'
 import { createSearchQuery } from './query-options.js'
 import { types } from './type-info.js'
 import { selectElement, createElement } from './utils.js'
 
-class Model extends EditorModel {
-  constructor () { super('') }
+class Model  {
 }
 
 class View {
