@@ -26,6 +26,7 @@ class Controller {
   setupSubmitButton (editorModule, response, type) {
     this.view.submitButton.addEventListener('click', async () => {
       await editorModule.output()
+      console.log(response)
       postJSON('api/update', { type, update: response })
     })
     // this.submitBlocker.button = this.view.submitButton
@@ -51,7 +52,7 @@ class Controller {
     const id = Number(params.id)
     const typeInfo = types[type]
     const response = await postAndGetJSON('api/get', { type: typeInfo.type, id, request: typeInfo.input })
-    const editor = new typeInfo.Editor(this.view.editor, response)
+    const editor = new typeInfo.Editor(response, this.view.editor)
     editor.build()
     editor.input()
     editor.setup()

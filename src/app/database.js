@@ -364,7 +364,13 @@ class WikiDatabase {
    * @param {number} id - Id of the row to get
    * @returns {string} First query word in the row
    */
-  getQueryNameById = async (type, id) => (await this.handler.selectId(type, id, 'querywords')).querywords.split('&&')[0]
+  getQueryNameById = async (type, id) => {
+    try {
+      return (await this.handler.selectId(type, id, 'querywords')).querywords.split('&&')[0]
+    } catch (error) {
+      return ''
+    }
+  }
 }
 
 /**
