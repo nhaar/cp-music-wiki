@@ -36,6 +36,8 @@ class Pointer {
   exchange (pointer) { pointer.assign(this.read()) }
 
   static fromPath (reference, path) {
+
+    console.log(path)
     const steps = path.match(/\.\w+|\[.\]/g)
     let pointer
     const iterator = (obj, current, steps) => {
@@ -56,11 +58,26 @@ class Pointer {
 }
 
 class BaseModule {
+  iteratemodules (options, callbackfn) {
+    const children = []
+    console.log(options)
+    this.modules().forEach(module => {
+      const vars = {}
+      for (const v in options) {
+        vars[v] = module[options[v]]
+      }
+      if (!vars.args) vars.args = []
+      if (vars.path) vars.path = Pointer.fromPath(this.r, vars.path)
+      children.push(callbackfn(vars))
+    })
+    return children
+  }
+
   getmodules () { return [] }
 
   build () {
     if (this.prebuild) this.prebuild()
-    this.iterateModules('build')
+    this.iterateChildren('build')
     if (this.postbuild) this.postbuild()
   }
 
@@ -73,12 +90,12 @@ class BaseModule {
         this.out.exchange(this.int)
       }
     }
-    this.iterateModules('input')
+    this.iterateChildren('input')
   }
 
   setup () {
     if (this.presetup) this.presetup()
-    this.iterateModules('setup')
+    this.iterateChildren('setup')
   }
 
   async output () {
@@ -94,7 +111,7 @@ class BaseModule {
    * Helper method to iterate through all the children modules and call a function from the modules
    * @param {string} fn - Name of the function to call
    */
-  iterateModules (fn) {
+  iterateChildren (fn) {
     this.children.forEach(child => child[fn]())
   }
 }
@@ -119,26 +136,34 @@ class ReceptorModule extends BaseModule {
   }
 
   getmodules () {
-    const modules = []
-    this.modules().forEach(module => {
-      const Class = module[0]
-      const path = module[1]
-      const args = module[2] || []
-      modules.push(new Class(this, Pointer.fromPath(this.r, path), null, ...args))
+    return this.iteratemodules({
+      Class: 0,
+      path: 1,
+      args: 2
+    }, o => {
+      const { Class, path, args } = o
+      return new Class(this, path, null, ...args)
     })
-    return modules
   }
 }
 
 class ConnectionModule extends ChildModule {
   getmodules () {
-    const modules = []
-    this.modules().forEach(module => {
-      const Class = module[0]
-      const args = module[1] || []
-      modules.push(new Class(this.parent, this.out, null, ...args))
+    return this.iteratemodules({
+      Class: 0,
+      args: 1
+    }, o => {
+      const {Class, args} = o
+      return new Class(this.parent, this.out, null, ...args)
     })
-    return modules
+
+    // const modules = []
+    // this.modules().forEach(module => {
+    //   const Class = module[0]
+    //   const args = module[1] || []
+    //   modules.push(new Class(this.parent, this.out, null, ...args))
+    // })
+    // return modules
   }
 
   modules () { return [] }
@@ -172,17 +197,18 @@ class ArrayModule extends ChildModule {
 
 class ObjectModule extends ChildModule {
   getmodules () {
-    const modules = []
-    this.modules().forEach(module => {
-      const Class = module[0]
-      if (!this.out.read()) this.out.assign({})
-      const cout = module[1]
-        ? new Pointer(this.out.read(), module[1])
+    return this.iteratemodules({
+      Class: 0,
+      property: 1,
+      args: 2
+    }, o => {
+      console.log(JSON.parse(JSON.stringify(o)))
+      const { Class, property, args } = o
+      const chOut = property
+        ? new Pointer(this.out.read(), property)
         : this.out
-      const args = module[2] || []
-      modules.push(new Class(this.parent, cout, null, ...args))
+      return new Class(this.parent, chOut, null, ...args)
     })
-    return modules
   }
 
   modules () { return [] }
@@ -792,19 +818,30 @@ class DateInputModule extends ElementModule {
 
 class SplitEditorModule extends ReceptorModule {
   getmodules () {
-    const modules = []
-    const expand = true
-    this.modules().forEach(module => {
-      const header = module[0]
-      const Class = module[1]
-      const path = module[2]
-      const args = module[3] || []
-      const RowModule = getEditorRowModule(header, Class, expand, args)
-      modules.push(
-        new RowModule(this, Pointer.fromPath(this.r, path))
-      )
+    return this.iteratemodules({
+      header: 0,
+      Class: 1,
+      path: 2,
+      args: 3
+    }, o => {
+      const { header, Class, path, args } = o
+      const RowModule = getEditorRowModule(header, Class, true, args)
+      return new RowModule(this, path)
     })
-    return modules
+
+    // const modules = []
+    // const expand = true
+    // this.modules().forEach(module => {
+    //   const header = module[0]
+    //   const Class = module[1]
+    //   const path = module[2]
+    //   const args = module[3] || []
+    //   const RowModule = getEditorRowModule(header, Class, expand, args)
+    //   modules.push(
+    //     new RowModule(this, Pointer.fromPath(this.r, path))
+    //   )
+    // })
+    // return modules
   }
 }
 
