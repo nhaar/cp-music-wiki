@@ -35,9 +35,13 @@ class Pointer {
    */
   exchange (pointer) { pointer.assign(this.read()) }
 
+  /**
+   * Create a pointer using an object reference and the path to an element inside the object
+   * @param {object} reference - Object reference to save
+   * @param {string} path - A string representation of the path, for example, '.property[0][1].property'
+   * @returns {Pointer} Result pointer
+   */
   static fromPath (reference, path) {
-
-    console.log(path)
     const steps = path.match(/\.\w+|\[.\]/g)
     let pointer
     const iterator = (obj, current, steps) => {
@@ -60,7 +64,6 @@ class Pointer {
 class BaseModule {
   iteratemodules (options, callbackfn) {
     const children = []
-    console.log(options)
     this.modules().forEach(module => {
       const vars = {}
       for (const v in options) {
@@ -74,6 +77,8 @@ class BaseModule {
   }
 
   getmodules () { return [] }
+
+  modules () { return [] }
 
   build () {
     if (this.prebuild) this.prebuild()
@@ -140,10 +145,7 @@ class ReceptorModule extends BaseModule {
       Class: 0,
       path: 1,
       args: 2
-    }, o => {
-      const { Class, path, args } = o
-      return new Class(this, path, null, ...args)
-    })
+    }, o => new o.Class(this, o.path, null, ...o.args))
   }
 }
 
@@ -152,21 +154,8 @@ class ConnectionModule extends ChildModule {
     return this.iteratemodules({
       Class: 0,
       args: 1
-    }, o => {
-      const {Class, args} = o
-      return new Class(this.parent, this.out, null, ...args)
-    })
-
-    // const modules = []
-    // this.modules().forEach(module => {
-    //   const Class = module[0]
-    //   const args = module[1] || []
-    //   modules.push(new Class(this.parent, this.out, null, ...args))
-    // })
-    // return modules
+    }, o => new o.Class(this.parent, this.out, null, ...o.args))
   }
-
-  modules () { return [] }
 }
 
 class ArrayModule extends ChildModule {
@@ -189,7 +178,6 @@ class ArrayModule extends ChildModule {
   middleoutput () {
     this.array = []
     this.children.forEach(child => {
-      console.log(child)
       this.array.push(child.out.read())
     })
   }
@@ -202,7 +190,6 @@ class ObjectModule extends ChildModule {
       property: 1,
       args: 2
     }, o => {
-      console.log(JSON.parse(JSON.stringify(o)))
       const { Class, property, args } = o
       const chOut = property
         ? new Pointer(this.out.read(), property)
@@ -210,16 +197,11 @@ class ObjectModule extends ChildModule {
       return new Class(this.parent, chOut, null, ...args)
     })
   }
-
-  modules () { return [] }
 }
 
-class ElementModule extends ChildModule {
-}
+class ElementModule extends ChildModule {}
 
-class ReadonlyModule extends ChildModule {
-
-}
+class ReadonlyModule extends ChildModule {}
 
 /**
  * Class for a module in the editor
@@ -520,20 +502,6 @@ class MoveableRowsModule extends ArrayModule {
   }
 
   /**
-   * Add the i/o data from the children to the i/o array
-   */
-  // async middleoutput () {
-  //   // array that will be used to store the i/o data of children modules
-  //   this.data = []
-  //   this.int = new Pointer(this, 'data')
-
-  //   const rows = Array.from(this.div.children).filter(child => child.tagName === 'DIV')
-  //   rows.forEach(row => {
-  //     this.data.push(this.indexValue[row.dataset.id])
-  //   })
-  // }
-
-  /**
    * Adds control to the add row button
    */
   setupAddButton () {
@@ -553,7 +521,6 @@ class MoveableRowsModule extends ArrayModule {
 
     // update id and save values
 
-    console.log(this)
     const childModule = this.newchild(this.ChildClass, [], value, childElement)
     childModule.build()
     childModule.setup()

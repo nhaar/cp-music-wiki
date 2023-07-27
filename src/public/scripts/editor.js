@@ -26,7 +26,6 @@ class Controller {
   setupSubmitButton (editorModule, response, type) {
     this.view.submitButton.addEventListener('click', async () => {
       await editorModule.output()
-      console.log(response)
       postJSON('api/update', { type, update: response })
     })
     // this.submitBlocker.button = this.view.submitButton
