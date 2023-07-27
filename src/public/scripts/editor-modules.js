@@ -43,25 +43,39 @@ class Pointer {
    */
   static fromPath (reference, path) {
     const steps = path.match(/\.\w+|\[.\]/g)
-    let pointer
-    const iterator = (obj, current, steps) => {
-      const step = steps[current]
+    let object = reference
+    const removeDot = x => x.match(/[^.]+/)[0]
+    const lastStep = removeDot(steps.splice(steps.length - 1, 1)[0])
+
+    steps.forEach(step => {
       if (step.includes('.')) {
-        const prop = step.match(/[^.]+/)[0]
-        if (current === steps.length - 1) pointer = new Pointer(obj, prop)
-        else iterator(obj[prop], current + 1, steps)
+        const prop = removeDot(step)
+        object = object[prop]
       } else if (step.includes('[')) {
         const i = Number(step.match(/\[(.*?)\]/)[1])
-        iterator(obj[i], current + 1, steps)
+        object = object[i]
       }
-    }
+    })
 
-    iterator(reference, 0, steps)
-    return pointer
+    return new Pointer(object, lastStep)
   }
 }
 
+/**
+ * The base class for the modules
+ *
+ * It contains the four main methods as well as the base method for getting modules
+ */
 class BaseModule {
+  /**
+   * This function handles the children modules that are created with the module creation
+   *
+   * It iterates through all the preconfigured modules and generates the list of children following the creation rules
+   * established by the options and the callback function
+   * @param {object} options - Object that maps variable names to indexes of arrays. Each module is an array where each index represents a variable, dictated by this options object
+   * @param {function(object) : BaseModule} callbackfn - Takes as the argument a vars object where each key is the name of an object with its value, and returns the constructed reference to the child
+   * @returns {BaseModule[]} The array with all the children
+   */
   iteratemodules (options, callbackfn) {
     const children = []
     this.modules().forEach(module => {
@@ -76,16 +90,30 @@ class BaseModule {
     return children
   }
 
+  /**
+   * Placeholder method returning empty list
+   * @returns {BaseModule[]} Empty list
+   */
   getmodules () { return [] }
 
+  /**
+   * Placeholder method returning empty list
+   * @returns {BaseModule[]} Empty list
+   */
   modules () { return [] }
 
+  /**
+   * Method for rendering HTML elements
+   */
   build () {
     if (this.prebuild) this.prebuild()
     this.iterateChildren('build')
     if (this.postbuild) this.postbuild()
   }
 
+  /**
+   * Method for inputting the data from database onto the page
+   */
   input () {
     if (this.preinput) this.preinput()
     if (this.int) {
@@ -98,31 +126,44 @@ class BaseModule {
     this.iterateChildren('input')
   }
 
+  /**
+   * Method for adding control to the HTML elements
+   */
   setup () {
     if (this.presetup) this.presetup()
     this.iterateChildren('setup')
   }
 
+  /**
+   * Method for outputting the data in the page to the backend
+   */
   async output () {
     for (let i = 0; i < this.children.length; i++) {
       await this.children[i].output()
     }
     if (this.middleoutput) await this.middleoutput()
-    console.log(this)
     if (this.int) this.int.exchange(this.out)
     if (this.postoutput) await this.postoutput()
   }
 
   /**
-   * Helper method to iterate through all the children modules and call a function from the modules
+   * Helper method to iterate through all the children modules and call a function from them
    * @param {string} fn - Name of the function to call
    */
-  iterateChildren (fn) {
-    this.children.forEach(child => child[fn]())
-  }
+  iterateChildren (fn) { this.children.forEach(child => child[fn]()) }
 }
 
+/**
+ * Base class for all the modules that are children of a parent
+ */
 class ChildModule extends BaseModule {
+  /**
+   * Create the module linked to a parent element and an external pointer,
+   * as well as giving it an element if possible
+   * @param {BaseModule} parent - Parent module to this module
+   * @param {Pointer} out - External pointer
+   * @param {HTMLElement} element - HTML element to link to this module, if missing will use the same element as the parent module
+   */
   constructor (parent, out, element) {
     super()
     Object.assign(this, { parent, out })
@@ -133,7 +174,16 @@ class ChildModule extends BaseModule {
   }
 }
 
+/**
+ * Class for modules that directly receive a reference from the database
+ * and is at the top of the module tree
+ */
 class ReceptorModule extends BaseModule {
+  /**
+   * Link module to the main object and HTML element
+   * @param {object} reference - Reference to main object retrieved from the database
+   * @param {HTMLElement} element - The outtermost HTML element for the editor
+   */
   constructor (reference, element) {
     super()
     this.r = reference
@@ -150,6 +200,10 @@ class ReceptorModule extends BaseModule {
   }
 }
 
+/**
+ * The class for the modules that serve only as a bridge for the data coming from the parent module to the children modules,
+ * as such it contains no internal pointer
+ */
 class ConnectionModule extends ChildModule {
   getmodules () {
     return this.iteratemodules({
@@ -159,24 +213,40 @@ class ConnectionModule extends ChildModule {
   }
 }
 
+/**
+ * Modules that handle array data, having an arbitrary number of modules all of the same type
+ */
 class ArrayModule extends ChildModule {
-  initialize () {
+  /**
+   * Create the map used to keep track of the value of each children
+   */
+  earlyinit () {
     this.map = {}
     this.seq = 0
     this.array = this.out.read() || []
     this.int = new Pointer(this, 'array')
   }
 
+  /**
+   * Add a new child to the array
+   * @param {Class} ChildClass Constructor for the child module
+   * @param {*[]} args - List of arbitrary arguments for the constructor
+   * @param {*} value - Value to give to the data in the array
+   * @param {HTMLElement} element - HTML element to give to the child
+   * @returns {ChildModule} - The created child
+   */
   newchild (ChildClass, args, value, element) {
     this.seq++
     this.map[this.seq] = value
-    console.log(this.map)
     const child = new ChildClass(this, new Pointer(this.map, this.seq + ''), element, ...args)
 
     this.children.push(child)
     return child
   }
 
+  /**
+   * Collects all the data from the children inside the array
+   */
   middleoutput () {
     this.array = []
     this.children.forEach(child => {
@@ -185,9 +255,15 @@ class ArrayModule extends ChildModule {
   }
 }
 
+/**
+ * Class for an module that represents an object,
+ * with each child being a property of the object
+ */
 class ObjectModule extends ChildModule {
+  /**
+   * Creates the object in the external data if it doesn't exists
+   */
   earlyinit () {
-    console.log(this)
     if (!this.out.read()) this.out.assign({})
   }
 
@@ -198,183 +274,41 @@ class ObjectModule extends ChildModule {
       args: 2
     }, o => {
       const { Class, property, args } = o
-      console.log(property, this)
       const chOut = property
         ? new Pointer(this.out.read(), property)
         : this.out
-      console.log(chOut)
       return new Class(this.parent, chOut, null, ...args)
     })
   }
 }
 
+/**
+ * Modules that directly communicate with an HTML element
+ *
+ * Currently only a semantic class
+ */
 class ElementModule extends ChildModule {}
 
-class ReadonlyModule extends ChildModule {}
-
 /**
- * Class for a module in the editor
+ * Modules that only read the external data and don't pass anything
  *
- * The editor is a module itself, and it is composed of module, so a module consists
- * of the fundamental piece for the editor
- *
- * It represents a way to connect the backend with the user
- *
- * The module consists of a pointer that brings data from outside, and a pointer that points to the user data,
- * which is stored in the page
- *
- * It also can store children modules. To define the modules, you must overwrite the function `modules`, docs on how to do it are on the function docs
- *
- * The entry points for the class are the methods:
- * * `initialize` To run code in the construction, specifically before creating modules (last constructor step)
- * * `prebuild` To render HTML elements specific to this class
- * * `postbuild` To run code after rerendering the HTML elements
- * * `preinput` Code to run before updating the HTML elements with the database data
- * * `convertinput` Code to convert the input when exchanging from internal to external, if needed
- * * `presetup` To add controls specific to the HTML elements for this class
- * * `middleoutput` Run code after all children modules `output`s were called but before passing data from this module to outside
- * * `postoutput` Run code after passing data to outside this module
+ * Currently only a semantic class
  */
-class EditorModule {
-  /**
-   * Link external pointer and HTML element
-   * @param {HTMLElement} parent - Reference to the HTML element the module will be rendered on
-   * @param {object} reference - Reference to the object for external pointer
-   * @param {string} property - Name of the property for the external pointer
-   */
-  constructor (parent, reference, property) {
-    this.parent = parent
-    this.addcss()
-    this.out = new Pointer(reference, property)
-    if (this.initialize) this.initialize()
-    this.modules = this.createModules()
-  }
-
-  parentcss () {}
-
-  addcss () {
-    const classes = this.parentcss()
-    if (typeof classes === 'string') {
-      this.parent.classList.add(classes)
-    } else if (Array.isArray(classes)) {
-      classes.forEach(className => {
-        this.parent.classList.add(className)
-      })
-    }
-  }
-
-  /**
-   * Build all HTML elements for the module
-   */
-  build () {
-    if (this.prebuild) this.prebuild()
-    this.iterateModules('build')
-    if (this.postbuild) this.postbuild()
-  }
-
-  /**
-   * Update all HTML elements with the database data
-   */
-  input () {
-    if (this.preinput) this.preinput()
-    if (this.int) {
-      if (this.convertinput) {
-        this.int.assign(this.convertinput(this.out.read()))
-      } else {
-        this.out.exchange(this.int)
-      }
-    }
-    this.iterateModules('input')
-  }
-
-  /**
-   * Add control to all the HTML elements in the module
-   */
-  setup () {
-    if (this.presetup) this.presetup()
-    this.iterateModules('setup')
-  }
-
-  /**
-   * Passes data stored in the module to outside (either parent module or to the backend)
-   */
-  async output () {
-    for (let i = 0; i < this.modules.length; i++) {
-      await this.modules[i].output()
-    }
-    if (this.middleoutput) await this.middleoutput()
-    if (this.int) this.int.exchange(this.out)
-    if (this.postoutput) await this.postoutput()
-  }
-
-  /**
-   * Method that should return the children modules
-   *
-   * The base modules list should be an array of arrays, each array representing a different modules,
-   * and it can have up to 5 elements:
-   * * Index 0 - Name of the property for the external pointer
-   * * Index 1 - Constructor of the module class
-   * * Index 2 - Reference to the object for the external pointer
-   * * Index 3 - Parent HTML element
-   * * Index 4 - An array of extra arguments to feed to the class constructor
-   *
-   * If elements are repeated, they can be left empty/undefined (see examples)
-   * @returns {*[][]}
-   */
-  modules () { return [] }
-
-  processedmodules () { return this.modules() }
-
-  /**
-   * Method that converts the output of the `modules` method and converts it into the children modules list
-   * @returns {EditorModule[]} Empty list
-   */
-  createModules () {
-    const modules = []
-    const memory = {}
-
-    this.processedmodules().forEach(module => {
-      for (let i = 0; i < 4; i++) {
-        const element = module[i]
-
-        if (!element) {
-          module[i] = memory[i]
-        } else if (element) {
-          memory[i] = element
-        }
-      }
-      const args = module[4] || []
-      const Class = module[1]
-      modules.push(new Class(module[3], module[2], module[0], ...args))
-    })
-    return modules
-  }
-
-  /**
-   * Helper method to iterate through all the children modules and call a function from the modules
-   * @param {string} fn - Name of the function to call
-   */
-  iterateModules (fn) {
-    this.modules.forEach(module => module[fn]())
-  }
-}
+class ReadonlyModule extends ChildModule {}
 
 /**
  * Module containing a single text element
  */
-
-// TYPE 5
 class SimpleTextModule extends ElementModule {
   /**
-   * Create module linked to pointer and element
-   * @param {HTMLElement} parent - HTML element to render the text element in
-   * @param {object} reference - Object reference to external pointer
-   * @param {string} property - Name of the property in external pointer
-   * @param {string} tag - Tag for the text element in the module
+   * @param {BaseModule} parent
+   * @param {object} out
+   * @param {HTMLElement} element
+   * @param {string} tag - Tag for the HTML element in the module
    * @param {string} access - Name of the property the text content is stored in the element
    */
-  constructor (parent, out, tag, access) {
-    super(parent, out)
+  constructor (parent, out, element, tag, access) {
+    super(parent, out, element)
     Object.assign(this, { tag, access })
   }
 
@@ -384,39 +318,34 @@ class SimpleTextModule extends ElementModule {
   prebuild () { this.textInput = createElement({ parent: this.e, tag: this.tag }) }
 
   /**
-   * Create internal pointer
+   * Add pointer to the text content
    */
   postbuild () { this.int = new Pointer(this.textInput, this.access) }
 }
 
 /**
- * Module containing a single text input
+ * Module containing a single HTML text input
  */
-
-// TYPE 5
 class TextInputModule extends SimpleTextModule {
   /**
-   * Create module linked to pointer and element
-   * @param {HTMLElement} parent - HTML element to render the text element in
-   * @param {object} reference - Object reference to external pointer
-   * @param {string} property - Name of the property in external pointer
+   * @param {BaseModule} parent
+   * @param {object} out
+   * @param {HTMLElement} element
    */
-  constructor (parent, out) { super(parent, out, 'input', 'value') }
+  constructor (parent, out, element) { super(parent, out, element, 'input', 'value') }
 }
 
 /**
- * Module containing a single text area element
+ * Module containing a single text area HTML element
  */
-
-// TYPE 5
 class TextAreaModule extends SimpleTextModule {
   /**
-   * Create module linked to pointer and element
-   * @param {HTMLElement} parent - HTML element to render the text element in
-   * @param {object} reference - Object reference to external pointer
-   * @param {string} property - Name of the property in external pointer
+   *
+   * @param {BaseModule} parent
+   * @param {object} out
+   * @param {HTMLElement} element
    */
-  constructor (parent, out) { super(parent, out, 'textarea', 'innerHTML') }
+  constructor (parent, out, element) { super(parent, out, element, 'textarea', 'innerHTML') }
 }
 
 /**
@@ -424,8 +353,6 @@ class TextAreaModule extends SimpleTextModule {
  * @param {import('../../app/database.js').TypeName} type - Name of the type of the editor
  * @returns {NameOnlyEditor} Class for the editor of the type
  */
-
-// TYPE 1
 export function getNameOnlyEditor (type) {
   /**
    * Class for an editor that contains a single module which is a text input and only updates the name property inside the data object
@@ -453,20 +380,14 @@ function indexOfChild (parent, child) {
 }
 
 /**
- * Class for a module that groups a number of children modules of the same type inside,
+ * Class for a module that lets manage the modules of an array module through the UI
  * allowing to move them (order them), as well as possibly adding and deleting new modules
- *
- * The i/o data is grouped inside an array where each element is the i/o data of the children modules,
- * ordered in the order they show up in the page
  */
-
-// TYPE 3
 class MoveableRowsModule extends ArrayModule {
   /**
-   * Create rows module linked to pointer, element and children module
-   * @param {HTMLElement} parent - HTML element to render the element in
-   * @param {object} reference - Object reference to external pointer
-   * @param {string} property - Name of the property in external pointer
+   * @param {BaseModule} parent
+   * @param {Pointer} out
+   * @param {HTMLElement} element
    * @param {EditorModule} childClass - Class for the children module
    * @param {object} options - Options for the module
    * @param {boolean} options.useDelete - True if wants to be able to delete rows. Defaults to true
@@ -528,8 +449,7 @@ class MoveableRowsModule extends ArrayModule {
     createElement({ parent: newRow, tag: 'button', className: this.delClass, innerHTML: 'DELETE' })
     createElement({ parent: newRow, tag: 'button', className: this.moveClass, innerHTML: 'MOVE' })
 
-    // update id and save values
-
+    // create module
     const childModule = this.newchild(this.ChildClass, [], value, childElement)
     childModule.build()
     childModule.setup()
@@ -592,19 +512,14 @@ class MoveableRowsModule extends ArrayModule {
 }
 
 /**
- * Get a search query module for a specific database type
- * @param {HTMLElement} parent - HTML element to render the module in
- * @param {object} reference - Object reference to external pointer
- * @param {string} property - Name of the property in external pointer
- * @param {import('../../app/database.js').TypeName} type - Name of the type to search query
- * @returns {SearchQueryModule} Module with the search query for the type
+ * Get a search query module constructor for a specific database type
+ * @param {import('../../app/database.js').TypeName} type - Name of the type
+ * @returns {SearchQueryModule} Module for the type
  */
 function getSearchQueryModule (type) {
   /**
    * Class containing a search query element, using as the i/o data the id of the queried objects
    */
-
-  // TYPE 5
   class SearchQueryModule extends ElementModule {
     /**
      * Render input for the query
@@ -639,10 +554,7 @@ function getSearchQueryModule (type) {
 
 /**
  * Get a search query module for the wiki references
- * @param {HTMLElement} parent - HTML element to render the module in
- * @param {object} reference - Object reference to external pointer
- * @param {string} property - Name of the property in external pointer
- * @returns {EditorModule} Module with the search query for the wiki references
+ * @returns {ElementModule} Module for the reference search query
  */
 function getReferenceSearchModule () {
   return getSearchQueryModule('wiki_reference')
@@ -651,8 +563,6 @@ function getReferenceSearchModule () {
 /**
  * Module for editting the data for a localization name
  */
-
-// TYPE 4
 class LocalizationNameModule extends ObjectModule {
   /**
    * Create internal pointer
@@ -661,6 +571,9 @@ class LocalizationNameModule extends ObjectModule {
     this.e = createElement({ classes: ['hidden', 'localization-name'] })
   }
 
+  /**
+   * Add element to parent
+   */
   prebuild () {
     this.parent.e.appendChild(this.e)
   }
@@ -674,12 +587,20 @@ class LocalizationNameModule extends ObjectModule {
   }
 }
 
-// TYPE 4
+/**
+ * Module for grouping the different localization names
+ */
 class LocalizationNamesModule extends ObjectModule {
+  /**
+   * Create element to hold the localization names
+   */
   initialize () {
     this.e = createElement({})
   }
 
+  /**
+   * Add language select and element
+   */
   prebuild () {
     const html = `
       <option selected> [PICK LOCALIZATION] </option>
@@ -693,6 +614,9 @@ class LocalizationNamesModule extends ObjectModule {
     this.parent.e.appendChild(this.e)
   }
 
+  /**
+   * Add control to the language select
+   */
   presetup () {
     this.langSelect.addEventListener('change', () => {
       const langNamesDiv = this.parent.e.children[3]
@@ -718,20 +642,14 @@ class LocalizationNamesModule extends ObjectModule {
 /**
  * Module for editting a song name (official)
  */
-
-// TYPE 4
 class SongNameModule extends ObjectModule {
-  parentcss () { return 'name-row' }
+  // parentcss () { return 'name-row' }
 
   modules () {
     return [
       [TextInputModule, 'name'],
       [getReferenceSearchModule(), 'reference'],
       [LocalizationNamesModule, '']
-
-      // ['name', TextInputModule, this.name, this.parent],
-      // ['reference', getReferenceSearchModule()],
-      // ['name', LocalizationNamesModule, this]
     ]
   }
 }
@@ -739,8 +657,6 @@ class SongNameModule extends ObjectModule {
 /**
  * Module for editting a song author
  */
-
-// TYPE 4
 class SongAuthorModule extends ObjectModule {
   modules () {
     return [
@@ -753,18 +669,18 @@ class SongAuthorModule extends ObjectModule {
 /**
  * Module for displaying a song's audio file
  */
-
-// type 6
 class AudioFileModule extends ReadonlyModule {
   /**
-   * Render the element
+   * Render the audio player
    */
   prebuild () {
     this.audioParent = createElement({ parent: this.e, innerHTML: generateAudio(this.out.read()) })
   }
 }
 
-// TYPE 4
+/**
+ * Module for an unofficial name
+ */
 class UnofficialNameModule extends ObjectModule {
   modules () {
     return [
@@ -774,7 +690,9 @@ class UnofficialNameModule extends ObjectModule {
   }
 }
 
-// TYPE 4
+/**
+ * Module for a song version object
+ */
 class SongVersionModule extends ObjectModule {
   modules () {
     return [
@@ -784,15 +702,23 @@ class SongVersionModule extends ObjectModule {
   }
 }
 
-// TYPE 5
+/**
+ * Module for a date input element
+ */
 class DateInputModule extends ElementModule {
+  /**
+   * Build date input and pointer
+   */
   prebuild () {
     this.dateInput = createElement({ parent: this.e, tag: 'input', type: 'date' })
     this.int = new Pointer(this.dateInput, 'value')
   }
 }
 
-class SplitEditorModule extends ReceptorModule {
+/**
+ * Base class for the top module of an editor
+ */
+class EditorModule extends ReceptorModule {
   getmodules () {
     return this.iteratemodules({
       header: 0,
@@ -804,34 +730,18 @@ class SplitEditorModule extends ReceptorModule {
       const RowModule = getEditorRowModule(header, Class, true, args)
       return new RowModule(this, path)
     })
-
-    // const modules = []
-    // const expand = true
-    // this.modules().forEach(module => {
-    //   const header = module[0]
-    //   const Class = module[1]
-    //   const path = module[2]
-    //   const args = module[3] || []
-    //   const RowModule = getEditorRowModule(header, Class, expand, args)
-    //   modules.push(
-    //     new RowModule(this, Pointer.fromPath(this.r, path))
-    //   )
-    // })
-    // return modules
   }
 }
 
 /**
  * Module for the song editor
  */
-
-// TYPE 1
-export class SongEditor extends SplitEditorModule {
+export class SongEditor extends EditorModule {
   /**
    * Create children modules
    * @returns {EditorModule} List of children modules
    */
-  parentcss () { return 'song-editor' }
+  // parentcss () { return 'song-editor' }
 
   modules () {
     const song = prop => `.song.data.${prop}`
@@ -850,46 +760,20 @@ export class SongEditor extends SplitEditorModule {
       ['Song Versions', MoveableRowsModule, song('versions'), [SongVersionModule]],
       ['Date Composed', DateInputModule, song('composedDate')],
       ['External Release Date', DateInputModule, song('externalReleaseDate')]
-
-      // ['names', getEditorRowModule('Names', MoveableRowsModule, true, [SongNameModule, 'name-div']), this.out.r.song.data, this.parent],
-      // ['authors', getEditorRowModule('Authors', MoveableRowsModule, true, [SongAuthorModule, 'authors-div']), ...Array(2)],
-      // ['link', getEditorRowModule('YouTube Link', TextInputModule, true)],
-      // ['files', getEditorRowModule('Song Files', MoveableRowsModule, true, [AudioFileModule, 'audios-div', { useAdd: false, useDelete: false }])],
-      // ['unofficialNames', getEditorRowModule('Unofficial Names', MoveableRowsModule, true, [UnofficialNameModule])],
-      // ['swfMusicNumbers', getEditorRowModule('SWF Music IDs', MoveableRowsModule, true, [TextInputModule
-      // ])],
-      // ['firstParagraph', getEditorRowModule('First Paragraph', TextAreaModule, true)],
-      // ['page', getEditorRowModule('Page Source Code', TextAreaModule, true)],
-      // ['keySignatures', getEditorRowModule('Key Signatures', MoveableRowsModule, true, [getSearchQueryModule('key_signature')])],
-      // ['genres', getEditorRowModule('Musical Genres', MoveableRowsModule, true, [getSearchQueryModule('genre')])],
-      // ['categories', getEditorRowModule('Page Categories', MoveableRowsModule, true, [getSearchQueryModule('category')])],
-      // ['versions', getEditorRowModule('Song Versions', MoveableRowsModule, true, [SongVersionModule])],
-      // ['composedDate', getEditorRowModule('Date Composed', DateInputModule, true)],
-      // ['externalReleaseDate', getEditorRowModule('External Release Date', DateInputModule, true)]
     ]
   }
-
-  // modules () {
-  //   return
-  // }
 }
 
 /**
  * Module for the reference editor
  */
-
-// TYPE 1
-export class ReferenceEditor extends SplitEditorModule {
+export class ReferenceEditor extends EditorModule {
   modules () {
     const file = prop => `.wiki_reference.data.${prop}`
     return [
       ['Reference Name', TextInputModule, file('name')],
       ['Link to Reference (if needed)', TextInputModule, file('link')],
       ['Reference Description', TextAreaModule, file('description')]
-
-      // ['name', TextInputModule, this.out.r.wiki_reference, this.parent],
-      // ['link'],
-      // ['description', TextAreaModule]
     ]
   }
 }
@@ -897,8 +781,6 @@ export class ReferenceEditor extends SplitEditorModule {
 /**
  * Module containing only a checkbox and having its checked property as the i/o data
  */
-
-// TYPE 5
 class CheckboxModule extends ElementModule {
   /**
    * Render the checkbox
@@ -913,12 +795,20 @@ class CheckboxModule extends ElementModule {
   postbuild () { this.int = new Pointer(this.checkbox, 'checked') }
 }
 
-// TYPE 5
+/**
+ * Module for a file upload element
+ */
 class FileUploadModule extends ElementModule {
+  /**
+   * Render the HTML element
+   */
   prebuild () {
     this.fileUpload = createElement({ parent: this.e, tag: 'input', type: 'file' })
   }
 
+  /**
+   * Send the file to the backend to get its data and then output it
+   */
   async middleoutput () {
     const file = this.fileUpload.files[0]
     const formData = new FormData()
@@ -935,9 +825,7 @@ class FileUploadModule extends ElementModule {
 /**
  * Module for the file editor
  */
-
-// TYPE 1
-export class FileEditor extends SplitEditorModule {
+export class FileEditor extends EditorModule {
   modules () {
     const id = this.r.file.id
     let FileClass
@@ -954,18 +842,24 @@ export class FileEditor extends SplitEditorModule {
       ['Link to Source (if needed)', TextInputModule, '.file.data.sourceLink'],
       ['Is it HQ?', CheckboxModule, '.file.data.isHQ'],
       [fileHeader, FileClass, '.file.data']
-
-      // ['source', getSearchQueryModule('source'), this.out.r.file.data, this.parent],
-      // ['sourceLink', TextInputModule],
-      // ['isHQ', CheckboxModule],
-      // ['data', FileClass, this.out.r.file]
     ]
   }
 }
 
+/**
+ * Get a class for an editor's row
+ * @param {string} header - Header of the row
+ * @param {Class} ChildClass - Constructor for the class to be included
+ * @param {boolean} useExpand - True if wants to use and expand button for the row
+ * @param {*[]} args - Arbitrary arguments for the constructor
+ * @returns {EditorModule} - Constructor for the editor's row
+ */
 function getEditorRowModule (header, ChildClass, useExpand, args = []) {
   // TYPE 2
   class EditorRowModule extends ConnectionModule {
+    /**
+     * Render the HTML elements
+     */
     prebuild () {
       createElement({ parent: this.parent.e, innerHTML: header })
       const row = createElement({ parent: this.parent.e })
@@ -973,42 +867,42 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
         this.expandButton = createElement({ parent: row, tag: 'button', innerHTML: 'expand' })
       }
       const childElement = createElement({ parent: row })
-      this.childModule = new ChildClass(this, this.out, null, ...args)
-      this.childModule.e = childElement
+      this.childModule = new ChildClass(this, this.out, childElement, ...args)
     }
 
+    /**
+     * Render child module
+     */
     postbuild () {
       this.childModule.build()
       this.childModule.input()
     }
 
+    /**
+     * Give control and add the child to children
+     */
     presetup () {
       this.children.push(this.childModule)
-
       if (useExpand) this.setupExpand()
     }
 
+    /**
+     * Add control to the expand button
+     */
     setupExpand () {
-    // const currentStyle = this.view.editor.style.gridTemplateRows
-    // const rowStyles = currentStyle.split(' ')
-
-      // expandButtons.forEach((button, i) => {
       const targetElement = this.expandButton.parentElement.children[1]
       const hide = () => {
-      // this.swapTemplateRow(i + 1, '50px')
         targetElement.classList.add('hidden')
       }
       hide()
       this.expandButton.addEventListener('click', () => {
         if (targetElement.classList.contains('hidden')) {
           targetElement.classList.remove('hidden')
-          // this.swapTemplateRow(i + 1, rowStyles[i])
           this.expandButton.classList.add('hidden')
         } else {
           hide()
         }
       })
-    // })
     }
   }
 
@@ -1016,13 +910,13 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
 }
 
 /**
-   * Generates HTML for an audio element based on a file
-   * @param {Row} file
-   * @returns {string}
-   */
+ * Generates HTML for an audio element based on a file
+ * @param {import('../../app/database.js').TypeData} file - Data for the file
+ * @returns {string} Generated HTML for the audio element
+ */
 function generateAudio (file) {
-  const name = file.original_name || file.originalname || ''
-  const filePath = file.file_name || file.filename || ''
+  const name = file.originalname || ''
+  const filePath = file.filename || ''
   let extension = name.match(/\.(.*?)$/)
   // in case there is no match
   if (extension) extension = extension[1]
@@ -1036,52 +930,7 @@ function generateAudio (file) {
   ]
 
   if (extension && validExtensions.includes(extension)) {
-    return `
-        <audio src="../music/${filePath}" controls data-name="${name}"></audio>
-      `
+    return `<audio src="../music/${filePath}" controls data-name="${name}"></audio>`
   }
   return '<div>Could not load</div>'
 }
-
-/*
-
-changes to be done:
-will start using parent MODULE instead of parent HTML element
-div element associated with module
-
-** Receptor Module (type 1)
-* Only has one constructor argument: the out pointer reference (no property and no parent element)
-* HTML element is the topmost element for the editor
-* methods only for running the children
-
-* Connection Module (type 2)
-* Arguments: parent module and pointer to pass over
-
-/*
-
-types of modules in terms of input output
-
-1. editor module/topmost parent module -> only take out, passes down to modules
-2. container modules only pass the out pointer from the parent to the children
-3-> array modules create a map to pass down to the children, and transforms that into an array when outputing
-4-> object modules define int pointing to own property and pass own properties to children
-5-> HTML modules point to things on the page
-6-> read data only, no output
-
-output for each number
-
-1. just calls every children
-2. just calls every child
-3. calls every child, build array and output
-4. call every child, pass own object to output
-5. get input and output to parent object
-
-1. Receptor Module
-2. Connection Module
-3. Array Module
-4. Object Module
-5. Element Module
-6. Readonly Module
-
- Array module
-*/
