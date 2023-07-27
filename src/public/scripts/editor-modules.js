@@ -108,6 +108,7 @@ class BaseModule {
       await this.children[i].output()
     }
     if (this.middleoutput) await this.middleoutput()
+    console.log(this)
     if (this.int) this.int.exchange(this.out)
     if (this.postoutput) await this.postoutput()
   }
@@ -169,6 +170,7 @@ class ArrayModule extends ChildModule {
   newchild (ChildClass, args, value, element) {
     this.seq++
     this.map[this.seq] = value
+    console.log(this.map)
     const child = new ChildClass(this, new Pointer(this.map, this.seq + ''), element, ...args)
 
     this.children.push(child)
@@ -184,6 +186,11 @@ class ArrayModule extends ChildModule {
 }
 
 class ObjectModule extends ChildModule {
+  earlyinit () {
+    console.log(this)
+    if (!this.out.read()) this.out.assign({})
+  }
+
   getmodules () {
     return this.iteratemodules({
       Class: 0,
@@ -191,9 +198,11 @@ class ObjectModule extends ChildModule {
       args: 2
     }, o => {
       const { Class, property, args } = o
+      console.log(property, this)
       const chOut = property
         ? new Pointer(this.out.read(), property)
         : this.out
+      console.log(chOut)
       return new Class(this.parent, chOut, null, ...args)
     })
   }
