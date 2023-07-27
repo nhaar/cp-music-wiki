@@ -155,6 +155,7 @@ class EditorModule {
   createModules () {
     const modules = []
     const memory = {}
+
     this.basemodules().forEach(module => {
       for (let i = 0; i < 4; i++) {
         const element = module[i]
@@ -324,6 +325,7 @@ class MoveableRowsModule extends EditorModule {
    * Add control to the rows handler
    */
   presetup () {
+    // if (this.out.p === 'unofficialNames') throw new Error('kkkkkkkkkkkk')
     if (this.options.useAdd) this.setupAddButton()
     this.setupMoving()
   }
@@ -331,7 +333,7 @@ class MoveableRowsModule extends EditorModule {
   /**
    * Add the i/o data from the children to the i/o array
    */
-  middleoutput () {
+  async middleoutput () {
     // array that will be used to store the i/o data of children modules
     this.data = []
     this.int = new Pointer(this, 'data')
@@ -346,7 +348,7 @@ class MoveableRowsModule extends EditorModule {
    * Adds control to the add row button
    */
   setupAddButton () {
-    this.addButton.addEventListener('click', () => this.addRow())
+    this.addButton.addEventListener('click', () => { this.addRow() })
   }
 
   /**
@@ -464,7 +466,7 @@ function getSearchQueryModule (type) {
     /**
      * Convert the data before outputting it
      */
-    postoutput () {
+    async postoutput () {
       const id = this.int.read()
       this.out.assign(id ? Number(id) : null)
     }
@@ -514,7 +516,7 @@ class LocalizationNamesModule extends EditorModule {
   initialize () {
     this.name = this.out.read() || {}
     this.int = new Pointer(this, 'name')
-    this.div = createElement({ })
+    this.div = createElement({})
   }
 
   prebuild () {
@@ -570,7 +572,7 @@ class SongNameModule extends EditorModule {
     return [
       ['name', TextInputModule, this.name, this.parent],
       ['reference', getReferenceSearchModule()],
-      [this.out.p, LocalizationNamesModule, this.out.r]
+      ['name', LocalizationNamesModule, this]
     ]
   }
 }
@@ -615,6 +617,40 @@ class AudioFileModule extends EditorModule {
   }
 }
 
+class UnofficialNameModule extends EditorModule {
+  initialize () {
+    this.data = {}
+    this.int = new Pointer(this, 'data')
+  }
+
+  basemodules () {
+    return [
+      ['name', TextInputModule, this.out.r, this.parent],
+      ['description', TextAreaModule]
+    ]
+  }
+}
+class SongVersionModule extends EditorModule {
+  initialize () {
+    this.data = {}
+    this.int = new Pointer(this, 'data')
+  }
+
+  basemodules () {
+    return [
+      ['name', TextInputModule, this.out.r, this.parent],
+      ['description', TextAreaModule]
+    ]
+  }
+}
+
+class DateInputModule extends EditorModule {
+  prebuild () {
+    this.dateInput = createElement({ parent: this.parent, tag: 'input', type: 'date' })
+    this.int = new Pointer(this.dateInput, 'value')
+  }
+}
+
 /**
  * Module for the song editor
  */
@@ -630,11 +666,19 @@ export class SongEditor extends EditorModule {
       ['names', getEditorRowModule('Names', MoveableRowsModule, true, [SongNameModule, 'name-div']), this.out.r.song.data, this.parent],
       ['authors', getEditorRowModule('Authors', MoveableRowsModule, true, [SongAuthorModule, 'authors-div']), ...Array(2)],
       ['link', getEditorRowModule('YouTube Link', TextInputModule, true)],
-      ['files', getEditorRowModule('Song Files', MoveableRowsModule, true, [AudioFileModule, 'audios-div', { useAdd: false, useDelete: false }])]
+      ['files', getEditorRowModule('Song Files', MoveableRowsModule, true, [AudioFileModule, 'audios-div', { useAdd: false, useDelete: false }])],
+      ['unofficialNames', getEditorRowModule('Unofficial Names', MoveableRowsModule, true, [UnofficialNameModule])],
+      ['swfMusicNumbers', getEditorRowModule('SWF Music IDs', MoveableRowsModule, true, [TextInputModule
+      ])],
+      ['firstParagraph', getEditorRowModule('First Paragraph', TextAreaModule, true)],
+      ['page', getEditorRowModule('Page Source Code', TextAreaModule, true)],
+      ['keySignatures', getEditorRowModule('Key Signatures', MoveableRowsModule, true, [getSearchQueryModule('key_signature')])],
+      ['genres', getEditorRowModule('Musical Genres', MoveableRowsModule, true, [getSearchQueryModule('genre')])],
+      ['categories', getEditorRowModule('Page Categories', MoveableRowsModule, true, [getSearchQueryModule('category')])],
+      ['versions', getEditorRowModule('Song Versions', MoveableRowsModule, true, [SongVersionModule])],
+      ['composedDate', getEditorRowModule('Date Composed', DateInputModule, true)],
+      ['externalReleaseDate', getEditorRowModule('External Release Date', DateInputModule, true)]
     ]
-  }
-
-  postoutput () {
   }
 
   // modules () {
@@ -722,7 +766,6 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
     postbuild () {
       this.childModule.build()
       this.childModule.input()
-      this.childModule.setup()
     }
 
     presetup () {

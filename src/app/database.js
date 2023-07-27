@@ -284,7 +284,6 @@ class WikiDatabase {
    * @param {function(string, string) : void} callbackfn - Callback function for each iteration which takes as the first argument the name of the property in the declaration and as the second argument the type of the property being declared
    */
   iterateDeclarations (code, callbackfn) {
-    console.log(code)
     const declarations = code.split('\n').map(line => line.trim()).filter(line => line)
     declarations.forEach(declr => {
       const names = declr.match(/\w+(\[\])*/g)
@@ -386,13 +385,15 @@ class SQLHandler {
 
   create = async query => { await this.pool.query(`CREATE TABLE IF NOT EXISTS ${query}`) }
 
-  createType = async type => { await this.create(`
+  createType = async type => {
+    await this.create(`
     ${type} (
       id SERIAL PRIMARY KEY,
       data JSONB,
       querywords TEXT
     )
-  `)}
+  `)
+  }
 
   /**
    * Select all rows from a table which a column is equal to a value
@@ -499,15 +500,15 @@ const db = new WikiDatabase({
     link TEXT
     files INT[]
     unofficialNames UNOFFICIAL_NAME[]
-    swf_music_numbers INT[]
-    first_paragraph TEXT
+    swfMusicNumbers INT[]
+    firstParagraph TEXT
     page TEXT
-    key_signature INT[]
+    keySignatures INT[]
     genres INT[]
     categories INT[]
     versions VERSION[]
-    composed_date DATE
-    external_release_date DATE
+    composedDate DATE
+    externalReleaseDate DATE
   `, [
     new Validator(
       o => o.names.length > 0 || o.unofficialNames.length > 0,

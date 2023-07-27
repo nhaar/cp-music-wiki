@@ -24,8 +24,8 @@ class Controller {
    * Add controls to the submit button
    */
   setupSubmitButton (editorModule, response, type) {
-    this.view.submitButton.addEventListener('click', () => {
-      editorModule.output()
+    this.view.submitButton.addEventListener('click', async () => {
+      await editorModule.output()
       postJSON('api/update', { type, update: response })
     })
     // this.submitBlocker.button = this.view.submitButton
