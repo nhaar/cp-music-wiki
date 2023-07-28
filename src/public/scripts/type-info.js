@@ -1,4 +1,4 @@
-import { FileEditor, FlashpartyEditor, FlashroomEditor, GenreEditor, InstrumentEditor, KeysigEditor, PageEditor, ReferenceEditor, SongEditor, getNameOnlyEditor } from './editor-modules.js'
+import { FileEditor, FlashpartyEditor, FlashroomEditor, GenreEditor, InstrumentEditor, KeysigEditor, MuscatalogEditor, PageEditor, ReferenceEditor, SongEditor, getNameOnlyEditor } from './editor-modules.js'
 
 class TypeInfo {
   constructor (type, name, editor, input = {}) {
@@ -66,5 +66,10 @@ export const types = [
     'flash_party',
     'Club Penguin Party',
     FlashpartyEditor
+  ),
+  new TypeInfo(
+    'music_catalogue',
+    'Music Catalogue',
+    MuscatalogEditor
   )
 ]

@@ -142,6 +142,7 @@ class BaseModule {
       await this.children[i].output()
     }
     if (this.middleoutput) await this.middleoutput()
+    if (this.postmidoutput) await this.postmidoutput()
     if (this.int) {
       if (this.convertoutput) {
         this.out.assign(this.convertoutput(this.int.read()))
@@ -388,7 +389,6 @@ class OptionSelectModule extends ElementModule {
   prebuild () {
     this.selectElement = createElement({ parent: this.e, tag: 'select' })
     createElement({ parent: this.selectElement, tag: 'option', value: '' })
-    console.log(this.options)
     for (const option in this.options) {
       const value = this.options[option]
       createElement({ parent: this.selectElement, tag: 'option', value, innerHTML: option })
@@ -400,8 +400,6 @@ class OptionSelectModule extends ElementModule {
   }
 
   convertoutput (output) { return Number(output) }
-
-  postoutput () { console.log(this) }
 }
 
 /**
@@ -563,6 +561,98 @@ class MoveableRowsModule extends ArrayModule {
         }
       }
     })
+  }
+}
+
+class GridModule extends ArrayModule {
+  constructor (parent, out, element, ChildClass) {
+    super(parent, out, element, ChildClass)
+    Object.assign(this, { ChildClass })
+    this.rows = 0
+    this.columns = 1  
+  
+  }
+
+  addRow (values = []) {
+    this.rows++
+    for (let i = 0; i < this.columns; i++) {
+      const newElement = createElement({ parent: this.grid })
+      const child = this.newchild([], values[i], newElement)
+      child.build()
+      child.setup()
+    }
+    this.setTemplateRows()
+  }
+
+  addColumn (values = []) {
+    this.columns++
+    for (let i = 0; i < this.rows; i++) {
+      const newElement = createElement({})
+      this.grid.insertBefore(newElement, this.grid.children[this.columns - 1 + i])
+      const child = this.newchild([], values[i], newElement)
+      child.build()
+      child.setup()
+    }
+    this.setTemplateColumns()
+  
+  }
+
+  setTemplateColumns () {
+    this.grid.style.gridTemplateColumns = this.getCSS(this.columns)
+  }
+
+  setTemplateRows () {
+    this.grid.style.gridTemplateRows = this.getCSS(this.rows)
+  }
+
+  getCSS (number) {
+    return `repeat(${number}, 1fr)`
+  }
+
+  prebuild () {
+    this.grid = createElement({ parent: this.e })
+    this.grid.style.display = 'grid'
+    this.rowButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Add row' })
+    this.colButton = createElement({ parent: this.e , tag: 'button', innerHTML: 'Add column'})
+  }
+
+  postbuild () {
+    const grid = this.out.read()
+    if (grid.length) {
+
+      const firstRow = grid[0]
+      this.columns = firstRow.length
+      this.setTemplateColumns()
+      for (let i = 0; i < grid.length; i++) {
+        this.addRow(grid[i])
+      }
+      
+    } else {
+      this.columns = 1
+    }
+  }
+
+  presetup () {
+    this.setupButtons()
+  }
+
+  setupButtons () {
+    this.rowButton.addEventListener('click', () => {
+      this.addRow()
+    })
+
+    this.colButton.addEventListener('click', () => {
+      this.addColumn()
+    })
+  }
+
+  postmidoutput () {
+    const gridArray = []
+    for (let i = 0; i < this.rows; i++) {
+      const removed = this.array.splice(0, this.columns)
+      gridArray.push(removed)
+    }
+    this.array = gridArray
   }
 }
 
@@ -1044,6 +1134,27 @@ export class FlashpartyEditor extends EditorModule {
       ['Party end date', DateInputModule, '.flash_party.data.dateEnd'],
       ['Is the end date an estimate?', CheckboxModule, '.flash_party.data.isEndEstimate'],
       ['Songs used in the party', MoveableRowsModule, '.flash_party.data.partySongs', [PartySongModule]]
+    ]
+  }
+}
+
+class CatalogueItemModule extends ObjectModule {
+  modules () {
+    return [
+      [TextInputModule, 'displayName'],
+      [getSearchQueryModule('song'), 'song']
+    ]
+  }
+}
+
+export class MuscatalogEditor extends EditorModule {
+  modules () {
+    return [
+      ['Catalogue Title', TextInputModule, '.music_catalogue.data.name'],
+      ['Catalogue Notes', TextAreaModule, '.music_catalogue.data.description'],
+      ['Catalogue Date', DateInputModule, '.music_catalogue.data.date'],
+      ['Song List', GridModule, '.music_catalogue.data.songs', [CatalogueItemModule]],
+      ['Catalogue Reference', getReferenceSearchModule(), '.music_catalogue.data.reference']
     ]
   }
 }
