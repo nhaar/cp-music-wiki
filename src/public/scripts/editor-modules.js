@@ -656,6 +656,20 @@ class GridModule extends ArrayModule {
   }
 }
 
+class StageAppearanceModule extends ObjectModule {
+  modules () {
+    return [
+      [CheckboxModule, 'isUnused'],
+      [DateInputModule, 'dateStart'],
+      [CheckboxModule, 'isStartEstimate'],
+      [DateInputModule, 'dateEnd'],
+      [CheckboxModule, 'isEndEstimate'],
+      [getReferenceSearchModule(), 'reference']
+    ]
+  }
+}
+
+
 /**
  * Get a search query module constructor for a specific database type
  * @param {import('../../app/database.js').TypeName} type - Name of the type
@@ -1155,6 +1169,44 @@ export class MuscatalogEditor extends EditorModule {
       ['Catalogue Date', DateInputModule, '.music_catalogue.data.date'],
       ['Song List', GridModule, '.music_catalogue.data.songs', [CatalogueItemModule]],
       ['Catalogue Reference', getReferenceSearchModule(), '.music_catalogue.data.reference']
+    ]
+  }
+}
+
+
+export class StageEditor extends EditorModule {
+  modules () {
+    return [
+      ['Stage Play Name',TextInputModule, '.stage_play.data.name'],
+      ['Play Theme Song', getSearchQueryModule('song'), '.stage_play.data.song'],
+      ['Play Debuts', MoveableRowsModule, '.stage_play.data.appearances', [StageAppearanceModule]]
+    ]
+  }
+}
+
+class MinigameSongModule extends ObjectModule {
+  modules () {
+    return [
+      [CheckboxModule, 'isUnused'],
+      [getSearchQueryModule('song'), 'song'],
+      [CheckboxModule, 'useMinigameDates'],
+      [DateInputModule, 'releaseDate'],
+      [CheckboxModule, 'isReleaseEstimate'],
+      [DateInputModule, 'removalDate'],
+      [CheckboxModule, 'isRemovalEstimate']
+    ]
+  }
+}
+
+export class FlashgameEditor extends EditorModule {
+  modules () {
+    return [
+      ['Minigame Name', TextInputModule, '.flash_minigame.data.name'],
+      ['Release Date', DateInputModule, '.flash_minigame.data.releaseDate'],
+      ['Is release date estimate', CheckboxModule, '.flash_minigame.data.,isReleaseEstimate'],
+      ['Closure Date', DateInputModule, '.flash_minigame.data.closureDate'],
+      ['Is closure estimate', CheckboxModule, '.flash_minigame.data.isClosureEstimate'],
+      ['Minigame songs', MoveableRowsModule, '.flash_minigame.data.songs', [MinigameSongModule]]
     ]
   }
 }
