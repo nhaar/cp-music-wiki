@@ -1,5 +1,5 @@
 import { createSearchQuery } from './query-options.js'
-import { createElement, selectElement, selectElements, styleElement } from './utils.js'
+import { createElement, deepcopy, selectElement, selectElements, styleElement } from './utils.js'
 
 /**
  * A pointer representation to a variable that isn't necessarily a reference
@@ -142,7 +142,13 @@ class BaseModule {
       await this.children[i].output()
     }
     if (this.middleoutput) await this.middleoutput()
-    if (this.int) this.int.exchange(this.out)
+    if (this.int) {
+      if (this.convertoutput) {
+        this.out.assign(this.convertoutput(this.int.read()))
+      } else {
+        this.int.exchange(this.out)
+      }
+    }
     if (this.postoutput) await this.postoutput()
   }
 
@@ -218,10 +224,10 @@ class ConnectionModule extends ChildModule {
  */
 class ArrayModule extends ChildModule {
   /**
-   * 
-   * @param {BaseModule} parent 
-   * @param {Pointer} out 
-   * @param {HTMLElement} element 
+   *
+   * @param {BaseModule} parent
+   * @param {Pointer} out
+   * @param {HTMLElement} element
    * @param {Class} ChildClass - Constructor for the children module
    */
   constructor (parent, out, element, ChildClass) {
@@ -323,15 +329,15 @@ class SimpleTextModule extends ElementModule {
    * @param {string} tag - Tag for the HTML element in the module
    * @param {string} access - Name of the property the text content is stored in the element
    */
-  constructor (parent, out, element, tag, access, entry) {
+  constructor (parent, out, element, tag, access, entry, type) {
     super(parent, out, element)
-    Object.assign(this, { tag, access, entry })
+    Object.assign(this, { tag, access, entry, type })
   }
 
   /**
    * Create text element
    */
-  prebuild () { this.textInput = createElement({ parent: this.e, tag: this.tag }) }
+  prebuild () { this.textInput = createElement({ parent: this.e, tag: this.tag, type: this.type }) }
 
   /**
    * Add pointer to the text content
@@ -364,6 +370,38 @@ class TextAreaModule extends SimpleTextModule {
    * @param {HTMLElement} element
    */
   constructor (parent, out, element) { super(parent, out, element, 'textarea', 'value', 'innerHTML') }
+}
+
+class NumberInputModule extends SimpleTextModule {
+  constructor (parent, out, element) { super(parent, out, element, 'input', 'value', 'value', 'number') }
+
+  convertoutput (output) { return Number(output) }
+}
+
+class OptionSelectModule extends ElementModule {
+  constructor (parent, out, element, options) {
+    super(parent, out, element)
+
+    Object.assign(this, { options })
+  }
+
+  prebuild () {
+    this.selectElement = createElement({ parent: this.e, tag: 'select' })
+    createElement({ parent: this.selectElement, tag: 'option', value: '' })
+    console.log(this.options)
+    for (const option in this.options) {
+      const value = this.options[option]
+      createElement({ parent: this.selectElement, tag: 'option', value, innerHTML: option })
+    }
+  }
+
+  postbuild () {
+    this.int = new Pointer(this.selectElement, 'value')
+  }
+
+  convertoutput (output) { return Number(output) }
+
+  postoutput () { console.log(this) }
 }
 
 /**
@@ -862,7 +900,6 @@ export class FileEditor extends EditorModule {
  * @returns {EditorModule} - Constructor for the editor's row
  */
 function getEditorRowModule (header, ChildClass, useExpand, args = []) {
-  // TYPE 2
   class EditorRowModule extends ConnectionModule {
     /**
      * Render the HTML elements
@@ -914,6 +951,101 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
   }
 
   return EditorRowModule
+}
+
+export class GenreEditor extends EditorModule {
+  modules () {
+    return [
+      ['Genre Name', TextInputModule, '.genre.data.name'],
+      ['External Link', TextInputModule, '.genre.data.link']
+    ]
+  }
+}
+
+export class InstrumentEditor extends EditorModule {
+  modules () {
+    return [
+      ['Instrument Name', TextInputModule, '.instrument.data.name'],
+      ['External Link', TextInputModule, '.instrument.data.link']
+    ]
+  }
+}
+
+export class KeysigEditor extends EditorModule {
+  modules () {
+    return [
+      ['Key Signature Name', TextInputModule, '.key_signature.data.name'],
+      ['External Link', TextInputModule, '.key_signature.data.link']
+    ]
+  }
+}
+
+export class PageEditor extends EditorModule {
+  modules () {
+    return [
+      ['Page Title', TextInputModule, '.page.data.name'],
+      ['Content', TextAreaModule, '.page.data.content'],
+      ['Categories', MoveableRowsModule, '.page.data.categories', [getSearchQueryModule('category')]]
+    ]
+  }
+}
+
+class SongAppearanceModule extends ObjectModule {
+  modules () {
+    return [
+      [CheckboxModule, 'isUnused'],
+      [DateInputModule, 'dateStart'],
+      [CheckboxModule, 'isStartEstimate'],
+      [DateInputModule, 'dateEnd'],
+      [CheckboxModule, 'isEndEstimate'],
+      [getSearchQueryModule('song'), 'song'],
+      [getReferenceSearchModule(), 'reference']
+    ]
+  }
+}
+
+export class FlashroomEditor extends EditorModule {
+  modules () {
+    return [
+      ['Room Name', TextInputModule, '.flash_room.data.name'],
+      ['Date the room opened', DateInputModule, '.flash_room.data.releaseDate'],
+      ['Is room opened date estimate?', CheckboxModule, '.flash_room.data.isReleaseEstimate'],
+      ['Date the room closed', DateInputModule, '.flash_room.data.closureDate'],
+      ['Is the date for closure an estimate?', CheckboxModule, '.flash_room.data.isClosureEstimate'],
+      ['Songs uses in the room', MoveableRowsModule, '.flash_room.data.songUses', [SongAppearanceModule]]
+    ]
+  }
+}
+
+class PartySongModule extends ObjectModule {
+  modules () {
+    return [
+      [CheckboxModule, 'isUnused'],
+      [OptionSelectModule, 'type', [{
+        Room: 1,
+        Minigame: 2
+      }]],
+      [CheckboxModule, 'usePartyDate'],
+      [DateInputModule, 'dateStart'],
+      [CheckboxModule, 'isStartEstimate'],
+      [DateInputModule, 'dateEnd'],
+      [CheckboxModule, 'isEndEstimate'],
+      [getSearchQueryModule('song'), 'song']
+    ]
+  }
+}
+
+export class FlashpartyEditor extends EditorModule {
+  modules () {
+    return [
+      ['Party Name', TextInputModule, '.flash_party.data.name'],
+      ['Party launch date', DateInputModule, '.flash_party.data.dateStart'],
+      ['Is the start date an estimate?', CheckboxModule, '.flash_party.data.isStartEstimate'],
+      ['Party end date', DateInputModule, '.flash_party.data.dateEnd'],
+      ['Is the end date an estimate?', CheckboxModule, '.flash_party.data.isEndEstimate'],
+      ['Songs used in the party', MoveableRowsModule, '.flash_party.data.partySongs', [PartySongModule]]
+    ]
+  }
 }
 
 /**

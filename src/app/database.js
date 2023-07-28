@@ -642,7 +642,7 @@ const db = new WikiDatabase({
     releaseDate DATE
     songs INT[]
   `),
-  screnenhog_comission: new ObjectType(`
+  screenhog_comission: new ObjectType(`
     comissioner TEXT
     projectName TEXT
     projectDescription TEXT
