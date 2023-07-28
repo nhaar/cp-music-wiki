@@ -218,6 +218,18 @@ class ConnectionModule extends ChildModule {
  */
 class ArrayModule extends ChildModule {
   /**
+   * 
+   * @param {BaseModule} parent 
+   * @param {Pointer} out 
+   * @param {HTMLElement} element 
+   * @param {Class} ChildClass - Constructor for the children module
+   */
+  constructor (parent, out, element, ChildClass) {
+    super(parent, out, element)
+    Object.assign(this, { ChildClass })
+  }
+
+  /**
    * Create the map used to keep track of the value of each children
    */
   earlyinit () {
@@ -236,12 +248,12 @@ class ArrayModule extends ChildModule {
    * @param {HTMLElement} element - HTML element to give to the child
    * @returns {ChildModule} - The created child
    */
-  newchild (ChildClass, args, value, element) {
+  newchild (args, value, element) {
     this.seq++
     this.map[this.seq] = value
     styleElement(element, this.arrayElementClass)
     element.dataset.id = this.seq
-    const child = new ChildClass(this, new Pointer(this.map, this.seq + ''), element, ...args)
+    const child = new this.ChildClass(this, new Pointer(this.map, this.seq + ''), element, ...args)
 
     this.children.push(child)
     return child
@@ -394,19 +406,18 @@ class MoveableRowsModule extends ArrayModule {
    * @param {BaseModule} parent
    * @param {Pointer} out
    * @param {HTMLElement} element
-   * @param {EditorModule} childClass - Class for the children module
+   * @param {EditorModule} ChildClass
    * @param {object} options - Options for the module
    * @param {boolean} options.useDelete - True if wants to be able to delete rows. Defaults to true
    * @param {boolean} options.useAdd - True if wants to be able to add rows. Defaults to true
    */
-  constructor (parent, out, element, childClass, divClass, options = {
+  constructor (parent, out, element, ChildClass, divClass, options = {
     useDelete: true,
     useAdd: true
   }) {
-    super(parent, out, element)
+    super(parent, out, element, ChildClass)
 
     this.divClass = divClass
-    this.ChildClass = childClass
     this.options = options
 
     // CSS class for the elements
@@ -456,7 +467,7 @@ class MoveableRowsModule extends ArrayModule {
     createElement({ parent: newRow, tag: 'button', className: this.moveClass, innerHTML: 'MOVE' })
 
     // create module
-    const childModule = this.newchild(this.ChildClass, [], value, childElement)
+    const childModule = this.newchild([], value, childElement)
     childModule.build()
     childModule.setup()
 
