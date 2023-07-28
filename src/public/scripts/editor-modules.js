@@ -277,7 +277,7 @@ class ObjectModule extends ChildModule {
       const chOut = property
         ? new Pointer(this.out.read(), property)
         : this.out
-      return new Class(this , chOut, null, ...args)
+      return new Class(this, chOut, null, ...args)
     })
   }
 }
@@ -360,7 +360,7 @@ export function getNameOnlyEditor (type) {
   class NameOnlyEditor extends EditorModule {
     modules () {
       return [
-        ['Name',TextInputModule, `.${type}.data.name`]
+        ['Name', TextInputModule, `.${type}.data.name`]
       ]
     }
   }
