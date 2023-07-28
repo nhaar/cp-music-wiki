@@ -1,5 +1,5 @@
 import { createSearchQuery } from './query-options.js'
-import { createElement, selectElement, styleElement } from './utils.js'
+import { createElement, selectElement, selectElements, styleElement } from './utils.js'
 
 /**
  * A pointer representation to a variable that isn't necessarily a reference
@@ -225,6 +225,7 @@ class ArrayModule extends ChildModule {
     this.seq = 0
     this.array = this.out.read() || []
     this.int = new Pointer(this, 'array')
+    this.arrayElementClass = 'array-element'
   }
 
   /**
@@ -238,6 +239,8 @@ class ArrayModule extends ChildModule {
   newchild (ChildClass, args, value, element) {
     this.seq++
     this.map[this.seq] = value
+    styleElement(element, this.arrayElementClass)
+    element.dataset.id = this.seq
     const child = new ChildClass(this, new Pointer(this.map, this.seq + ''), element, ...args)
 
     this.children.push(child)
@@ -249,8 +252,9 @@ class ArrayModule extends ChildModule {
    */
   middleoutput () {
     this.array = []
-    this.children.forEach(child => {
-      this.array.push(child.out.read())
+    const children = selectElements(this.arrayElementClass, this.e)
+    children.forEach(child => {
+      this.array.push(this.map[child.dataset.id])
     })
   }
 }
