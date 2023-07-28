@@ -71,6 +71,10 @@ export function createElement (options) {
   return newElement
 }
 
+export function styleElement (element, className) {
+  element.classList.add(className)
+}
+
 /**
  * Asynchronously posts with JSON as content
  * @param {string} route - Route to post to

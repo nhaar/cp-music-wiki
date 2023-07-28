@@ -1,5 +1,5 @@
 import { createSearchQuery } from './query-options.js'
-import { createElement, selectElement } from './utils.js'
+import { createElement, selectElement, styleElement } from './utils.js'
 
 /**
  * A pointer representation to a variable that isn't necessarily a reference
@@ -277,7 +277,7 @@ class ObjectModule extends ChildModule {
       const chOut = property
         ? new Pointer(this.out.read(), property)
         : this.out
-      return new Class(this.parent, chOut, null, ...args)
+      return new Class(this , chOut, null, ...args)
     })
   }
 }
@@ -357,10 +357,10 @@ export function getNameOnlyEditor (type) {
   /**
    * Class for an editor that contains a single module which is a text input and only updates the name property inside the data object
    */
-  class NameOnlyEditor extends ReceptorModule {
+  class NameOnlyEditor extends EditorModule {
     modules () {
       return [
-        [TextInputModule, `.${type}.data.name`]
+        ['Name',TextInputModule, `.${type}.data.name`]
       ]
     }
   }
@@ -568,14 +568,7 @@ class LocalizationNameModule extends ObjectModule {
    * Create internal pointer
    */
   initialize () {
-    this.e = createElement({ classes: ['hidden', 'localization-name'] })
-  }
-
-  /**
-   * Add element to parent
-   */
-  prebuild () {
-    this.parent.e.appendChild(this.e)
+    this.e = createElement({ parent: this.e, classes: ['hidden', 'localization-name'] })
   }
 
   modules () {
@@ -643,7 +636,10 @@ class LocalizationNamesModule extends ObjectModule {
  * Module for editting a song name (official)
  */
 class SongNameModule extends ObjectModule {
-  // parentcss () { return 'name-row' }
+  /**
+   * Style row
+   */
+  initialize () { styleElement(this.e, 'name-row') }
 
   modules () {
     return [
@@ -737,12 +733,6 @@ class EditorModule extends ReceptorModule {
  * Module for the song editor
  */
 export class SongEditor extends EditorModule {
-  /**
-   * Create children modules
-   * @returns {EditorModule} List of children modules
-   */
-  // parentcss () { return 'song-editor' }
-
   modules () {
     const song = prop => `.song.data.${prop}`
     return [
