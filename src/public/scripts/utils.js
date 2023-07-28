@@ -158,3 +158,5 @@ export function getTakenVariable (element, variable) {
   const takenIds = [value]
   return { hasUntakenId, takenIds }
 }
+
+export function deepcopy (obj) { return JSON.parse(JSON.stringify(obj)) }

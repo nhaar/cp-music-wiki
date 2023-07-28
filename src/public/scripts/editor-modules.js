@@ -307,9 +307,9 @@ class SimpleTextModule extends ElementModule {
    * @param {string} tag - Tag for the HTML element in the module
    * @param {string} access - Name of the property the text content is stored in the element
    */
-  constructor (parent, out, element, tag, access) {
+  constructor (parent, out, element, tag, access, entry) {
     super(parent, out, element)
-    Object.assign(this, { tag, access })
+    Object.assign(this, { tag, access, entry })
   }
 
   /**
@@ -320,7 +320,9 @@ class SimpleTextModule extends ElementModule {
   /**
    * Add pointer to the text content
    */
-  postbuild () { this.int = new Pointer(this.textInput, this.access) }
+  postbuild () { this.int = new Pointer(this.textInput, this.entry) }
+
+  middleoutput () { this.int = new Pointer(this.textInput, this.access) }
 }
 
 /**
@@ -332,7 +334,7 @@ class TextInputModule extends SimpleTextModule {
    * @param {object} out
    * @param {HTMLElement} element
    */
-  constructor (parent, out, element) { super(parent, out, element, 'input', 'value') }
+  constructor (parent, out, element) { super(parent, out, element, 'input', 'value', 'value') }
 }
 
 /**
@@ -345,7 +347,7 @@ class TextAreaModule extends SimpleTextModule {
    * @param {object} out
    * @param {HTMLElement} element
    */
-  constructor (parent, out, element) { super(parent, out, element, 'textarea', 'innerHTML') }
+  constructor (parent, out, element) { super(parent, out, element, 'textarea', 'value', 'innerHTML') }
 }
 
 /**

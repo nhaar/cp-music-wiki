@@ -1,4 +1,4 @@
-import { createElement, postAndGetJSON, postJSON, selectElement } from './utils.js'
+import { createElement, deepcopy, postAndGetJSON, postJSON, selectElement } from './utils.js'
 import { types } from './type-info.js'
 
 class View {
@@ -26,6 +26,7 @@ class Controller {
   setupSubmitButton (editorModule, response, type) {
     this.view.submitButton.addEventListener('click', async () => {
       await editorModule.output()
+      console.log(deepcopy(response))
       postJSON('api/update', { type, update: response })
     })
     // this.submitBlocker.button = this.view.submitButton
@@ -51,6 +52,7 @@ class Controller {
     const id = Number(params.id)
     const typeInfo = types[type]
     const response = await postAndGetJSON('api/get', { type: typeInfo.type, id, request: typeInfo.input })
+    console.log(deepcopy(response))
     const editor = new typeInfo.Editor(response, this.view.editor)
     editor.build()
     editor.input()

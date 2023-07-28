@@ -1,4 +1,5 @@
 const { Pool } = require('pg')
+const { deepcopy } = require('./utils')
 
 /**
  * Represents CPT code, used to define the properties of the database objects
@@ -140,7 +141,7 @@ class WikiDatabase {
             const dimensionIterator = (array, level) => {
               if (Array.isArray(array)) {
                 for (let i = 0; i < array.length; i++) {
-                  const newPath = JSON.parse(JSON.stringify(path))
+                  const newPath = deepcopy(path)
                   newPath.push(`[${i}]`)
                   if (level === 1) {
                     checkType(array[i], realType, newPath)
@@ -261,7 +262,7 @@ class WikiDatabase {
 
       const iterate = (code, path) => {
         this.iterateDeclarations(code, (property, type) => {
-          const newPath = JSON.parse(JSON.stringify(path)).concat([property])
+          const newPath = deepcopy(path).concat([property])
           const dimension = this.getDimension(type)
           for (let i = 0; i < dimension; i++) {
             newPath.push('[]')
