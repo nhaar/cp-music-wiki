@@ -931,6 +931,23 @@ class EditorModule extends ReceptorModule {
   }
 }
 
+class SongFileEditor extends ObjectModule {
+  modules () {
+    let lastElement
+    if (this.out.read().originalname) {
+      lastElement = [AudioFileModule, '']
+    } else {
+      lastElement = [FileUploadModule, '']
+    }
+    return [
+      [getSearchQueryModule('source'), 'source'],
+      [TextInputModule, 'link'],
+      [CheckboxModule, 'isHQ'],
+      lastElement
+    ]
+  }
+}
+
 /**
  * Module for the song editor
  */
@@ -941,7 +958,7 @@ export class SongEditor extends EditorModule {
       ['Names', MoveableRowsModule, song('names'), [SongNameModule, 'name-div']],
       ['Authors', MoveableRowsModule, song('authors'), [SongAuthorModule, 'authors-div']],
       ['Youtube Link', TextInputModule, song('link')],
-      ['Song Files', MoveableRowsModule, song('files'), [AudioFileModule, 'audios-div', { useAdd: false, useDelete: false }]],
+      ['Song Files', MoveableRowsModule, song('files'), [SongFileEditor, 'audios-div']],
       ['Unofficial Names', MoveableRowsModule, song('unofficialNames'), [UnofficialNameModule]],
       ['SWF Music IDs', MoveableRowsModule, song('swfMusicNumbers'), [NumberInputModule]],
       ['First Paragraph', TextAreaModule, song('firstParagraph')],
@@ -986,8 +1003,10 @@ class FileUploadModule extends ElementModule {
    */
   async middleoutput () {
     const file = this.fileUpload.files[0]
+    console.log(file)
     const formData = new FormData()
     formData.append('file', file)
+    console.log(formData)
     const response = await fetch('api/submit-file', {
       method: 'POST',
       body: formData
@@ -1000,6 +1019,7 @@ class FileUploadModule extends ElementModule {
 /**
  * Module for the file editor
  */
+
 export class FileEditor extends EditorModule {
   modules () {
     const id = this.r.file.id
@@ -1015,7 +1035,7 @@ export class FileEditor extends EditorModule {
     return [
       ['File Song', getSearchQueryModule('song'), '.file.data.song'],
       ['File Source', getSearchQueryModule('source'), '.file.data.source'],
-      ['Link to Source (if needed)', TextInputModule, '.file.data.sourceLink'],
+      ['Link to Source (if needed)', TextInputModule, '.file.data.link'],
       ['Is it HQ?', CheckboxModule, '.file.data.isHQ'],
       [fileHeader, FileClass, '.file.data']
     ]

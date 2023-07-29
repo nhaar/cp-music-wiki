@@ -518,7 +518,7 @@ const db = new WikiDatabase({
     names NAME[]
     authors SONG_AUTHOR[]
     link TEXT
-    files INT[]
+    files SONG_FILE[]
     unofficialNames UNOFFICIAL_NAME[]
     swfMusicNumbers INT[]
     firstParagraph TEXT
@@ -718,6 +718,13 @@ const db = new WikiDatabase({
   TIME_RANGE: new ObjectType(`
     start DATE_ESTIMATE
     end DATE_ESTIMATE
+  `),
+  SONG_FILE: new ObjectType(`
+    source INT
+    link TEXT
+    isHQ BOOLEAN
+    originalname TEXT
+    filename TEXT
   `)
 })
 
