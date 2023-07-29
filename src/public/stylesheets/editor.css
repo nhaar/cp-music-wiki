@@ -194,5 +194,25 @@ button:hover {
 
 .name-row {
   display: grid;
-  grid-template-rows: repeat(3, 50px) 1fr ;
+  grid-template-rows: repeat(2, 50px) 1fr ;
+}
+
+.header-row {
+  grid-template-columns: 200px 1fr;
+  grid-gap: 5px;
+  background-color: black;
+  padding: 5px;
+}
+
+.header-row > * {
+  background-color: var(--login-blue);
+}
+
+.header-row * {
+  padding: 5px;
+}
+
+.language-select {
+  display: grid;
+  grid-template-columns: 100px 1fr;
 }

@@ -71,8 +71,10 @@ export function createElement (options) {
   return newElement
 }
 
-export function styleElement (element, className) {
-  element.classList.add(className)
+export function styleElement (element, ...classes) {
+  classes.forEach(className => {
+    element.classList.add(className)
+  })
 }
 
 /**

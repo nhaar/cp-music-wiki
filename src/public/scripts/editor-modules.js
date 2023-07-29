@@ -319,6 +319,12 @@ class ElementModule extends ChildModule {}
  */
 class ReadonlyModule extends ChildModule {}
 
+class DivModule extends ConnectionModule {
+  initialize () {
+    this.e = createElement({ parent: this.e })
+  }
+}
+
 /**
  * Module containing a single text element
  */
@@ -346,6 +352,9 @@ class SimpleTextModule extends ElementModule {
   postbuild () { this.int = new Pointer(this.textInput, this.entry) }
 
   middleoutput () { this.int = new Pointer(this.textInput, this.access) }
+
+  // to prevent 'undefned' from being written in the input
+  convertinput (input) { return input || '' }
 }
 
 /**
@@ -709,14 +718,14 @@ class LocalizationNameModule extends ObjectModule {
    * Create internal pointer
    */
   initialize () {
-    this.e = createElement({ parent: this.e, classes: ['hidden', 'localization-name'] })
+    this.e = createElement({ parent: this.e, classes: ['hidden', 'localization-name', 'header-row'] })
   }
 
   modules () {
     return [
-      [TextInputModule, 'name'],
-      [getReferenceSearchModule(), 'reference'],
-      [TextAreaModule, 'translationNotes']
+      [getHeaderRowModule('Localized Name', TextInputModule), 'name'],
+      [getHeaderRowModule('Name Reference', getReferenceSearchModule()), 'reference'],
+      [getHeaderRowModule('Translation Notes', TextAreaModule), 'translationNotes']
     ]
   }
 }
@@ -729,6 +738,7 @@ class LocalizationNamesModule extends ObjectModule {
    * Create element to hold the localization names
    */
   initialize () {
+    this.bridge = this.e
     this.e = createElement({})
   }
 
@@ -737,15 +747,17 @@ class LocalizationNamesModule extends ObjectModule {
    */
   prebuild () {
     const html = `
-      <option selected> [PICK LOCALIZATION] </option>
+      <option selected> [PICK LANGUAGE] </option>
       <option value="0"> Portuguese </option>
       <option value="1"> French </option>
       <option value="2"> Spanish </option>
       <option value="3"> German </option>
       <option value="4"> Russian </option>
     `
-    this.langSelect = createElement({ parent: this.parent.e, tag: 'select', innerHTML: html })
-    this.parent.e.appendChild(this.e)
+    this.selectDiv = createElement({ parent: this.bridge, className: 'language-select' })
+    createElement({ parent: this.selectDiv, innerHTML: 'Language' })
+    this.langSelect = createElement({ parent: this.selectDiv, tag: 'select', innerHTML: html })
+    this.bridge.appendChild(this.e)
   }
 
   /**
@@ -753,7 +765,7 @@ class LocalizationNamesModule extends ObjectModule {
    */
   presetup () {
     this.langSelect.addEventListener('change', () => {
-      const langNamesDiv = this.parent.e.children[3]
+      const langNamesDiv = this.e
       const targetElement = langNamesDiv.children[Number(this.langSelect.value)]
       const previousElement = langNamesDiv.querySelector(':scope > div:not(.hidden)')
 
@@ -780,13 +792,13 @@ class SongNameModule extends ObjectModule {
   /**
    * Style row
    */
-  initialize () { styleElement(this.e, 'name-row') }
+  initialize () { styleElement(this.e, 'name-row', 'header-row') }
 
   modules () {
     return [
-      [TextInputModule, 'name'],
-      [getReferenceSearchModule(), 'reference'],
-      [LocalizationNamesModule, '']
+      [getHeaderRowModule('Main Name', TextInputModule), 'name'],
+      [getHeaderRowModule('Name Reference', getReferenceSearchModule()), 'reference'],
+      [getHeaderRowModule('Localization Name', LocalizationNamesModule), '']
     ]
   }
 }
@@ -1055,6 +1067,10 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
   }
 
   return EditorRowModule
+}
+
+function getHeaderRowModule (header, ChildClass, args = []) {
+  return getEditorRowModule(header, ChildClass, false, args)
 }
 
 export class GenreEditor extends EditorModule {

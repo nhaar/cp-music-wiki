@@ -6,6 +6,7 @@
   position: absolute;
   background-color: white;
   z-index: 100;
+  padding: 0;
 }
 
 .query-options div {
