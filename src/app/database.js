@@ -93,7 +93,20 @@ class WikiDatabase {
     }
 
     for (const type in request.request) {
-      // do something soon
+      let query = request.request[type]
+
+      // replace shorthand sqls
+      query = query.replace(/SELECT (?=\w+)/, 'SELECT id, data FROM ')
+
+      // replace with things if exist
+      query = replaceWithArray(data, query)
+
+      // replace ids if necessary
+      query = query.replace('$id', id)
+
+      const results = await this.handler.pool.query(query)
+
+      response[type] = results.rows
     }
 
     return response
@@ -536,6 +549,7 @@ const db = new WikiDatabase({
     originalname QUERY
     filename TEXT
     source INT
+    song INT
     isHQ BOOLEAN
     sourceLink TEXT
   `),
@@ -731,6 +745,49 @@ const test = {
       OR id IN main.names[*].ru.reference
     `
   }
+}
+
+// goal: transform
+// @.names[*].reference onto the wanted array
+function replaceWithArray (data, string) {
+  const matchInfo = string.match(/@((\.\w+)|(\[.\]))*/)
+  if (!matchInfo) return string
+
+  const pos = matchInfo.index
+  const path = matchInfo[0]
+
+  const steps = path.match(/\.\w+|\[.\]/g)
+  removeDot = x => x.match(/[^.]+/)[0]
+
+  const results = []
+
+  const iterator = (object, current) => {
+    if (current === steps.length) {
+      results.push(object)
+      return
+    }
+    const step = steps[current]
+
+    if (step.includes('.')) {
+      iterator(object[removeDot(step)], current + 1)
+    } else if (step.includes('[*]')) {
+      object.forEach(element => {
+        iterator(element, current + 1)
+      })
+    } else if (step.includes('[')) {
+      iterator(object[Number(step.match(/\[(.*?)\]/)[1])], current + 1)
+    }
+  }
+
+  iterator(data, 0)
+
+  let replaceString
+  if (results.length === 1) {
+    replaceString = results[0]
+  } else {
+    replaceString = `[${results}]`
+  }
+  return string.replace(path, replaceString)
 }
 
 module.exports = db

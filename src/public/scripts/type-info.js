@@ -10,7 +10,13 @@ export const types = [
   new TypeInfo(
     'song',
     'Song',
-    SongEditor
+    SongEditor,
+    {
+      file: `
+        SELECT file
+        WHERE data ->> 'song' = '$id'
+      `
+    }
   ),
   new TypeInfo(
     'author',

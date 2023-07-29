@@ -1013,6 +1013,7 @@ export class FileEditor extends EditorModule {
       fileHeader = 'Upload the audio file'
     }
     return [
+      ['File Song', getSearchQueryModule('song'), '.file.data.song'],
       ['File Source', getSearchQueryModule('source'), '.file.data.source'],
       ['Link to Source (if needed)', TextInputModule, '.file.data.sourceLink'],
       ['Is it HQ?', CheckboxModule, '.file.data.isHQ'],
