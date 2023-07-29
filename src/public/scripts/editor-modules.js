@@ -807,10 +807,12 @@ class SongNameModule extends ObjectModule {
  * Module for editting a song author
  */
 class SongAuthorModule extends ObjectModule {
+  prebuild () { styleElement(this.e, 'grid', 'header-row') }
+
   modules () {
     return [
-      [getSearchQueryModule('author'), 'author'],
-      [getReferenceSearchModule(), 'reference']
+      [getHeaderRowModule('Author Name', getSearchQueryModule('author')), 'author'],
+      [getHeaderRowModule('Reference', getReferenceSearchModule()), 'reference']
     ]
   }
 }
@@ -831,10 +833,12 @@ class AudioFileModule extends ReadonlyModule {
  * Module for an unofficial name
  */
 class UnofficialNameModule extends ObjectModule {
+  prebuild () { styleElement(this.e, 'header-row', 'grid') }
+
   modules () {
     return [
-      [TextInputModule, 'name'],
-      [TextAreaModule, 'description']
+      [getHeaderRowModule('Name', TextInputModule), 'name'],
+      [getHeaderRowModule('Description', TextAreaModule), 'description']
     ]
   }
 }
@@ -843,10 +847,11 @@ class UnofficialNameModule extends ObjectModule {
  * Module for a song version object
  */
 class SongVersionModule extends ObjectModule {
+  prebuild () { styleElement(this.e, 'header-row', 'grid') }
   modules () {
     return [
-      [TextInputModule, 'name'],
-      [TextAreaModule, 'description']
+      [getHeaderRowModule('Version Name', TextInputModule), 'name'],
+      [getHeaderRowModule('Description', TextAreaModule), 'description']
     ]
   }
 }
@@ -864,11 +869,37 @@ class DateInputModule extends ElementModule {
   }
 }
 
+/**
+ * Module containing only a checkbox and having its checked property as the i/o data
+ */
+class CheckboxModule extends ElementModule {
+  /**
+   * Render the checkbox
+   */
+  prebuild () {
+    this.checkbox = createElement({ parent: this.e, tag: 'input', type: 'checkbox' })
+  }
+
+  /**
+   * Create the internal pointer
+   */
+  postbuild () { this.int = new Pointer(this.checkbox, 'checked') }
+}
+
+class EstimateCheckboxModule extends CheckboxModule {
+  prebuild () {
+    styleElement(this.e, 'date-estimate')
+    this.div = createElement({ parent: this.e, className: 'is-estimate' })
+    this.text = createElement({ parent: this.div, innerHTML: 'Is estimate?' })
+    this.checkbox = createElement({ parent: this.div, tag: 'input', type: 'checkbox' })
+  }
+}
+
 class DateEstimateModule extends ObjectModule {
   modules () {
     return [
       [DateInputModule, 'date'],
-      [CheckboxModule, 'isEstimate']
+      [EstimateCheckboxModule, 'isEstimate']
     ]
   }
 }
@@ -912,7 +943,7 @@ export class SongEditor extends EditorModule {
       ['Youtube Link', TextInputModule, song('link')],
       ['Song Files', MoveableRowsModule, song('files'), [AudioFileModule, 'audios-div', { useAdd: false, useDelete: false }]],
       ['Unofficial Names', MoveableRowsModule, song('unofficialNames'), [UnofficialNameModule]],
-      ['SWF Music IDs', MoveableRowsModule, song('swfMusicNumbers'), [TextInputModule]],
+      ['SWF Music IDs', MoveableRowsModule, song('swfMusicNumbers'), [NumberInputModule]],
       ['First Paragraph', TextAreaModule, song('firstParagraph')],
       ['Page Source Code', TextAreaModule, song('page')],
       ['Key Signatures', MoveableRowsModule, song('keySignatures'), [getSearchQueryModule('key_signature')]],
@@ -937,23 +968,6 @@ export class ReferenceEditor extends EditorModule {
       ['Reference Description', TextAreaModule, file('description')]
     ]
   }
-}
-
-/**
- * Module containing only a checkbox and having its checked property as the i/o data
- */
-class CheckboxModule extends ElementModule {
-  /**
-   * Render the checkbox
-   */
-  prebuild () {
-    this.checkbox = createElement({ parent: this.e, tag: 'input', type: 'checkbox' })
-  }
-
-  /**
-   * Create the internal pointer
-   */
-  postbuild () { this.int = new Pointer(this.checkbox, 'checked') }
 }
 
 /**

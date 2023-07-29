@@ -177,10 +177,6 @@ button:hover {
   grid-template-rows: repeat(2, 50px) 100px;
 }
 
-.hidden {
-  display: none;
-  height: 0;
-}
 
 
 .hidden-btn {
@@ -197,7 +193,12 @@ button:hover {
   grid-template-rows: repeat(2, 50px) 1fr ;
 }
 
+.grid {
+  display: grid;
+}
+
 .header-row {
+  display: grid;
   grid-template-columns: 200px 1fr;
   grid-gap: 5px;
   background-color: black;
@@ -215,4 +216,26 @@ button:hover {
 .language-select {
   display: grid;
   grid-template-columns: 100px 1fr;
+}
+
+.date-estimate {
+  display: flex;
+}
+
+.is-estimate {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.is-estimate div {
+  font-size: 12px;
+  width: 50px;
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+  height: 0;
 }
