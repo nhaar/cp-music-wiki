@@ -569,8 +569,7 @@ class GridModule extends ArrayModule {
     super(parent, out, element, ChildClass)
     Object.assign(this, { ChildClass })
     this.rows = 0
-    this.columns = 1  
-  
+    this.columns = 1
   }
 
   addRow (values = []) {
@@ -594,7 +593,6 @@ class GridModule extends ArrayModule {
       child.setup()
     }
     this.setTemplateColumns()
-  
   }
 
   setTemplateColumns () {
@@ -613,20 +611,18 @@ class GridModule extends ArrayModule {
     this.grid = createElement({ parent: this.e })
     this.grid.style.display = 'grid'
     this.rowButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Add row' })
-    this.colButton = createElement({ parent: this.e , tag: 'button', innerHTML: 'Add column'})
+    this.colButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Add column' })
   }
 
   postbuild () {
     const grid = this.out.read()
     if (grid.length) {
-
       const firstRow = grid[0]
       this.columns = firstRow.length
       this.setTemplateColumns()
       for (let i = 0; i < grid.length; i++) {
         this.addRow(grid[i])
       }
-      
     } else {
       this.columns = 1
     }
@@ -655,20 +651,6 @@ class GridModule extends ArrayModule {
     this.array = gridArray
   }
 }
-
-class StageAppearanceModule extends ObjectModule {
-  modules () {
-    return [
-      [CheckboxModule, 'isUnused'],
-      [DateInputModule, 'dateStart'],
-      [CheckboxModule, 'isStartEstimate'],
-      [DateInputModule, 'dateEnd'],
-      [CheckboxModule, 'isEndEstimate'],
-      [getReferenceSearchModule(), 'reference']
-    ]
-  }
-}
-
 
 /**
  * Get a search query module constructor for a specific database type
@@ -870,6 +852,24 @@ class DateInputModule extends ElementModule {
   }
 }
 
+class DateEstimateModule extends ObjectModule {
+  modules () {
+    return [
+      [DateInputModule, 'date'],
+      [CheckboxModule, 'isEstimate']
+    ]
+  }
+}
+
+class TimeRangeModule extends ObjectModule {
+  modules () {
+    return [
+      [DateEstimateModule, 'start'],
+      [DateEstimateModule, 'end']
+    ]
+  }
+}
+
 /**
  * Base class for the top module of an editor
  */
@@ -907,7 +907,7 @@ export class SongEditor extends EditorModule {
       ['Musical Genres', MoveableRowsModule, song('genres'), [getSearchQueryModule('genre')]],
       ['Page Categories', MoveableRowsModule, song('categories'), [getSearchQueryModule('category')]],
       ['Song Versions', MoveableRowsModule, song('versions'), [SongVersionModule]],
-      ['Date Composed', DateInputModule, song('composedDate')],
+      ['Date Composed', DateEstimateModule, song('composedDate')],
       ['External Release Date', DateInputModule, song('externalReleaseDate')]
     ]
   }
@@ -1098,10 +1098,7 @@ class SongAppearanceModule extends ObjectModule {
   modules () {
     return [
       [CheckboxModule, 'isUnused'],
-      [DateInputModule, 'dateStart'],
-      [CheckboxModule, 'isStartEstimate'],
-      [DateInputModule, 'dateEnd'],
-      [CheckboxModule, 'isEndEstimate'],
+      [TimeRangeModule, 'available'],
       [getSearchQueryModule('song'), 'song'],
       [getReferenceSearchModule(), 'reference']
     ]
@@ -1112,10 +1109,7 @@ export class FlashroomEditor extends EditorModule {
   modules () {
     return [
       ['Room Name', TextInputModule, '.flash_room.data.name'],
-      ['Date the room opened', DateInputModule, '.flash_room.data.releaseDate'],
-      ['Is room opened date estimate?', CheckboxModule, '.flash_room.data.isReleaseEstimate'],
-      ['Date the room closed', DateInputModule, '.flash_room.data.closureDate'],
-      ['Is the date for closure an estimate?', CheckboxModule, '.flash_room.data.isClosureEstimate'],
+      ['Time period the room was open', TimeRangeModule, '.flash_room.data.open'],
       ['Songs uses in the room', MoveableRowsModule, '.flash_room.data.songUses', [SongAppearanceModule]]
     ]
   }
@@ -1130,10 +1124,7 @@ class PartySongModule extends ObjectModule {
         Minigame: 2
       }]],
       [CheckboxModule, 'usePartyDate'],
-      [DateInputModule, 'dateStart'],
-      [CheckboxModule, 'isStartEstimate'],
-      [DateInputModule, 'dateEnd'],
-      [CheckboxModule, 'isEndEstimate'],
+      [TimeRangeModule, 'available'],
       [getSearchQueryModule('song'), 'song']
     ]
   }
@@ -1143,10 +1134,7 @@ export class FlashpartyEditor extends EditorModule {
   modules () {
     return [
       ['Party Name', TextInputModule, '.flash_party.data.name'],
-      ['Party launch date', DateInputModule, '.flash_party.data.dateStart'],
-      ['Is the start date an estimate?', CheckboxModule, '.flash_party.data.isStartEstimate'],
-      ['Party end date', DateInputModule, '.flash_party.data.dateEnd'],
-      ['Is the end date an estimate?', CheckboxModule, '.flash_party.data.isEndEstimate'],
+      ['Period the party was actiuve', TimeRangeModule, '.flash_party.data.active'],
       ['Songs used in the party', MoveableRowsModule, '.flash_party.data.partySongs', [PartySongModule]]
     ]
   }
@@ -1166,18 +1154,27 @@ export class MuscatalogEditor extends EditorModule {
     return [
       ['Catalogue Title', TextInputModule, '.music_catalogue.data.name'],
       ['Catalogue Notes', TextAreaModule, '.music_catalogue.data.description'],
-      ['Catalogue Date', DateInputModule, '.music_catalogue.data.date'],
+      ['Catalogue Date', DateEstimateModule, '.music_catalogue.data.date'],
       ['Song List', GridModule, '.music_catalogue.data.songs', [CatalogueItemModule]],
       ['Catalogue Reference', getReferenceSearchModule(), '.music_catalogue.data.reference']
     ]
   }
 }
 
+class StageAppearanceModule extends ObjectModule {
+  modules () {
+    return [
+      [CheckboxModule, 'isUnused'],
+      [TimeRangeModule, 'appearance'],
+      [getReferenceSearchModule(), 'reference']
+    ]
+  }
+}
 
 export class StageEditor extends EditorModule {
   modules () {
     return [
-      ['Stage Play Name',TextInputModule, '.stage_play.data.name'],
+      ['Stage Play Name', TextInputModule, '.stage_play.data.name'],
       ['Play Theme Song', getSearchQueryModule('song'), '.stage_play.data.song'],
       ['Play Debuts', MoveableRowsModule, '.stage_play.data.appearances', [StageAppearanceModule]]
     ]
@@ -1190,10 +1187,7 @@ class MinigameSongModule extends ObjectModule {
       [CheckboxModule, 'isUnused'],
       [getSearchQueryModule('song'), 'song'],
       [CheckboxModule, 'useMinigameDates'],
-      [DateInputModule, 'releaseDate'],
-      [CheckboxModule, 'isReleaseEstimate'],
-      [DateInputModule, 'removalDate'],
-      [CheckboxModule, 'isRemovalEstimate']
+      [TimeRangeModule, 'available']
     ]
   }
 }
@@ -1202,10 +1196,7 @@ export class FlashgameEditor extends EditorModule {
   modules () {
     return [
       ['Minigame Name', TextInputModule, '.flash_minigame.data.name'],
-      ['Release Date', DateInputModule, '.flash_minigame.data.releaseDate'],
-      ['Is release date estimate', CheckboxModule, '.flash_minigame.data.,isReleaseEstimate'],
-      ['Closure Date', DateInputModule, '.flash_minigame.data.closureDate'],
-      ['Is closure estimate', CheckboxModule, '.flash_minigame.data.isClosureEstimate'],
+      ['Time period game is playable', TimeRangeModule, '.flash_minigame.data.available'],
       ['Minigame songs', MoveableRowsModule, '.flash_minigame.data.songs', [MinigameSongModule]]
     ]
   }

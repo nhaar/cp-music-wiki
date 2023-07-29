@@ -514,7 +514,7 @@ const db = new WikiDatabase({
     genres INT[]
     categories INT[]
     versions VERSION[]
-    composedDate DATE
+    composedDate DATE_ESTIMATE
     externalReleaseDate DATE
   `, [
     new Validator(
@@ -566,24 +566,18 @@ const db = new WikiDatabase({
   `),
   flash_room: new ObjectType(`
     name QUERY
-    releaseDate DATE
-    isReleaseEstimate BOOLEAN
-    closureDate DATE
-    isClosureEstimate BOOLEAN
+    open TIME_RANGE
     songUses SONG_APPEARANCE[]
   `),
   flash_party: new ObjectType(`
     name QUERY
-    dateStart DATE
-    isStartEstimate BOOLEAN
-    dateEnd DATE
-    isEndEstimate BOOLEAN
+    active TIME_RANGE
     partySongs PARTY_SONG[]
   `),
   music_catalogue: new ObjectType(`
     name QUERY
     description TEXT
-    date DATE
+    launch DATE_ESTIMATE
     songs CATALOGUE_ITEM[][]
     reference INT
   `),
@@ -594,39 +588,27 @@ const db = new WikiDatabase({
   `),
   flash_minigame: new ObjectType(`
     name QUERY
-    releaseDate DATE
-    isReleaseEstimate BOOLEAN
-    closureDate DATE
-    isClosureEstimate BOOLEAN
+    available TIME_RANGE
     songs GAME_SONG[]
   `),
   flash_misc: new ObjectType(`
     isUnused BOOLEAN
     name QUERY
     description TEXT
-    startDate DATE
-    isStartEstimate BOOLEAN
-    endDate DATE
-    isEndEstimate BOOLEAN
+    available TIME_RANGE
     song INT
   `),
   penguin_chat_appearance: new ObjectType(`
     name QUERY
     description TEXT
     song INT
-    start_date DATE
-    isStartEstimate BOOLEAN
-    endDate DATE
-    isEndEstimate BOOLEAN
+    available TIME_RANGE
   `),
   exclusive_app_appearance: new ObjectType(`
     song INT
     name QUERY
     description TEXT
-    startDate DATE
-    isStartEstimate BOOLEAN
-    endDate DATE
-    isEndEstimate BOOLEAN
+    available TIME_RANGE
   `),
   youtube_video: new ObjectType(`
     name QUERY
@@ -635,11 +617,11 @@ const db = new WikiDatabase({
   `),
   tv_video: new ObjectType(`
     name QUERY
-    earliestDate DATE
+    earliest DATE_ESTIMATE
     appearance VIDEO_APPEARANCE[]
   `),
   industry_release: new ObjectType(`
-    releaseDate DATE
+    release DATE
     songs INT[]
   `),
   screenhog_comission: new ObjectType(`
@@ -647,7 +629,7 @@ const db = new WikiDatabase({
     projectName TEXT
     projectDescription TEXT
     songs INT[]
-    availableDate DATE
+    available DATE_ESTIMATE
   `)
 }, {
   NAME: new ObjectType(`
@@ -683,10 +665,7 @@ const db = new WikiDatabase({
   `),
   SONG_APPEARANCE: new ObjectType(`
     isUnused BOOLEAN
-    dateStart TEXT
-    isStartEstimate BOOLEAN
-    dateEnd TEXT
-    isEndEstimate BOOLEAN
+    available TIME_RANGE
     song INT
     reference INT
   `),
@@ -694,10 +673,7 @@ const db = new WikiDatabase({
     isUnused BOOLEAN
     type INT
     usePartyDate BOOLEAN
-    dateStart DATE
-    isStartEstimate BOOLEAN
-    dateEnd DATE
-    isEndEstimate BOOLEAN
+    available TIME_RANGE
     song INT
   `),
   CATALOGUE_ITEM: new ObjectType(`
@@ -706,26 +682,28 @@ const db = new WikiDatabase({
   `),
   STAGE_APPEARANCE: new ObjectType(`
     isUnused BOOLEAN
-    dateStart DATE
-    isStartEstimate BOOLEAN
-    dateEnd DATE
-    isEndEstimate BOOLEAN
+    appearance TIME_RANGE
     reference INT
   `),
   GAME_SONG: new ObjectType(`
     isUnused BOOLEAN
     song INT
     useMinigameDates BOOLEAN
-    releaseDate DATE
-    isReleaseEstimate BOOLEAN
-    removalDate DATE
-    isRemovalEstimate BOOLEAN
+    available TIME_RANGE
   `),
   VIDEO_APPEARANCE: new ObjectType(`
     song INT
     isEntireVideo BOOLEAN
     startTime INT
     endTime INT
+  `),
+  DATE_ESTIMATE: new ObjectType(`
+    date DATE
+    isEstimate BOOLEAN
+  `),
+  TIME_RANGE: new ObjectType(`
+    start DATE_ESTIMATE
+    end DATE_ESTIMATE
   `)
 })
 
