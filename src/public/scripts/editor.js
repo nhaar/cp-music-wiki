@@ -23,18 +23,12 @@ class Controller {
   /**
    * Add controls to the submit button
    */
-  setupSubmitButton (editorModule, response, type) {
+  setupSubmitButton (editorModule, row, type) {
     this.view.submitButton.addEventListener('click', async () => {
       await editorModule.output()
-      console.log(deepcopy(response))
-      postJSON('api/update', { type, update: response })
+      console.log(deepcopy(row))
+      postJSON('api/update', { type, row })
     })
-    // this.submitBlocker.button = this.view.submitButton
-    // this.submitBlocker.clickCallback = () => {
-    //   const data = this.getUserData()
-    //   this.model.update(data)
-    // }
-    // this.submitBlocker.addListeners()
   }
 
   /**
@@ -51,16 +45,16 @@ class Controller {
     const type = params.t ? Number(params.t) : null
     const id = Number(params.id)
     const typeInfo = types[type]
-    const response = await postAndGetJSON('api/get', { type: typeInfo.type, id, request: typeInfo.input })
-    console.log(deepcopy(response))
-    const editor = new typeInfo.Editor(response, this.view.editor)
+    const row = await postAndGetJSON('api/get', { type: typeInfo.type, id })
+    console.log(deepcopy(row))
+    const editor = new typeInfo.Editor(row, this.view.editor)
     editor.build()
     editor.input()
     editor.setup()
     // make a request including type, id, request type
 
     this.view.renderSubmitButton()
-    this.setupSubmitButton(editor, response, typeInfo.type)
+    this.setupSubmitButton(editor, row, typeInfo.type)
 
     // const typeRelation = {
     //   0: Song,

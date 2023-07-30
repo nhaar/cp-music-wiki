@@ -66,6 +66,10 @@ class WikiDatabase {
     this.queryIndexing()
   }
 
+  isType (type) {
+    return Object.keys(this.databaseTypes).includes(type)
+  }
+
   initialize () {
     for (const type in this.databaseTypes) {
       this.handler.createType(type)
@@ -79,49 +83,6 @@ class WikiDatabase {
    * @returns {Row} Data retrieved from the database
    */
   getDataById = async (type, id) => await this.handler.selectId(type, id)
-
-  async getEditData (request) {
-    const { type, id } = request
-    let data
-    if (id) {
-      data = await this.getDataById(type, id)
-    } else {
-      data = { id, data: this.getDefault(type) }
-    }
-    const response = {
-      [type]: data
-    }
-
-    for (const type in request.request) {
-      let query = request.request[type]
-
-      // replace shorthand sqls
-      query = query.replace(/SELECT (?=\w+)/, 'SELECT id, data FROM ')
-
-      // replace with things if exist
-      query = replaceWithArray(data, query)
-
-      // replace ids if necessary
-      query = query.replace('$id', id)
-
-      const results = await this.handler.pool.query(query)
-
-      response[type] = results.rows
-    }
-
-    return response
-  }
-
-  async updateEdit (type, update) {
-    this.updateType(type, update[type])
-    for (const key in update) {
-      if (key !== type) {
-        update[key].forEach(data => {
-          this.updateType(key, data)
-        })
-      }
-    }
-  }
 
   /**
    * Check if the object for a type follows the rules defined and returns a list of all the errors found
@@ -796,5 +757,7 @@ function replaceWithArray (data, string) {
   }
   return string.replace(path, replaceString)
 }
+
+db.getDataById('song', 100).then(res => console.log(res))
 
 module.exports = db
