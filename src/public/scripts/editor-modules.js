@@ -83,7 +83,6 @@ class BaseModule {
       for (const v in options) {
         vars[v] = module[options[v]]
       }
-      console.log(vars)
 
       if (!vars.args) vars.args = []
       if (typeof vars.property === 'string') {
@@ -92,7 +91,7 @@ class BaseModule {
           : this.out
       }
       if (vars.path) vars.path = Pointer.fromPath(this.r, vars.path)
-      else if (vars.path === '') { console.log(this.out); vars.path = this.out }
+      else if (vars.path === '') { vars.path = this.out }
       children.push(callbackfn(vars))
     })
     return children
@@ -295,7 +294,6 @@ class ObjectModule extends ChildModule {
    * Creates the object in the external data if it doesn't exists
    */
   earlyinit () {
-    console.log(this)
     if (!this.out.read()) this.out.assign({})
   }
 
@@ -1016,10 +1014,8 @@ class FileUploadModule extends ElementModule {
    */
   async middleoutput () {
     const file = this.fileUpload.files[0]
-    console.log(file)
     const formData = new FormData()
     formData.append('file', file)
-    console.log(formData)
     const response = await fetch('api/submit-file', {
       method: 'POST',
       body: formData

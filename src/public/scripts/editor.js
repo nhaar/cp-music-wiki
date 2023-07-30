@@ -45,8 +45,7 @@ class Page {
       row = await postAndGetJSON('api/default', { type: typeInfo.type })
     }
     console.log(deepcopy(row))
-    const editor = new typeInfo.Editor(row, this.editor)
-    console.log(editor)
+    const editor = new typeInfo.Editor(row.data, this.editor)
     editor.build()
     editor.input()
     editor.setup()

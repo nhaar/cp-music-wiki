@@ -21,8 +21,8 @@ router.post('/default', async (req, res) => {
 router.post('/get', async (req, res) => {
   const { type, id } = req.body
 
-  if (checkType(res, type)) {
-    if (checkId(res, id)) {
+  if (checkType(res, type) && checkId(res, id)) {
+    if (true) {
       const row = await db.getDataById(type, id)
       if (!row) sendBadReq(res, 'Item not found in the database')
       else res.status(200).send(row)
