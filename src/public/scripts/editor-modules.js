@@ -2,13 +2,13 @@ import { createSearchQuery } from './query-options.js'
 import { createElement, selectElement, selectElements, styleElement } from './utils.js'
 
 /**
- * A pointer representation to a variable that isn't necessarily a reference
+ * A pointer representation to a variable
  *
- * It consists of using the pointer to a reference and reserving a property inside the object
+ * It consists of using the reference to an object and reserving a property inside the object
  */
 class Pointer {
   /**
-   * Define pointer in object and property name
+   * Define pointer in object with property name
    * @param {object} reference - Reference to an object
    * @param {string} property - Name of a property to reserve
    */
@@ -34,31 +34,6 @@ class Pointer {
    * @param {Pointer} pointer Other pointer to pass value to
    */
   exchange (pointer) { pointer.assign(this.read()) }
-
-  /**
-   * Create a pointer using an object reference and the path to an element inside the object
-   * @param {object} reference - Object reference to save
-   * @param {string} path - A string representation of the path, for example, '.property[0][1].property'
-   * @returns {Pointer} Result pointer
-   */
-  static fromPath (reference, path) {
-    const steps = path.match(/\.\w+|\[.\]/g)
-    let object = reference
-    const removeDot = x => x.match(/[^.]+/)[0]
-    const lastStep = removeDot(steps.splice(steps.length - 1, 1)[0])
-
-    steps.forEach(step => {
-      if (step.includes('.')) {
-        const prop = removeDot(step)
-        object = object[prop]
-      } else if (step.includes('[')) {
-        const i = Number(step.match(/\[(.*?)\]/)[1])
-        object = object[i]
-      }
-    })
-
-    return new Pointer(object, lastStep)
-  }
 }
 
 /**
@@ -72,7 +47,7 @@ class BaseModule {
    *
    * It iterates through all the preconfigured modules and generates the list of children following the creation rules
    * established by the options and the callback function
-   * @param {object} options - Object that maps variable names to indexes of arrays. Each module is an array where each index represents a variable, dictated by this options object
+   * @param {string[]} options - Array where each element and its index corresponds to what each element in the module list is
    * @param {function(object) : BaseModule} callbackfn - Takes as the argument a vars object where each key is the name of an object with its value, and returns the constructed reference to the child
    * @returns {BaseModule[]} The array with all the children
    */
@@ -80,13 +55,14 @@ class BaseModule {
     const children = []
     this.modules().forEach(module => {
       const vars = {}
-      for (const v in options) {
-        vars[v] = module[options[v]]
-      }
+      options.forEach((option, i) => {
+        vars[option] = module[i]
+      })
 
+      // handle special data types
       if (!vars.args) vars.args = []
       if (typeof vars.property === 'string') {
-        vars.chOut = vars.property
+        vars.childOut = vars.property
           ? new Pointer(this.out.read(), vars.property)
           : this.out
       }
@@ -199,16 +175,17 @@ class ReceptorModule extends BaseModule {
   constructor (reference, element) {
     super()
     this.r = reference
+    this.out = new Pointer(this, 'r')
     this.e = element
     this.children = this.getmodules()
   }
 
   getmodules () {
-    return this.iteratemodules({
-      Class: 0,
-      path: 1,
-      args: 2
-    }, o => new o.Class(this, o.path, null, ...o.args))
+    return this.iteratemodules([
+      'Class',
+      'path',
+      'args'
+    ], o => new o.Class(this, o.path, null, ...o.args))
   }
 }
 
@@ -218,10 +195,10 @@ class ReceptorModule extends BaseModule {
  */
 class ConnectionModule extends ChildModule {
   getmodules () {
-    return this.iteratemodules({
-      Class: 0,
-      args: 1
-    }, o => new o.Class(this.parent, this.out, null, ...o.args))
+    return this.iteratemodules(
+      ['Class', 'args'],
+      o => new o.Class(this.parent, this.out, null, ...o.args)
+    )
   }
 }
 
@@ -296,14 +273,10 @@ class ObjectModule extends ChildModule {
   }
 
   getmodules () {
-    return this.iteratemodules({
-      Class: 0,
-      property: 1,
-      args: 2
-    }, o => {
-      const { Class, args, chOut } = o
-      return new Class(this, chOut, null, ...args)
-    })
+    return this.iteratemodules(
+      ['Class', 'property', 'args'],
+      o => new o.Class(this, o.childOut, null, ...o.args)
+    )
   }
 }
 
@@ -323,16 +296,13 @@ class ReadonlyModule extends ChildModule {}
 
 class TableModule extends ObjectModule {
   getmodules () {
-    return this.iteratemodules({
-      header: 0,
-      Class: 1,
-      property: 2,
-      args: 3
-    }, o => {
-      const { Class, args, chOut, header } = o
-      const TableClass = getHeaderRowModule(header, Class, args)
-      return new TableClass(this, chOut, null, args)
-    })
+    return this.iteratemodules(
+      ['header', 'Class', 'property', 'args'],
+      o => {
+        const TableClass = getHeaderRowModule(o.header, o.Class, o.args)
+        return new TableClass(this, o.childOut, null)
+      }
+    )
   }
 }
 
@@ -929,19 +899,13 @@ class TimeRangeModule extends ObjectModule {
  */
 class EditorModule extends ReceptorModule {
   getmodules () {
-    return this.iteratemodules({
-      header: 0,
-      Class: 1,
-      prop: 2,
-      args: 3
-    }, o => {
-      const { header, Class, prop, args } = o
-      const chOut = prop
-        ? new Pointer(this.r, prop)
-        : new Pointer(this, 'r')
-      const RowModule = getEditorRowModule(header, Class, true, args)
-      return new RowModule(this, chOut)
-    })
+    return this.iteratemodules(
+      ['header', 'Class', 'property', 'args'],
+      o => {
+        const RowModule = getEditorRowModule(o.header, o.Class, true, o.args)
+        return new RowModule(this, o.childOut)
+      }
+    )
   }
 }
 
