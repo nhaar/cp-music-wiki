@@ -1,5 +1,5 @@
 import { createSearchQuery } from './query-options.js'
-import { createElement, deepcopy, selectElement, selectElements, styleElement } from './utils.js'
+import { createElement, selectElement, selectElements, styleElement } from './utils.js'
 
 /**
  * A pointer representation to a variable that isn't necessarily a reference
@@ -90,8 +90,6 @@ class BaseModule {
           ? new Pointer(this.out.read(), vars.property)
           : this.out
       }
-      if (vars.path) vars.path = Pointer.fromPath(this.r, vars.path)
-      else if (vars.path === '') { vars.path = this.out }
       children.push(callbackfn(vars))
     })
     return children
@@ -934,12 +932,15 @@ class EditorModule extends ReceptorModule {
     return this.iteratemodules({
       header: 0,
       Class: 1,
-      path: 2,
+      prop: 2,
       args: 3
     }, o => {
-      const { header, Class, path, args } = o
+      const { header, Class, prop, args } = o
+      const chOut = prop
+        ? new Pointer(this.r, prop)
+        : new Pointer(this, 'r')
       const RowModule = getEditorRowModule(header, Class, true, args)
-      return new RowModule(this, path)
+      return new RowModule(this, chOut)
     })
   }
 }
@@ -967,20 +968,20 @@ class SongFileEditor extends ObjectModule {
 export class SongEditor extends EditorModule {
   modules () {
     return [
-      ['Names', MoveableRowsModule, '.names', [SongNameModule, 'name-div']],
-      ['Authors', MoveableRowsModule, '.authors', [SongAuthorModule, 'authors-div']],
-      ['Youtube Link', TextInputModule, '.link'],
-      ['Song Files', MoveableRowsModule, '.files', [SongFileEditor, 'audios-div']],
-      ['Unofficial Names', MoveableRowsModule, '.unofficialNames', [UnofficialNameModule]],
-      ['SWF Music IDs', MoveableRowsModule, '.swfMusicNumbers', [NumberInputModule]],
-      ['First Paragraph', TextAreaModule, '.firstParagraph'],
-      ['Page Source Code', TextAreaModule, '.page'],
-      ['Key Signatures', MoveableRowsModule, '.keySignatures', [getSearchQueryModule('key_signature')]],
-      ['Musical Genres', MoveableRowsModule, '.genres', [getSearchQueryModule('genre')]],
-      ['Page Categories', MoveableRowsModule, '.categories', [getSearchQueryModule('category')]],
-      ['Song Versions', MoveableRowsModule, '.versions', [SongVersionModule]],
-      ['Date Composed', DateEstimateModule, '.composedDate'],
-      ['External Release Date', DateInputModule, '.externalReleaseDate']
+      ['Names', MoveableRowsModule, 'names', [SongNameModule, 'name-div']],
+      ['Authors', MoveableRowsModule, 'authors', [SongAuthorModule, 'authors-div']],
+      ['Youtube Link', TextInputModule, 'link'],
+      ['Song Files', MoveableRowsModule, 'files', [SongFileEditor, 'audios-div']],
+      ['Unofficial Names', MoveableRowsModule, 'unofficialNames', [UnofficialNameModule]],
+      ['SWF Music IDs', MoveableRowsModule, 'swfMusicNumbers', [NumberInputModule]],
+      ['First Paragraph', TextAreaModule, 'firstParagraph'],
+      ['Page Source Code', TextAreaModule, 'page'],
+      ['Key Signatures', MoveableRowsModule, 'keySignatures', [getSearchQueryModule('key_signature')]],
+      ['Musical Genres', MoveableRowsModule, 'genres', [getSearchQueryModule('genre')]],
+      ['Page Categories', MoveableRowsModule, 'categories', [getSearchQueryModule('category')]],
+      ['Song Versions', MoveableRowsModule, 'versions', [SongVersionModule]],
+      ['Date Composed', DateEstimateModule, 'composedDate'],
+      ['External Release Date', DateInputModule, 'externalReleaseDate']
     ]
   }
 }
@@ -991,9 +992,9 @@ export class SongEditor extends EditorModule {
 export class ReferenceEditor extends EditorModule {
   modules () {
     return [
-      ['Reference Name', TextInputModule, '.name'],
-      ['Link to Reference (if needed)', TextInputModule, '.link'],
-      ['Reference Description', TextAreaModule, '.description']
+      ['Reference Name', TextInputModule, 'name'],
+      ['Link to Reference (if needed)', TextInputModule, 'link'],
+      ['Reference Description', TextAreaModule, 'description']
     ]
   }
 }
@@ -1042,10 +1043,10 @@ export class FileEditor extends EditorModule {
       fileHeader = 'Upload the audio file'
     }
     return [
-      ['File Song', getSearchQueryModule('song'), '.song'],
-      ['File Source', getSearchQueryModule('source'), '.source'],
-      ['Link to Source (if needed)', TextInputModule, '.link'],
-      ['Is it HQ?', CheckboxModule, '.isHQ'],
+      ['File Song', getSearchQueryModule('song'), 'song'],
+      ['File Source', getSearchQueryModule('source'), 'source'],
+      ['Link to Source (if needed)', TextInputModule, 'link'],
+      ['Is it HQ?', CheckboxModule, 'isHQ'],
       [fileHeader, FileClass, '']
     ]
   }
@@ -1120,8 +1121,8 @@ function getHeaderRowModule (header, ChildClass, args = []) {
 export class GenreEditor extends EditorModule {
   modules () {
     return [
-      ['Genre Name', TextInputModule, '.name'],
-      ['External Link', TextInputModule, '.link']
+      ['Genre Name', TextInputModule, 'name'],
+      ['External Link', TextInputModule, 'link']
     ]
   }
 }
@@ -1129,8 +1130,8 @@ export class GenreEditor extends EditorModule {
 export class InstrumentEditor extends EditorModule {
   modules () {
     return [
-      ['Instrument Name', TextInputModule, '.name'],
-      ['External Link', TextInputModule, '.link']
+      ['Instrument Name', TextInputModule, 'name'],
+      ['External Link', TextInputModule, 'link']
     ]
   }
 }
@@ -1138,8 +1139,8 @@ export class InstrumentEditor extends EditorModule {
 export class KeysigEditor extends EditorModule {
   modules () {
     return [
-      ['Key Signature Name', TextInputModule, '.name'],
-      ['External Link', TextInputModule, '.link']
+      ['Key Signature Name', TextInputModule, 'name'],
+      ['External Link', TextInputModule, 'link']
     ]
   }
 }
@@ -1147,9 +1148,9 @@ export class KeysigEditor extends EditorModule {
 export class PageEditor extends EditorModule {
   modules () {
     return [
-      ['Page Title', TextInputModule, '.name'],
-      ['Content', TextAreaModule, '.content'],
-      ['Categories', MoveableRowsModule, '.categories', [getSearchQueryModule('category')]]
+      ['Page Title', TextInputModule, 'name'],
+      ['Content', TextAreaModule, 'content'],
+      ['Categories', MoveableRowsModule, 'categories', [getSearchQueryModule('category')]]
     ]
   }
 }
@@ -1168,9 +1169,9 @@ class SongAppearanceModule extends ObjectModule {
 export class FlashroomEditor extends EditorModule {
   modules () {
     return [
-      ['Room Name', TextInputModule, '.name'],
-      ['Time period the room was open', TimeRangeModule, '.open'],
-      ['Songs uses in the room', MoveableRowsModule, '.songUses', [SongAppearanceModule]]
+      ['Room Name', TextInputModule, 'name'],
+      ['Time period the room was open', TimeRangeModule, 'open'],
+      ['Songs uses in the room', MoveableRowsModule, 'songUses', [SongAppearanceModule]]
     ]
   }
 }
@@ -1194,8 +1195,8 @@ export class FlashpartyEditor extends EditorModule {
   modules () {
     return [
       ['Party Name', TextInputModule, '.name'],
-      ['Period the party was actiuve', TimeRangeModule, '.active'],
-      ['Songs used in the party', MoveableRowsModule, '.partySongs', [PartySongModule]]
+      ['Period the party was actiuve', TimeRangeModule, 'active'],
+      ['Songs used in the party', MoveableRowsModule, 'partySongs', [PartySongModule]]
     ]
   }
 }
@@ -1212,11 +1213,11 @@ class CatalogueItemModule extends ObjectModule {
 export class MuscatalogEditor extends EditorModule {
   modules () {
     return [
-      ['Catalogue Title', TextInputModule, '.name'],
-      ['Catalogue Notes', TextAreaModule, '.description'],
-      ['Catalogue Date', DateEstimateModule, '.date'],
-      ['Song List', GridModule, '.songs', [CatalogueItemModule]],
-      ['Catalogue Reference', getReferenceSearchModule(), '.reference']
+      ['Catalogue Title', TextInputModule, 'name'],
+      ['Catalogue Notes', TextAreaModule, 'description'],
+      ['Catalogue Date', DateEstimateModule, 'date'],
+      ['Song List', GridModule, 'songs', [CatalogueItemModule]],
+      ['Catalogue Reference', getReferenceSearchModule(), 'reference']
     ]
   }
 }
@@ -1234,9 +1235,9 @@ class StageAppearanceModule extends ObjectModule {
 export class StageEditor extends EditorModule {
   modules () {
     return [
-      ['Stage Play Name', TextInputModule, '.name'],
-      ['Play Theme Song', getSearchQueryModule('song'), '.song'],
-      ['Play Debuts', MoveableRowsModule, '.appearances', [StageAppearanceModule]]
+      ['Stage Play Name', TextInputModule, 'name'],
+      ['Play Theme Song', getSearchQueryModule('song'), 'song'],
+      ['Play Debuts', MoveableRowsModule, 'appearances', [StageAppearanceModule]]
     ]
   }
 }
@@ -1255,9 +1256,9 @@ class MinigameSongModule extends ObjectModule {
 export class FlashgameEditor extends EditorModule {
   modules () {
     return [
-      ['Minigame Name', TextInputModule, '.name'],
-      ['Time period game is playable', TimeRangeModule, '.available'],
-      ['Minigame songs', MoveableRowsModule, '.songs', [MinigameSongModule]]
+      ['Minigame Name', TextInputModule, 'name'],
+      ['Time period game is playable', TimeRangeModule, 'available'],
+      ['Minigame songs', MoveableRowsModule, 'songs', [MinigameSongModule]]
     ]
   }
 }

@@ -22,11 +22,9 @@ router.post('/get', async (req, res) => {
   const { type, id } = req.body
 
   if (checkType(res, type) && checkId(res, id)) {
-    if (true) {
-      const row = await db.getDataById(type, id)
-      if (!row) sendBadReq(res, 'Item not found in the database')
-      else res.status(200).send(row)
-    }
+    const row = await db.getDataById(type, id)
+    if (!row) sendBadReq(res, 'Item not found in the database')
+    else res.status(200).send(row)
   }
 })
 
@@ -83,11 +81,9 @@ router.post('/get-by-name', async (req, res) => {
 // get name with id
 router.post('/get-name', async (req, res) => {
   const { type, id } = req.body
-  if (checkType(res, type)) {
-    if (checkId(res, id)) {
-      const name = await db.getQueryNameById(type, id)
-      res.status(200).send({ name })
-    }
+  if (checkType(res, type) && checkId(res, id)) {
+    const name = await db.getQueryNameById(type, id)
+    res.status(200).send({ name })
   }
 })
 
