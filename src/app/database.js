@@ -61,19 +61,15 @@ class WikiDatabase {
     this.handler = new SQLHandler()
     Object.assign(this, { databaseTypes, propertyTypes })
 
-    this.initialize()
+    for (const type in this.databaseTypes) {
+      this.handler.createType(type)
+    }
     this.assignDefaults()
     this.queryIndexing()
   }
 
   isType (type) {
     return Object.keys(this.databaseTypes).includes(type)
-  }
-
-  initialize () {
-    for (const type in this.databaseTypes) {
-      this.handler.createType(type)
-    }
   }
 
   /**
@@ -688,76 +684,5 @@ const db = new WikiDatabase({
     filename TEXT
   `)
 })
-
-const test = {
-  type: 'song',
-  properties: {
-    files: `
-      SELECT originalname, filename
-      FROM file
-      WHERE id IN main.files
-    `,
-    authors: `
-      SELECT name
-      FROM author
-      WHERE id IN main.authors[*].author
-    `,
-    reference: `
-      SELECT name
-      FROM wiki_reference
-      WHERE id IN main.names[*].reference
-      OR id IN main.names[*].pt.reference
-      OR id IN main.names[*].fr.reference
-      OR id IN main.names[*].es.reference
-      OR id IN main.names[*].de.reference
-      OR id IN main.names[*].ru.reference
-    `
-  }
-}
-
-// goal: transform
-// @.names[*].reference onto the wanted array
-function replaceWithArray (data, string) {
-  const matchInfo = string.match(/@((\.\w+)|(\[.\]))*/)
-  if (!matchInfo) return string
-
-  const pos = matchInfo.index
-  const path = matchInfo[0]
-
-  const steps = path.match(/\.\w+|\[.\]/g)
-  removeDot = x => x.match(/[^.]+/)[0]
-
-  const results = []
-
-  const iterator = (object, current) => {
-    if (current === steps.length) {
-      results.push(object)
-      return
-    }
-    const step = steps[current]
-
-    if (step.includes('.')) {
-      iterator(object[removeDot(step)], current + 1)
-    } else if (step.includes('[*]')) {
-      object.forEach(element => {
-        iterator(element, current + 1)
-      })
-    } else if (step.includes('[')) {
-      iterator(object[Number(step.match(/\[(.*?)\]/)[1])], current + 1)
-    }
-  }
-
-  iterator(data, 0)
-
-  let replaceString
-  if (results.length === 1) {
-    replaceString = results[0]
-  } else {
-    replaceString = `[${results}]`
-  }
-  return string.replace(path, replaceString)
-}
-
-db.getDataById('song', 100).then(res => console.log(res))
 
 module.exports = db
