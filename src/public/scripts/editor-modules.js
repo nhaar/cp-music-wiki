@@ -83,8 +83,16 @@ class BaseModule {
       for (const v in options) {
         vars[v] = module[options[v]]
       }
+      console.log(vars)
+
       if (!vars.args) vars.args = []
+      if (typeof vars.property === 'string') {
+        vars.chOut = vars.property
+          ? new Pointer(this.out.read(), vars.property)
+          : this.out
+      }
       if (vars.path) vars.path = Pointer.fromPath(this.r, vars.path)
+      else if (vars.path === '') { console.log(this.out); vars.path = this.out }
       children.push(callbackfn(vars))
     })
     return children
@@ -287,6 +295,7 @@ class ObjectModule extends ChildModule {
    * Creates the object in the external data if it doesn't exists
    */
   earlyinit () {
+    console.log(this)
     if (!this.out.read()) this.out.assign({})
   }
 
@@ -296,10 +305,7 @@ class ObjectModule extends ChildModule {
       property: 1,
       args: 2
     }, o => {
-      const { Class, property, args } = o
-      const chOut = property
-        ? new Pointer(this.out.read(), property)
-        : this.out
+      const { Class, args, chOut } = o
       return new Class(this, chOut, null, ...args)
     })
   }
@@ -319,9 +325,18 @@ class ElementModule extends ChildModule {}
  */
 class ReadonlyModule extends ChildModule {}
 
-class DivModule extends ConnectionModule {
-  initialize () {
-    this.e = createElement({ parent: this.e })
+class TableModule extends ObjectModule {
+  getmodules () {
+    return this.iteratemodules({
+      header: 0,
+      Class: 1,
+      property: 2,
+      args: 3
+    }, o => {
+      const { Class, args, chOut, header } = o
+      const TableClass = getHeaderRowModule(header, Class, args)
+      return new TableClass(this, chOut, null, args)
+    })
   }
 }
 
@@ -423,7 +438,7 @@ export function getNameOnlyEditor (type) {
   class NameOnlyEditor extends EditorModule {
     modules () {
       return [
-        ['Name', TextInputModule, `.${type}.data.name`]
+        ['Name', TextInputModule, '.name']
       ]
     }
   }
@@ -713,7 +728,7 @@ function getReferenceSearchModule () {
 /**
  * Module for editting the data for a localization name
  */
-class LocalizationNameModule extends ObjectModule {
+class LocalizationNameModule extends TableModule {
   /**
    * Create internal pointer
    */
@@ -723,9 +738,9 @@ class LocalizationNameModule extends ObjectModule {
 
   modules () {
     return [
-      [getHeaderRowModule('Localized Name', TextInputModule), 'name'],
-      [getHeaderRowModule('Name Reference', getReferenceSearchModule()), 'reference'],
-      [getHeaderRowModule('Translation Notes', TextAreaModule), 'translationNotes']
+      ['Localized Name', TextInputModule, 'name'],
+      ['Name Reference', getReferenceSearchModule(), 'reference'],
+      ['Translation Notes', TextAreaModule, 'translationNotes']
     ]
   }
 }
@@ -788,7 +803,7 @@ class LocalizationNamesModule extends ObjectModule {
 /**
  * Module for editting a song name (official)
  */
-class SongNameModule extends ObjectModule {
+class SongNameModule extends TableModule {
   /**
    * Style row
    */
@@ -796,9 +811,9 @@ class SongNameModule extends ObjectModule {
 
   modules () {
     return [
-      [getHeaderRowModule('Main Name', TextInputModule), 'name'],
-      [getHeaderRowModule('Name Reference', getReferenceSearchModule()), 'reference'],
-      [getHeaderRowModule('Localization Name', LocalizationNamesModule), '']
+      ['Main Name', TextInputModule, 'name'],
+      ['Name Reference', getReferenceSearchModule(), 'reference'],
+      ['Localization Name', LocalizationNamesModule, '']
     ]
   }
 }
@@ -806,13 +821,13 @@ class SongNameModule extends ObjectModule {
 /**
  * Module for editting a song author
  */
-class SongAuthorModule extends ObjectModule {
+class SongAuthorModule extends TableModule {
   prebuild () { styleElement(this.e, 'grid', 'header-row') }
 
   modules () {
     return [
-      [getHeaderRowModule('Author Name', getSearchQueryModule('author')), 'author'],
-      [getHeaderRowModule('Reference', getReferenceSearchModule()), 'reference']
+      ['Author Name', getSearchQueryModule('author'), 'author'],
+      ['Reference', getReferenceSearchModule(), 'reference']
     ]
   }
 }
@@ -832,13 +847,13 @@ class AudioFileModule extends ReadonlyModule {
 /**
  * Module for an unofficial name
  */
-class UnofficialNameModule extends ObjectModule {
+class UnofficialNameModule extends TableModule {
   prebuild () { styleElement(this.e, 'header-row', 'grid') }
 
   modules () {
     return [
-      [getHeaderRowModule('Name', TextInputModule), 'name'],
-      [getHeaderRowModule('Description', TextAreaModule), 'description']
+      ['Name', TextInputModule, 'name'],
+      ['Description', TextAreaModule, 'description']
     ]
   }
 }
@@ -846,12 +861,12 @@ class UnofficialNameModule extends ObjectModule {
 /**
  * Module for a song version object
  */
-class SongVersionModule extends ObjectModule {
+class SongVersionModule extends TableModule {
   prebuild () { styleElement(this.e, 'header-row', 'grid') }
   modules () {
     return [
-      [getHeaderRowModule('Version Name', TextInputModule), 'name'],
-      [getHeaderRowModule('Description', TextAreaModule), 'description']
+      ['Version Name', TextInputModule, 'name'],
+      ['Description', TextAreaModule, 'description']
     ]
   }
 }
@@ -953,22 +968,21 @@ class SongFileEditor extends ObjectModule {
  */
 export class SongEditor extends EditorModule {
   modules () {
-    const song = prop => `.song.data.${prop}`
     return [
-      ['Names', MoveableRowsModule, song('names'), [SongNameModule, 'name-div']],
-      ['Authors', MoveableRowsModule, song('authors'), [SongAuthorModule, 'authors-div']],
-      ['Youtube Link', TextInputModule, song('link')],
-      ['Song Files', MoveableRowsModule, song('files'), [SongFileEditor, 'audios-div']],
-      ['Unofficial Names', MoveableRowsModule, song('unofficialNames'), [UnofficialNameModule]],
-      ['SWF Music IDs', MoveableRowsModule, song('swfMusicNumbers'), [NumberInputModule]],
-      ['First Paragraph', TextAreaModule, song('firstParagraph')],
-      ['Page Source Code', TextAreaModule, song('page')],
-      ['Key Signatures', MoveableRowsModule, song('keySignatures'), [getSearchQueryModule('key_signature')]],
-      ['Musical Genres', MoveableRowsModule, song('genres'), [getSearchQueryModule('genre')]],
-      ['Page Categories', MoveableRowsModule, song('categories'), [getSearchQueryModule('category')]],
-      ['Song Versions', MoveableRowsModule, song('versions'), [SongVersionModule]],
-      ['Date Composed', DateEstimateModule, song('composedDate')],
-      ['External Release Date', DateInputModule, song('externalReleaseDate')]
+      ['Names', MoveableRowsModule, '.names', [SongNameModule, 'name-div']],
+      ['Authors', MoveableRowsModule, '.authors', [SongAuthorModule, 'authors-div']],
+      ['Youtube Link', TextInputModule, '.link'],
+      ['Song Files', MoveableRowsModule, '.files', [SongFileEditor, 'audios-div']],
+      ['Unofficial Names', MoveableRowsModule, '.unofficialNames', [UnofficialNameModule]],
+      ['SWF Music IDs', MoveableRowsModule, '.swfMusicNumbers', [NumberInputModule]],
+      ['First Paragraph', TextAreaModule, '.firstParagraph'],
+      ['Page Source Code', TextAreaModule, '.page'],
+      ['Key Signatures', MoveableRowsModule, '.keySignatures', [getSearchQueryModule('key_signature')]],
+      ['Musical Genres', MoveableRowsModule, '.genres', [getSearchQueryModule('genre')]],
+      ['Page Categories', MoveableRowsModule, '.categories', [getSearchQueryModule('category')]],
+      ['Song Versions', MoveableRowsModule, '.versions', [SongVersionModule]],
+      ['Date Composed', DateEstimateModule, '.composedDate'],
+      ['External Release Date', DateInputModule, '.externalReleaseDate']
     ]
   }
 }
@@ -978,11 +992,10 @@ export class SongEditor extends EditorModule {
  */
 export class ReferenceEditor extends EditorModule {
   modules () {
-    const file = prop => `.wiki_reference.data.${prop}`
     return [
-      ['Reference Name', TextInputModule, file('name')],
-      ['Link to Reference (if needed)', TextInputModule, file('link')],
-      ['Reference Description', TextAreaModule, file('description')]
+      ['Reference Name', TextInputModule, '.name'],
+      ['Link to Reference (if needed)', TextInputModule, '.link'],
+      ['Reference Description', TextAreaModule, '.description']
     ]
   }
 }
@@ -1033,11 +1046,11 @@ export class FileEditor extends EditorModule {
       fileHeader = 'Upload the audio file'
     }
     return [
-      ['File Song', getSearchQueryModule('song'), '.file.data.song'],
-      ['File Source', getSearchQueryModule('source'), '.file.data.source'],
-      ['Link to Source (if needed)', TextInputModule, '.file.data.link'],
-      ['Is it HQ?', CheckboxModule, '.file.data.isHQ'],
-      [fileHeader, FileClass, '.file.data']
+      ['File Song', getSearchQueryModule('song'), '.song'],
+      ['File Source', getSearchQueryModule('source'), '.source'],
+      ['Link to Source (if needed)', TextInputModule, '.link'],
+      ['Is it HQ?', CheckboxModule, '.isHQ'],
+      [fileHeader, FileClass, '']
     ]
   }
 }
@@ -1111,8 +1124,8 @@ function getHeaderRowModule (header, ChildClass, args = []) {
 export class GenreEditor extends EditorModule {
   modules () {
     return [
-      ['Genre Name', TextInputModule, '.genre.data.name'],
-      ['External Link', TextInputModule, '.genre.data.link']
+      ['Genre Name', TextInputModule, '.name'],
+      ['External Link', TextInputModule, '.link']
     ]
   }
 }
@@ -1120,8 +1133,8 @@ export class GenreEditor extends EditorModule {
 export class InstrumentEditor extends EditorModule {
   modules () {
     return [
-      ['Instrument Name', TextInputModule, '.instrument.data.name'],
-      ['External Link', TextInputModule, '.instrument.data.link']
+      ['Instrument Name', TextInputModule, '.name'],
+      ['External Link', TextInputModule, '.link']
     ]
   }
 }
@@ -1129,8 +1142,8 @@ export class InstrumentEditor extends EditorModule {
 export class KeysigEditor extends EditorModule {
   modules () {
     return [
-      ['Key Signature Name', TextInputModule, '.key_signature.data.name'],
-      ['External Link', TextInputModule, '.key_signature.data.link']
+      ['Key Signature Name', TextInputModule, '.name'],
+      ['External Link', TextInputModule, '.link']
     ]
   }
 }
@@ -1138,9 +1151,9 @@ export class KeysigEditor extends EditorModule {
 export class PageEditor extends EditorModule {
   modules () {
     return [
-      ['Page Title', TextInputModule, '.page.data.name'],
-      ['Content', TextAreaModule, '.page.data.content'],
-      ['Categories', MoveableRowsModule, '.page.data.categories', [getSearchQueryModule('category')]]
+      ['Page Title', TextInputModule, '.name'],
+      ['Content', TextAreaModule, '.content'],
+      ['Categories', MoveableRowsModule, '.categories', [getSearchQueryModule('category')]]
     ]
   }
 }
@@ -1159,9 +1172,9 @@ class SongAppearanceModule extends ObjectModule {
 export class FlashroomEditor extends EditorModule {
   modules () {
     return [
-      ['Room Name', TextInputModule, '.flash_room.data.name'],
-      ['Time period the room was open', TimeRangeModule, '.flash_room.data.open'],
-      ['Songs uses in the room', MoveableRowsModule, '.flash_room.data.songUses', [SongAppearanceModule]]
+      ['Room Name', TextInputModule, '.name'],
+      ['Time period the room was open', TimeRangeModule, '.open'],
+      ['Songs uses in the room', MoveableRowsModule, '.songUses', [SongAppearanceModule]]
     ]
   }
 }
@@ -1184,9 +1197,9 @@ class PartySongModule extends ObjectModule {
 export class FlashpartyEditor extends EditorModule {
   modules () {
     return [
-      ['Party Name', TextInputModule, '.flash_party.data.name'],
-      ['Period the party was actiuve', TimeRangeModule, '.flash_party.data.active'],
-      ['Songs used in the party', MoveableRowsModule, '.flash_party.data.partySongs', [PartySongModule]]
+      ['Party Name', TextInputModule, '.name'],
+      ['Period the party was actiuve', TimeRangeModule, '.active'],
+      ['Songs used in the party', MoveableRowsModule, '.partySongs', [PartySongModule]]
     ]
   }
 }
@@ -1203,11 +1216,11 @@ class CatalogueItemModule extends ObjectModule {
 export class MuscatalogEditor extends EditorModule {
   modules () {
     return [
-      ['Catalogue Title', TextInputModule, '.music_catalogue.data.name'],
-      ['Catalogue Notes', TextAreaModule, '.music_catalogue.data.description'],
-      ['Catalogue Date', DateEstimateModule, '.music_catalogue.data.date'],
-      ['Song List', GridModule, '.music_catalogue.data.songs', [CatalogueItemModule]],
-      ['Catalogue Reference', getReferenceSearchModule(), '.music_catalogue.data.reference']
+      ['Catalogue Title', TextInputModule, '.name'],
+      ['Catalogue Notes', TextAreaModule, '.description'],
+      ['Catalogue Date', DateEstimateModule, '.date'],
+      ['Song List', GridModule, '.songs', [CatalogueItemModule]],
+      ['Catalogue Reference', getReferenceSearchModule(), '.reference']
     ]
   }
 }
@@ -1225,9 +1238,9 @@ class StageAppearanceModule extends ObjectModule {
 export class StageEditor extends EditorModule {
   modules () {
     return [
-      ['Stage Play Name', TextInputModule, '.stage_play.data.name'],
-      ['Play Theme Song', getSearchQueryModule('song'), '.stage_play.data.song'],
-      ['Play Debuts', MoveableRowsModule, '.stage_play.data.appearances', [StageAppearanceModule]]
+      ['Stage Play Name', TextInputModule, '.name'],
+      ['Play Theme Song', getSearchQueryModule('song'), '.song'],
+      ['Play Debuts', MoveableRowsModule, '.appearances', [StageAppearanceModule]]
     ]
   }
 }
@@ -1246,9 +1259,9 @@ class MinigameSongModule extends ObjectModule {
 export class FlashgameEditor extends EditorModule {
   modules () {
     return [
-      ['Minigame Name', TextInputModule, '.flash_minigame.data.name'],
-      ['Time period game is playable', TimeRangeModule, '.flash_minigame.data.available'],
-      ['Minigame songs', MoveableRowsModule, '.flash_minigame.data.songs', [MinigameSongModule]]
+      ['Minigame Name', TextInputModule, '.name'],
+      ['Time period game is playable', TimeRangeModule, '.available'],
+      ['Minigame songs', MoveableRowsModule, '.songs', [MinigameSongModule]]
     ]
   }
 }

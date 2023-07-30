@@ -1,7 +1,7 @@
 import { createElement, deepcopy, postAndGetJSON, postJSON, selectElement } from './utils.js'
 import { types } from './type-info.js'
 
-class View {
+class Page {
   constructor () {
     this.editor = selectElement('js-editor')
   }
@@ -12,19 +12,12 @@ class View {
   renderSubmitButton () {
     this.submitButton = createElement({ parent: document.body, tag: 'button', innerHTML: 'Submit' })
   }
-}
-
-class Controller {
-  /**
-   * @param {View} view
-   */
-  constructor (view) { this.view = view }
 
   /**
    * Add controls to the submit button
    */
   setupSubmitButton (editorModule, row, type) {
-    this.view.submitButton.addEventListener('click', async () => {
+    this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
       console.log(deepcopy(row))
       postJSON('api/update', { type, row })
@@ -35,41 +28,31 @@ class Controller {
    * Initializes the editor by handling the options from the URL
    * and initializing the editor for that type
    */
-  async initializePage () {
+  async initialize () {
     // get URL params
     const urlParams = new URLSearchParams(window.location.search)
     const params = this.paramsToObject(urlParams)
 
-    // t corresponds to the type, guide is below
+    // t corresponds to a `DataType`
     // id is for the id of whatever type is being editted
     const type = params.t ? Number(params.t) : null
     const id = Number(params.id)
     const typeInfo = types[type]
-    const row = await postAndGetJSON('api/get', { type: typeInfo.type, id })
+    let row
+    if (id) {
+      row = await postAndGetJSON('api/get', { type: typeInfo.type, id })
+    } else {
+      row = await postAndGetJSON('api/default', { type: typeInfo.type })
+    }
     console.log(deepcopy(row))
-    const editor = new typeInfo.Editor(row, this.view.editor)
+    const editor = new typeInfo.Editor(row, this.editor)
+    console.log(editor)
     editor.build()
     editor.input()
     editor.setup()
-    // make a request including type, id, request type
 
-    this.view.renderSubmitButton()
+    this.renderSubmitButton()
     this.setupSubmitButton(editor, row, typeInfo.type)
-
-    // const typeRelation = {
-    //   0: Song,
-    //   1: Author,
-    //   2: Source,
-    //   3: File,
-    //   4: Reference,
-    //   5: FlashRoom
-    // }
-
-    // const Class = typeRelation[type]
-    // if (Class) {
-    //   const type = new Class(id)
-    //   type.initializeEditor(this.view.editor)
-    // } else this.view.editor.innerHTML = 'ERROR'
   }
 
   /**
@@ -88,6 +71,5 @@ class Controller {
   }
 }
 
-const view = new View()
-const controller = new Controller(view)
-controller.initializePage()
+const page = new Page()
+page.initialize()

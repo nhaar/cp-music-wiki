@@ -11,7 +11,7 @@ const db = require('../app/database')
 router.post('/default', async (req, res) => {
   const { type } = req.body
 
-  if (!checkType(res, type)) {
+  if (checkType(res, type)) {
     const row = await db.getDefault(type)
     res.status(200).send(row)
   }
@@ -19,14 +19,14 @@ router.post('/default', async (req, res) => {
 
 // get a data row
 router.post('/get', async (req, res) => {
-  const { type, id } = req
-  if (
-    !checkType(res, type) &&
-    !checkId(res, id)
-  ) {
-    const row = await db.getDataById(type, id)
-    if (!row) sendBadReq(res, 'Item not found in the database')
-    else res.status(200).send(row)
+  const { type, id } = req.body
+
+  if (checkType(res, type)) {
+    if (checkId(res, id)) {
+      const row = await db.getDataById(type, id)
+      if (!row) sendBadReq(res, 'Item not found in the database')
+      else res.status(200).send(row)
+    }
   }
 })
 
@@ -36,7 +36,7 @@ router.post('/update', async (req, res) => {
   const error = msg => sendBadReq(res, msg)
 
   // validate data
-  if (!checkType(res, type)) {
+  if (checkType(res, type)) {
     if (typeof row !== 'object') error('Invalid row data')
     else {
       const { data } = row
@@ -71,7 +71,7 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
 // get filtering by a name
 router.post('/get-by-name', async (req, res) => {
   const { keyword, type } = req.body
-  if (!checkType(res, type)) {
+  if (checkType(res, type)) {
     if (typeof keyword !== 'string') sendBadReq(res, 'Invalid keyword')
     else {
       const results = await db.getByName(type, keyword)
@@ -83,12 +83,11 @@ router.post('/get-by-name', async (req, res) => {
 // get name with id
 router.post('/get-name', async (req, res) => {
   const { type, id } = req.body
-  if (
-    !checkType(res, type) &&
-    !checkId(res, id)
-  ) {
-    const name = await db.getQueryNameById(type, id)
-    res.status(200).send({ name })
+  if (checkType(res, type)) {
+    if (checkId(res, id)) {
+      const name = await db.getQueryNameById(type, id)
+      res.status(200).send({ name })
+    }
   }
 })
 

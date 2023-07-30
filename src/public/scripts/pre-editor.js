@@ -2,9 +2,6 @@ import { createSearchQuery } from './query-options.js'
 import { types } from './type-info.js'
 import { selectElement, createElement } from './utils.js'
 
-class Model {
-}
-
 class View {
   constructor () {
     this.select = selectElement('type-select')
@@ -19,8 +16,8 @@ class View {
 }
 
 class Controller {
-  constructor (model, view) {
-    Object.assign(this, { model, view })
+  constructor (view) {
+    Object.assign(this, { view })
   }
 
   /**
@@ -28,27 +25,32 @@ class Controller {
    */
   setupPage () {
     this.view.select.addEventListener('change', () => {
-      this.model.type = Number(this.view.select.value)
-      const { type } = types[this.model.type]
-      // reset query
-      this.view.input.innerHTML = ''
-      const input = createElement({ parent: this.view.input, tag: 'input' })
+      const value = this.view.select.value
+      if (value) {
+        this.type = Number(value)
+        const { type } = types[this.type]
+        // reset query
+        this.view.input.innerHTML = ''
+        const input = createElement({ parent: this.view.input, tag: 'input' })
 
-      createSearchQuery(
-        input,
-        type
-      )
+        createSearchQuery(
+          input,
+          type
+        )
+      } else {
+        this.view.input.innerHTML = ' '
+      }
     })
 
     // to create a new entry
     this.view.create.addEventListener('click', () => {
-      if (Number.isInteger(this.model.type)) window.location.href = this.getEditorParam()
+      if (Number.isInteger(this.type)) window.location.href = this.getEditorParam()
     })
 
     // edit existing entry
     this.view.edit.addEventListener('click', () => {
       const input = this.view.input.querySelector('input')
-      if (Number.isInteger(this.model.type) && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
+      if (Number.isInteger(this.type) && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
     })
   }
 
@@ -57,7 +59,7 @@ class Controller {
    * @returns {string}
    */
   getEditorParam () {
-    return `editor?t=${this.model.type}`
+    return `editor?t=${this.type}`
   }
 
   /**
@@ -70,7 +72,6 @@ class Controller {
   }
 }
 
-const model = new Model()
 const view = new View()
-const controller = new Controller(model, view)
+const controller = new Controller(view)
 controller.setupPage()
