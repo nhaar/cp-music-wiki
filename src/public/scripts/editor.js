@@ -39,13 +39,16 @@ class Page {
     const id = Number(params.id)
     const typeInfo = types[type]
     let row
+    let data
     if (id) {
       row = await postAndGetJSON('api/get', { type: typeInfo.type, id })
+      data = row.data
     } else {
-      row = await postAndGetJSON('api/default', { type: typeInfo.type })
+      data = await postAndGetJSON('api/default', { type: typeInfo.type })
+      row = { data }
     }
     console.log(deepcopy(row))
-    const editor = new typeInfo.Editor(row.data, this.editor)
+    const editor = new typeInfo.Editor(data, this.editor)
     editor.build()
     editor.input()
     editor.setup()

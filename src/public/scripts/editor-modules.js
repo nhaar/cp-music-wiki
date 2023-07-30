@@ -43,39 +43,32 @@ class Pointer {
  */
 class BaseModule {
   /**
-   * This function handles the children modules that are created with the module creation
+   * Get all the predefined children for a module
    *
-   * It iterates through all the preconfigured modules and generates the list of children following the creation rules
-   * established by the options and the callback function
-   * @param {string[]} options - Array where each element and its index corresponds to what each element in the module list is
-   * @param {function(object) : BaseModule} callbackfn - Takes as the argument a vars object where each key is the name of an object with its value, and returns the constructed reference to the child
-   * @returns {BaseModule[]} The array with all the children
+   * The module are defined in the `modules` method, and
+   * the definitions are processed into the actual module via
+   * the `constructModule` method
+   * @returns {BaseModule[]} Array with all the children
    */
-  iteratemodules (options, callbackfn) {
+  getmodules () {
     const children = []
     this.modules().forEach(module => {
-      const vars = {}
-      options.forEach((option, i) => {
-        vars[option] = module[i]
-      })
-
-      // handle special data types
-      if (!vars.args) vars.args = []
-      if (typeof vars.property === 'string') {
-        vars.childOut = vars.property
-          ? new Pointer(this.out.read(), vars.property)
+      // define pointer if there is a property
+      if (typeof module.property === 'string') {
+        module.childOut = module.property
+          ? new Pointer(this.out.read(), module.property)
           : this.out
       }
-      children.push(callbackfn(vars))
+      children.push(this.constructModule(module))
     })
     return children
   }
 
   /**
-   * Placeholder method returning empty list
-   * @returns {BaseModule[]} Empty list
+   * Placeholder method
+   * @returns {undefined}
    */
-  getmodules () { return [] }
+  constructModule () { return undefined }
 
   /**
    * Placeholder method returning empty list
@@ -180,12 +173,8 @@ class ReceptorModule extends BaseModule {
     this.children = this.getmodules()
   }
 
-  getmodules () {
-    return this.iteratemodules([
-      'Class',
-      'path',
-      'args'
-    ], o => new o.Class(this, o.path, null, ...o.args))
+  constructModule (o) {
+    return new o.Class(this, o.path, null, ...o.args)
   }
 }
 
@@ -194,11 +183,8 @@ class ReceptorModule extends BaseModule {
  * as such it contains no internal pointer
  */
 class ConnectionModule extends ChildModule {
-  getmodules () {
-    return this.iteratemodules(
-      ['Class', 'args'],
-      o => new o.Class(this.parent, this.out, null, ...o.args)
-    )
+  constructModule (o) {
+    return o => new o.Class(this.parent, this.out, null, ...o.args)
   }
 }
 
@@ -237,7 +223,7 @@ class ArrayModule extends ChildModule {
    * @param {HTMLElement} element - HTML element to give to the child
    * @returns {ChildModule} - The created child
    */
-  newchild (args, value, element) {
+  newchild (value, element, ...args) {
     this.seq++
     this.map[this.seq] = value
     styleElement(element, this.arrayElementClass)
@@ -272,11 +258,8 @@ class ObjectModule extends ChildModule {
     if (!this.out.read()) this.out.assign({})
   }
 
-  getmodules () {
-    return this.iteratemodules(
-      ['Class', 'property', 'args'],
-      o => new o.Class(this, o.childOut, null, ...o.args)
-    )
+  constructModule (o) {
+    return new o.Class(this, o.childOut, null, ...o.args)
   }
 }
 
@@ -294,15 +277,25 @@ class ElementModule extends ChildModule {}
  */
 class ReadonlyModule extends ChildModule {}
 
+/**
+ * Object with the data for child modules in `TableModule` and `EditorModule`
+ */
+class TableChild {
+  /**
+   * @param {string} header - Header for the the module's row
+   * @param {BaseModule} Class - Module constructor
+   * @param {string} property - Property in the pointer to access
+   * @param  {...any} args - Arbitrary arguments for the constructor
+   */
+  constructor (header, Class, property, ...args) {
+    Object.assign(this, { header, Class, property, args })
+  }
+}
+
 class TableModule extends ObjectModule {
-  getmodules () {
-    return this.iteratemodules(
-      ['header', 'Class', 'property', 'args'],
-      o => {
-        const TableClass = getHeaderRowModule(o.header, o.Class, o.args)
-        return new TableClass(this, o.childOut, null)
-      }
-    )
+  constructModule (o) {
+    const TableClass = getHeaderRowModule(o.header, o.Class, o.args)
+    return new TableClass(this, o.childOut, null)
   }
 }
 
@@ -397,14 +390,14 @@ class OptionSelectModule extends ElementModule {
  * @param {import('../../app/database.js').TypeName} type - Name of the type of the editor
  * @returns {NameOnlyEditor} Class for the editor of the type
  */
-export function getNameOnlyEditor (type) {
+export function getNameOnlyEditor () {
   /**
    * Class for an editor that contains a single module which is a text input and only updates the name property inside the data object
    */
   class NameOnlyEditor extends EditorModule {
     modules () {
       return [
-        ['Name', TextInputModule, '.name']
+        new TableChild('Name', TextInputModule, 'name')
       ]
     }
   }
@@ -493,7 +486,7 @@ class MoveableRowsModule extends ArrayModule {
     createElement({ parent: newRow, tag: 'button', className: this.moveClass, innerHTML: 'MOVE' })
 
     // create module
-    const childModule = this.newchild([], value, childElement)
+    const childModule = this.newchild(value, childElement)
     childModule.build()
     childModule.setup()
 
@@ -566,7 +559,7 @@ class GridModule extends ArrayModule {
     this.rows++
     for (let i = 0; i < this.columns; i++) {
       const newElement = createElement({ parent: this.grid })
-      const child = this.newchild([], values[i], newElement)
+      const child = this.newchild(values[i], newElement)
       child.build()
       child.setup()
     }
@@ -578,7 +571,7 @@ class GridModule extends ArrayModule {
     for (let i = 0; i < this.rows; i++) {
       const newElement = createElement({})
       this.grid.insertBefore(newElement, this.grid.children[this.columns - 1 + i])
-      const child = this.newchild([], values[i], newElement)
+      const child = this.newchild(values[i], newElement)
       child.build()
       child.setup()
     }
@@ -704,10 +697,24 @@ class LocalizationNameModule extends TableModule {
 
   modules () {
     return [
-      ['Localized Name', TextInputModule, 'name'],
-      ['Name Reference', getReferenceSearchModule(), 'reference'],
-      ['Translation Notes', TextAreaModule, 'translationNotes']
+      new TableChild('Localized Name', TextInputModule, 'name'),
+      new TableChild('Name Reference', getReferenceSearchModule(), 'reference'),
+      new TableChild('Translation Notes', TextAreaModule, 'translationNotes')
     ]
+  }
+}
+
+/**
+ * Information for defining a child module in an `ObjectModule`
+ */
+class ObjectChild {
+  /**
+   * @param {Class} Class - Module constructor
+   * @param {string} property - Property to access in the pointer
+   * @param  {...any} args - Arbitrary arguments for the constructor
+   */
+  constructor (Class, property, ...args) {
+    Object.assign(this, { Class, property, args })
   }
 }
 
@@ -757,11 +764,11 @@ class LocalizationNamesModule extends ObjectModule {
 
   modules () {
     return [
-      [LocalizationNameModule, 'pt'],
-      [LocalizationNameModule, 'fr'],
-      [LocalizationNameModule, 'es'],
-      [LocalizationNameModule, 'de'],
-      [LocalizationNameModule, 'ru']
+      new ObjectChild(LocalizationNameModule, 'pt'),
+      new ObjectChild(LocalizationNameModule, 'fr'),
+      new ObjectChild(LocalizationNameModule, 'es'),
+      new ObjectChild(LocalizationNameModule, 'de'),
+      new ObjectChild(LocalizationNameModule, 'ru')
     ]
   }
 }
@@ -777,9 +784,9 @@ class SongNameModule extends TableModule {
 
   modules () {
     return [
-      ['Main Name', TextInputModule, 'name'],
-      ['Name Reference', getReferenceSearchModule(), 'reference'],
-      ['Localization Name', LocalizationNamesModule, '']
+      new TableChild('Main Name', TextInputModule, 'name'),
+      new TableChild('Name Reference', getReferenceSearchModule(), 'reference'),
+      new TableChild('Localization Name', LocalizationNamesModule, '')
     ]
   }
 }
@@ -792,8 +799,8 @@ class SongAuthorModule extends TableModule {
 
   modules () {
     return [
-      ['Author Name', getSearchQueryModule('author'), 'author'],
-      ['Reference', getReferenceSearchModule(), 'reference']
+      new TableChild('Author Name', getSearchQueryModule('author'), 'author'),
+      new TableChild('Reference', getReferenceSearchModule(), 'reference')
     ]
   }
 }
@@ -818,8 +825,8 @@ class UnofficialNameModule extends TableModule {
 
   modules () {
     return [
-      ['Name', TextInputModule, 'name'],
-      ['Description', TextAreaModule, 'description']
+      new TableChild('Name', TextInputModule, 'name'),
+      new TableChild('Description', TextAreaModule, 'description')
     ]
   }
 }
@@ -831,8 +838,8 @@ class SongVersionModule extends TableModule {
   prebuild () { styleElement(this.e, 'header-row', 'grid') }
   modules () {
     return [
-      ['Version Name', TextInputModule, 'name'],
-      ['Description', TextAreaModule, 'description']
+      new TableChild('Version Name', TextInputModule, 'name'),
+      new TableChild('Description', TextAreaModule, 'description')
     ]
   }
 }
@@ -879,8 +886,8 @@ class EstimateCheckboxModule extends CheckboxModule {
 class DateEstimateModule extends ObjectModule {
   modules () {
     return [
-      [DateInputModule, 'date'],
-      [EstimateCheckboxModule, 'isEstimate']
+      new ObjectChild(DateInputModule, 'date'),
+      new ObjectChild(EstimateCheckboxModule, 'isEstimate')
     ]
   }
 }
@@ -888,8 +895,8 @@ class DateEstimateModule extends ObjectModule {
 class TimeRangeModule extends ObjectModule {
   modules () {
     return [
-      [DateEstimateModule, 'start'],
-      [DateEstimateModule, 'end']
+      new ObjectChild(DateEstimateModule, 'start'),
+      new ObjectChild(DateEstimateModule, 'end')
     ]
   }
 }
@@ -898,30 +905,23 @@ class TimeRangeModule extends ObjectModule {
  * Base class for the top module of an editor
  */
 class EditorModule extends ReceptorModule {
-  getmodules () {
-    return this.iteratemodules(
-      ['header', 'Class', 'property', 'args'],
-      o => {
-        const RowModule = getEditorRowModule(o.header, o.Class, true, o.args)
-        return new RowModule(this, o.childOut)
-      }
-    )
+  constructModule (o) {
+    const RowModule = getEditorRowModule(o.header, o.Class, true, ...o.args)
+    return new RowModule(this, o.childOut)
   }
 }
 
 class SongFileEditor extends ObjectModule {
   modules () {
-    let lastElement
-    if (this.out.read().originalname) {
-      lastElement = [AudioFileModule, '']
-    } else {
-      lastElement = [FileUploadModule, '']
-    }
+    const lastClass = this.out.read().originalname
+      ? AudioFileModule
+      : FileUploadModule
+
     return [
-      [getSearchQueryModule('source'), 'source'],
-      [TextInputModule, 'link'],
-      [CheckboxModule, 'isHQ'],
-      lastElement
+      new ObjectChild(getSearchQueryModule('source'), 'source'),
+      new ObjectChild(TextInputModule, 'link'),
+      new ObjectChild(CheckboxModule, 'isHQ'),
+      new ObjectChild(lastClass, '')
     ]
   }
 }
@@ -932,20 +932,20 @@ class SongFileEditor extends ObjectModule {
 export class SongEditor extends EditorModule {
   modules () {
     return [
-      ['Names', MoveableRowsModule, 'names', [SongNameModule, 'name-div']],
-      ['Authors', MoveableRowsModule, 'authors', [SongAuthorModule, 'authors-div']],
-      ['Youtube Link', TextInputModule, 'link'],
-      ['Song Files', MoveableRowsModule, 'files', [SongFileEditor, 'audios-div']],
-      ['Unofficial Names', MoveableRowsModule, 'unofficialNames', [UnofficialNameModule]],
-      ['SWF Music IDs', MoveableRowsModule, 'swfMusicNumbers', [NumberInputModule]],
-      ['First Paragraph', TextAreaModule, 'firstParagraph'],
-      ['Page Source Code', TextAreaModule, 'page'],
-      ['Key Signatures', MoveableRowsModule, 'keySignatures', [getSearchQueryModule('key_signature')]],
-      ['Musical Genres', MoveableRowsModule, 'genres', [getSearchQueryModule('genre')]],
-      ['Page Categories', MoveableRowsModule, 'categories', [getSearchQueryModule('category')]],
-      ['Song Versions', MoveableRowsModule, 'versions', [SongVersionModule]],
-      ['Date Composed', DateEstimateModule, 'composedDate'],
-      ['External Release Date', DateInputModule, 'externalReleaseDate']
+      new TableChild('Names', MoveableRowsModule, 'names', SongNameModule, 'name-div'),
+      new TableChild('Authors', MoveableRowsModule, 'authors', SongAuthorModule, 'authors-div'),
+      new TableChild('Youtube Link', TextInputModule, 'link'),
+      new TableChild('Song Files', MoveableRowsModule, 'files', SongFileEditor, 'audios-div'),
+      new TableChild('Unofficial Names', MoveableRowsModule, 'unofficialNames', UnofficialNameModule),
+      new TableChild('SWF Music IDs', MoveableRowsModule, 'swfMusicNumbers', NumberInputModule),
+      new TableChild('First Paragraph', TextAreaModule, 'firstParagraph'),
+      new TableChild('Page Source Code', TextAreaModule, 'page'),
+      new TableChild('Key Signatures', MoveableRowsModule, 'keySignatures', getSearchQueryModule('key_signature')),
+      new TableChild('Musical Genres', MoveableRowsModule, 'genres', getSearchQueryModule('genre')),
+      new TableChild('Page Categories', MoveableRowsModule, 'categories', getSearchQueryModule('category')),
+      new TableChild('Song Versions', MoveableRowsModule, 'versions', SongVersionModule),
+      new TableChild('Date Composed', DateEstimateModule, 'composedDate'),
+      new TableChild('External Release Date', DateInputModule, 'externalReleaseDate')
     ]
   }
 }
@@ -956,9 +956,9 @@ export class SongEditor extends EditorModule {
 export class ReferenceEditor extends EditorModule {
   modules () {
     return [
-      ['Reference Name', TextInputModule, 'name'],
-      ['Link to Reference (if needed)', TextInputModule, 'link'],
-      ['Reference Description', TextAreaModule, 'description']
+      new TableChild('Reference Name', TextInputModule, 'name'),
+      new TableChild('Link to Reference (if needed)', TextInputModule, 'link'),
+      new TableChild('Reference Description', TextAreaModule, 'description')
     ]
   }
 }
@@ -1007,11 +1007,11 @@ export class FileEditor extends EditorModule {
       fileHeader = 'Upload the audio file'
     }
     return [
-      ['File Song', getSearchQueryModule('song'), 'song'],
-      ['File Source', getSearchQueryModule('source'), 'source'],
-      ['Link to Source (if needed)', TextInputModule, 'link'],
-      ['Is it HQ?', CheckboxModule, 'isHQ'],
-      [fileHeader, FileClass, '']
+      new TableChild('File Song', getSearchQueryModule('song'), 'song'),
+      new TableChild('File Source', getSearchQueryModule('source'), 'source'),
+      new TableChild('Link to Source (if needed)', TextInputModule, 'link'),
+      new TableChild('Is it HQ?', CheckboxModule, 'isHQ'),
+      new TableChild(fileHeader, FileClass, '')
     ]
   }
 }
@@ -1024,7 +1024,7 @@ export class FileEditor extends EditorModule {
  * @param {*[]} args - Arbitrary arguments for the constructor
  * @returns {EditorModule} - Constructor for the editor's row
  */
-function getEditorRowModule (header, ChildClass, useExpand, args = []) {
+function getEditorRowModule (header, ChildClass, useExpand, ...args) {
   class EditorRowModule extends ConnectionModule {
     /**
      * Render the HTML elements
@@ -1078,15 +1078,15 @@ function getEditorRowModule (header, ChildClass, useExpand, args = []) {
   return EditorRowModule
 }
 
-function getHeaderRowModule (header, ChildClass, args = []) {
-  return getEditorRowModule(header, ChildClass, false, args)
+function getHeaderRowModule (header, ChildClass, ...args) {
+  return getEditorRowModule(header, ChildClass, false, ...args)
 }
 
 export class GenreEditor extends EditorModule {
   modules () {
     return [
-      ['Genre Name', TextInputModule, 'name'],
-      ['External Link', TextInputModule, 'link']
+      new TableChild('Genre Name', TextInputModule, 'name'),
+      new TableChild('External Link', TextInputModule, 'link')
     ]
   }
 }
@@ -1094,8 +1094,8 @@ export class GenreEditor extends EditorModule {
 export class InstrumentEditor extends EditorModule {
   modules () {
     return [
-      ['Instrument Name', TextInputModule, 'name'],
-      ['External Link', TextInputModule, 'link']
+      new TableChild('Instrument Name', TextInputModule, 'name'),
+      new TableChild('External Link', TextInputModule, 'link')
     ]
   }
 }
@@ -1103,8 +1103,8 @@ export class InstrumentEditor extends EditorModule {
 export class KeysigEditor extends EditorModule {
   modules () {
     return [
-      ['Key Signature Name', TextInputModule, 'name'],
-      ['External Link', TextInputModule, 'link']
+      new TableChild('Key Signature Name', TextInputModule, 'name'),
+      new TableChild('External Link', TextInputModule, 'link')
     ]
   }
 }
@@ -1112,9 +1112,9 @@ export class KeysigEditor extends EditorModule {
 export class PageEditor extends EditorModule {
   modules () {
     return [
-      ['Page Title', TextInputModule, 'name'],
-      ['Content', TextAreaModule, 'content'],
-      ['Categories', MoveableRowsModule, 'categories', [getSearchQueryModule('category')]]
+      new TableChild('Page Title', TextInputModule, 'name'),
+      new TableChild('Content', TextAreaModule, 'content'),
+      new TableChild('Categories', MoveableRowsModule, 'categories', getSearchQueryModule('category'))
     ]
   }
 }
@@ -1122,10 +1122,10 @@ export class PageEditor extends EditorModule {
 class SongAppearanceModule extends ObjectModule {
   modules () {
     return [
-      [CheckboxModule, 'isUnused'],
-      [TimeRangeModule, 'available'],
-      [getSearchQueryModule('song'), 'song'],
-      [getReferenceSearchModule(), 'reference']
+      new ObjectChild(CheckboxModule, 'isUnused'),
+      new ObjectChild(TimeRangeModule, 'available'),
+      new ObjectChild(getSearchQueryModule('song'), 'song'),
+      new ObjectChild(getReferenceSearchModule(), 'reference')
     ]
   }
 }
@@ -1133,9 +1133,9 @@ class SongAppearanceModule extends ObjectModule {
 export class FlashroomEditor extends EditorModule {
   modules () {
     return [
-      ['Room Name', TextInputModule, 'name'],
-      ['Time period the room was open', TimeRangeModule, 'open'],
-      ['Songs uses in the room', MoveableRowsModule, 'songUses', [SongAppearanceModule]]
+      new TableChild('Room Name', TextInputModule, 'name'),
+      new TableChild('Time period the room was open', TimeRangeModule, 'open'),
+      new TableChild('Songs uses in the room', MoveableRowsModule, 'songUses', SongAppearanceModule)
     ]
   }
 }
@@ -1143,14 +1143,14 @@ export class FlashroomEditor extends EditorModule {
 class PartySongModule extends ObjectModule {
   modules () {
     return [
-      [CheckboxModule, 'isUnused'],
-      [OptionSelectModule, 'type', [{
+      new ObjectChild(CheckboxModule, 'isUnused'),
+      new ObjectChild(OptionSelectModule, 'type', {
         Room: 1,
         Minigame: 2
-      }]],
-      [CheckboxModule, 'usePartyDate'],
-      [TimeRangeModule, 'available'],
-      [getSearchQueryModule('song'), 'song']
+      }),
+      new ObjectChild(CheckboxModule, 'usePartyDate'),
+      new ObjectChild(TimeRangeModule, 'available'),
+      new ObjectChild(getSearchQueryModule('song'), 'song')
     ]
   }
 }
@@ -1158,9 +1158,9 @@ class PartySongModule extends ObjectModule {
 export class FlashpartyEditor extends EditorModule {
   modules () {
     return [
-      ['Party Name', TextInputModule, '.name'],
-      ['Period the party was actiuve', TimeRangeModule, 'active'],
-      ['Songs used in the party', MoveableRowsModule, 'partySongs', [PartySongModule]]
+      new TableChild('Party Name', TextInputModule, '.name'),
+      new TableChild('Period the party was actiuve', TimeRangeModule, 'active'),
+      new TableChild('Songs used in the party', MoveableRowsModule, 'partySongs', PartySongModule)
     ]
   }
 }
@@ -1168,8 +1168,8 @@ export class FlashpartyEditor extends EditorModule {
 class CatalogueItemModule extends ObjectModule {
   modules () {
     return [
-      [TextInputModule, 'displayName'],
-      [getSearchQueryModule('song'), 'song']
+      new ObjectChild(TextInputModule, 'displayName'),
+      new ObjectChild(getSearchQueryModule('song'), 'song')
     ]
   }
 }
@@ -1177,11 +1177,11 @@ class CatalogueItemModule extends ObjectModule {
 export class MuscatalogEditor extends EditorModule {
   modules () {
     return [
-      ['Catalogue Title', TextInputModule, 'name'],
-      ['Catalogue Notes', TextAreaModule, 'description'],
-      ['Catalogue Date', DateEstimateModule, 'date'],
-      ['Song List', GridModule, 'songs', [CatalogueItemModule]],
-      ['Catalogue Reference', getReferenceSearchModule(), 'reference']
+      new TableChild('Catalogue Title', TextInputModule, 'name'),
+      new TableChild('Catalogue Notes', TextAreaModule, 'description'),
+      new TableChild('Catalogue Date', DateEstimateModule, 'date'),
+      new TableChild('Song List', GridModule, 'songs', CatalogueItemModule),
+      new TableChild('Catalogue Reference', getReferenceSearchModule(), 'reference')
     ]
   }
 }
@@ -1189,9 +1189,9 @@ export class MuscatalogEditor extends EditorModule {
 class StageAppearanceModule extends ObjectModule {
   modules () {
     return [
-      [CheckboxModule, 'isUnused'],
-      [TimeRangeModule, 'appearance'],
-      [getReferenceSearchModule(), 'reference']
+      new ObjectChild(CheckboxModule, 'isUnused'),
+      new ObjectChild(TimeRangeModule, 'appearance'),
+      new ObjectChild(getReferenceSearchModule(), 'reference')
     ]
   }
 }
@@ -1199,9 +1199,9 @@ class StageAppearanceModule extends ObjectModule {
 export class StageEditor extends EditorModule {
   modules () {
     return [
-      ['Stage Play Name', TextInputModule, 'name'],
-      ['Play Theme Song', getSearchQueryModule('song'), 'song'],
-      ['Play Debuts', MoveableRowsModule, 'appearances', [StageAppearanceModule]]
+      new TableChild('Stage Play Name', TextInputModule, 'name'),
+      new TableChild('Play Theme Song', getSearchQueryModule('song'), 'song'),
+      new TableChild('Play Debuts', MoveableRowsModule, 'appearances', StageAppearanceModule)
     ]
   }
 }
@@ -1209,10 +1209,10 @@ export class StageEditor extends EditorModule {
 class MinigameSongModule extends ObjectModule {
   modules () {
     return [
-      [CheckboxModule, 'isUnused'],
-      [getSearchQueryModule('song'), 'song'],
-      [CheckboxModule, 'useMinigameDates'],
-      [TimeRangeModule, 'available']
+      new ObjectChild(CheckboxModule, 'isUnused'),
+      new ObjectChild(getSearchQueryModule('song'), 'song'),
+      new ObjectChild(CheckboxModule, 'useMinigameDates'),
+      new ObjectChild(TimeRangeModule, 'available')
     ]
   }
 }
@@ -1220,9 +1220,9 @@ class MinigameSongModule extends ObjectModule {
 export class FlashgameEditor extends EditorModule {
   modules () {
     return [
-      ['Minigame Name', TextInputModule, 'name'],
-      ['Time period game is playable', TimeRangeModule, 'available'],
-      ['Minigame songs', MoveableRowsModule, 'songs', [MinigameSongModule]]
+      new TableChild('Minigame Name', TextInputModule, 'name'),
+      new TableChild('Time period game is playable', TimeRangeModule, 'available'),
+      new TableChild('Minigame songs', MoveableRowsModule, 'songs', MinigameSongModule)
     ]
   }
 }
