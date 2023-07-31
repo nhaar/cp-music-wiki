@@ -78,6 +78,9 @@ class BaseModule {
 
   /**
    * Method for rendering HTML elements
+   *
+   * It calls the `prebuild` and `postbuild` methods,
+   * and between those two it calls `build` for all of the children
    */
   build () {
     if (this.prebuild) this.prebuild()
@@ -87,6 +90,10 @@ class BaseModule {
 
   /**
    * Method for inputting the data from database onto the page
+   *
+   * It calls the `preinput` method, and then if `int` exists
+   * converts it with the `convertinput` method if it exists as well,
+   * after which it calls `input` for all the children
    */
   input () {
     if (this.preinput) this.preinput()
@@ -102,6 +109,8 @@ class BaseModule {
 
   /**
    * Method for adding control to the HTML elements
+   *
+   * Calls `setup` for all the children, can call code before it with `presetup`
    */
   setup () {
     if (this.presetup) this.presetup()
@@ -110,6 +119,9 @@ class BaseModule {
 
   /**
    * Method for outputting the data in the page to the backend
+   *
+   * Calls the `middleoutput`, `postmidoutput`, after calling `output` to all the children,
+   * ends converting with `convertoutput` if necessary and then running `postoutput`
    */
   async output () {
     for (let i = 0; i < this.children.length; i++) {
@@ -184,7 +196,7 @@ class ReceptorModule extends BaseModule {
  */
 class ConnectionModule extends ChildModule {
   constructModule (o) {
-    return o => new o.Class(this.parent, this.out, null, ...o.args)
+    return new o.Class(this.parent, this.out, null, ...o.args)
   }
 }
 
@@ -193,7 +205,6 @@ class ConnectionModule extends ChildModule {
  */
 class ArrayModule extends ChildModule {
   /**
-   *
    * @param {BaseModule} parent
    * @param {Pointer} out
    * @param {HTMLElement} element
@@ -215,21 +226,31 @@ class ArrayModule extends ChildModule {
     this.arrayElementClass = 'array-element'
   }
 
+  // /**
+  //  * Add a new child to the array
+  //  * @param {Class} ChildClass Constructor for the child module
+  //  * @param {*[]} args - List of arbitrary arguments for the constructor
+  //  * @param {*} value - Value to give to the data in the array
+  //  * @param {HTMLElement} element - HTML element to give to the child
+  //  * @returns {ChildModule} - The created child
+  //  */
+
   /**
-   * Add a new child to the array
-   * @param {Class} ChildClass Constructor for the child module
-   * @param {*[]} args - List of arbitrary arguments for the constructor
-   * @param {*} value - Value to give to the data in the array
-   * @param {HTMLElement} element - HTML element to give to the child
-   * @returns {ChildModule} - The created child
+   * Add a new child to the array module
+   * @param {*} value - Value to initialize the element's pointer to
+   * @param {HTMLElement} element - HTML element to bind child
+   * @param  {...any} args - Arbitrary arguments for the child constructor
+   * @returns {BaseModule} Reference to new child
    */
   newchild (value, element, ...args) {
     this.seq++
     this.map[this.seq] = value
+
+    // identify element for output
     styleElement(element, this.arrayElementClass)
     element.dataset.id = this.seq
-    const child = new this.ChildClass(this, new Pointer(this.map, this.seq + ''), element, ...args)
 
+    const child = new this.ChildClass(this, new Pointer(this.map, this.seq + ''), element, ...args)
     this.children.push(child)
     return child
   }
@@ -247,7 +268,7 @@ class ArrayModule extends ChildModule {
 }
 
 /**
- * Class for an module that represents an object,
+ * Class for a module that represents an object,
  * with each child being a property of the object
  */
 class ObjectModule extends ChildModule {
@@ -292,10 +313,14 @@ class TableChild {
   }
 }
 
+/**
+ * Module representing a table containing rows where each row
+ * contains a name and a module
+ */
 class TableModule extends ObjectModule {
   constructModule (o) {
     const TableClass = getHeaderRowModule(o.header, o.Class, o.args)
-    return new TableClass(this, o.childOut, null)
+    return new TableClass(this, o.childOut)
   }
 }
 
@@ -304,11 +329,14 @@ class TableModule extends ObjectModule {
  */
 class SimpleTextModule extends ElementModule {
   /**
+   *
    * @param {BaseModule} parent
-   * @param {object} out
+   * @param {Pointer} out
    * @param {HTMLElement} element
-   * @param {string} tag - Tag for the HTML element in the module
-   * @param {string} access - Name of the property the text content is stored in the element
+   * @param {string} tag - Tag for HTML element
+   * @param {string} access - Property for the output
+   * @param {string} entry - Property for the input
+   * @param {string} type - Type for the HTML element
    */
   constructor (parent, out, element, tag, access, entry, type) {
     super(parent, out, element)
@@ -318,16 +346,21 @@ class SimpleTextModule extends ElementModule {
   /**
    * Create text element
    */
-  prebuild () { this.textInput = createElement({ parent: this.e, tag: this.tag, type: this.type }) }
+  prebuild () {
+    this.textInput = createElement({ parent: this.e, tag: this.tag, type: this.type })
+    this.int = new Pointer(this.textInput, this.entry)
+  }
 
   /**
-   * Add pointer to the text content
+   * Retrieve data
    */
-  postbuild () { this.int = new Pointer(this.textInput, this.entry) }
-
   middleoutput () { this.int = new Pointer(this.textInput, this.access) }
 
-  // to prevent 'undefned' from being written in the input
+  /**
+   * Set default value for the input
+   * @param {*} input Input value
+   * @returns {string} Converted value
+   */
   convertinput (input) { return input || '' }
 }
 
@@ -337,7 +370,7 @@ class SimpleTextModule extends ElementModule {
 class TextInputModule extends SimpleTextModule {
   /**
    * @param {BaseModule} parent
-   * @param {object} out
+   * @param {Pointer} out
    * @param {HTMLElement} element
    */
   constructor (parent, out, element) { super(parent, out, element, 'input', 'value', 'value') }
@@ -348,27 +381,52 @@ class TextInputModule extends SimpleTextModule {
  */
 class TextAreaModule extends SimpleTextModule {
   /**
-   *
    * @param {BaseModule} parent
-   * @param {object} out
+   * @param {Pointer} out
    * @param {HTMLElement} element
    */
   constructor (parent, out, element) { super(parent, out, element, 'textarea', 'value', 'innerHTML') }
 }
 
+/**
+ * Module containing a single number input HTML element
+ */
 class NumberInputModule extends SimpleTextModule {
+  /**
+   * @param {BaseModule} parent
+   * @param {Pointer} out
+   * @param {HTMLElement} element
+   */
   constructor (parent, out, element) { super(parent, out, element, 'input', 'value', 'value', 'number') }
 
+  /**
+   * To convert any value into a number
+   * @param {*} output
+   * @returns {number} Converted value
+   */
   convertoutput (output) { return Number(output) }
 }
 
+/**
+ * Module containing a select HTML element with options
+ */
 class OptionSelectModule extends ElementModule {
+  /**
+   *
+   * @param {BaseModule} parent
+   * @param {Pointer} out
+   * @param {HTMLElement} element
+   * @param {object} options - Object where each key represents an option HTML element where the key is the innerHTML and the value is the element value
+   */
   constructor (parent, out, element, options) {
     super(parent, out, element)
 
     Object.assign(this, { options })
   }
 
+  /**
+   * Render select element
+   */
   prebuild () {
     this.selectElement = createElement({ parent: this.e, tag: 'select' })
     createElement({ parent: this.selectElement, tag: 'option', value: '' })
@@ -376,33 +434,15 @@ class OptionSelectModule extends ElementModule {
       const value = this.options[option]
       createElement({ parent: this.selectElement, tag: 'option', value, innerHTML: option })
     }
-  }
-
-  postbuild () {
     this.int = new Pointer(this.selectElement, 'value')
   }
 
-  convertoutput (output) { return Number(output) }
-}
-
-/**
- * Get a class for an editor for a name only type
- * @param {import('../../app/database.js').TypeName} type - Name of the type of the editor
- * @returns {NameOnlyEditor} Class for the editor of the type
- */
-export function getNameOnlyEditor () {
   /**
-   * Class for an editor that contains a single module which is a text input and only updates the name property inside the data object
+   * Expect the value output to be a number
+   * @param {*} output
+   * @returns {number} - Converted output
    */
-  class NameOnlyEditor extends EditorModule {
-    modules () {
-      return [
-        new TableChild('Name', TextInputModule, 'name')
-      ]
-    }
-  }
-
-  return NameOnlyEditor
+  convertoutput (output) { return Number(output) }
 }
 
 /**
@@ -417,7 +457,7 @@ function indexOfChild (parent, child) {
 }
 
 /**
- * Class for a module that lets manage the modules of an array module through the UI
+ * Class for a module that lets the user manage the modules of an array module through the UI
  * allowing to move them (order them), as well as possibly adding and deleting new modules
  */
 class MoveableRowsModule extends ArrayModule {
@@ -908,6 +948,18 @@ class EditorModule extends ReceptorModule {
   constructModule (o) {
     const RowModule = getEditorRowModule(o.header, o.Class, true, ...o.args)
     return new RowModule(this, o.childOut)
+  }
+}
+
+/**
+ * Class for an editor that contains a single module which is a text input
+ * and only updates the name property inside the data object
+ */
+export class NameOnlyEditor extends EditorModule {
+  modules () {
+    return [
+      new TableChild('Name', TextInputModule, 'name')
+    ]
   }
 }
 
