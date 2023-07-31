@@ -824,8 +824,10 @@ class LocalizationNameModule extends TableModule {
    * Create internal pointer
    */
   initialize () {
-    this.e = createElement({ parent: this.e, classes: ['hidden', 'localization-name', 'header-row'] })
+    this.e = createElement({ parent: this.e })
   }
+
+  style () { return ['hidden', 'localization-name', 'header-row'] }
 
   modules () {
     return [
