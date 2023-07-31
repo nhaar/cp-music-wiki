@@ -627,6 +627,17 @@ class GridModule extends ArrayModule {
     })
   }
 
+  removeRow () {
+    // don't remove if at 0
+    if (this.rows > 0) {
+      this.rows--
+      const removePos = this.columns * this.rows
+      for (let i = 0; i < this.columns; i++) {
+        this.grid.removeChild(this.grid.children[removePos])
+      }
+    }
+  }
+
   setTemplate (index) {
     this.grid.style[`gridTemplate${this.capitalizedPlural[index]}`] = `repeat(${this[this.pluralNames[index]]}, 1fr)`
   }
@@ -637,6 +648,7 @@ class GridModule extends ArrayModule {
     this.names.forEach(name => {
       this[`${name}Button`] = createElement({ parent: this.e, tag: 'button', innerHTML: `Add ${name}` })
     })
+    this.removeRowButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Remove row' })
   }
 
   postbuild () {
@@ -665,6 +677,10 @@ class GridModule extends ArrayModule {
         this[`add${capitalized}`]()
         console.log(this.rows, this.columns)
       })
+    })
+
+    this.removeRowButton.addEventListener('click', () => {
+      this.removeRow()
     })
   }
 
