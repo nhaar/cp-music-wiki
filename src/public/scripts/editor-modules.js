@@ -595,16 +595,12 @@ class GridModule extends ArrayModule {
     this.columns = 1
 
     this.names = ['row', 'column']
-    this.pluralNames = this.names.map(name => `${name}s`)
-    const capitalize = x => `${x[0].toUpperCase()}${x.slice(1)}`
-    this.capitalizedNames = this.names.map(name => capitalize(name))
-    this.capitalizedPlural = this.pluralNames.map(name => capitalize(name))
+    this.actions = ['add', 'remove']
   }
 
   addNew (values = [], index, callbackfn) {
-    const name = this.pluralNames[index]
-    const otherName = this.pluralNames[index ? 0 : 1]
-    console.log(name, otherName)
+    const name = this.pluralize(this.names[index])
+    const otherName = this.pluralize(this.names[index ? 0 : 1])
     this[name]++
     for (let i = 0; i < this[otherName]; i++) {
       const newElement = callbackfn(i)
@@ -647,17 +643,18 @@ class GridModule extends ArrayModule {
   }
 
   setTemplate (index) {
-    this.grid.style[`gridTemplate${this.capitalizedPlural[index]}`] = `repeat(${this[this.pluralNames[index]]}, 1fr)`
+    this.grid.style[`gridTemplate${this.capitalpluralize(this.names[index])}`] = `repeat(${this[this.pluralize(this.names[index])]}, 1fr)`
   }
 
   prebuild () {
     this.grid = createElement({ parent: this.e })
     this.grid.style.display = 'grid'
-    this.names.forEach(name => {
-      this[`${name}Button`] = createElement({ parent: this.e, tag: 'button', innerHTML: `Add ${name}` })
+    this.actions.forEach(action => {
+      this.names.forEach(name => {
+        const capitalized = this.capitalize(name)
+        this[`${action}${capitalized}Button`] = createElement({ parent: this.e, tag: 'button', innerHTML: `${this.capitalize(action)} ${capitalized}` })
+      })
     })
-    this.removeRowButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Remove row' })
-    this.removeColumnButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Remove column' })
   }
 
   postbuild () {
@@ -679,21 +676,13 @@ class GridModule extends ArrayModule {
   }
 
   setupButtons () {
-    this.names.forEach((name, i) => {
-      this[`${name}Button`].addEventListener('click', () => {
-        const capitalized = this.capitalizedNames[i]
-        console.log(this, `add${capitalized}`)
-        this[`add${capitalized}`]()
-        console.log(this.rows, this.columns)
+    this.actions.forEach(action => {
+      this.names.forEach(name => {
+        const capitalized = this.capitalize(name)
+        this[`${action}${capitalized}Button`].addEventListener('click', () => {
+          this[`${action}${capitalized}`]()
+        })
       })
-    })
-
-    this.removeRowButton.addEventListener('click', () => {
-      this.removeRow()
-    })
-
-    this.removeColumnButton.addEventListener('click', () => {
-      this.removeColumn()
     })
   }
 
@@ -704,6 +693,18 @@ class GridModule extends ArrayModule {
       gridArray.push(removed)
     }
     this.array = gridArray
+  }
+
+  pluralize (str) {
+    return `${str}s`
+  }
+
+  capitalize (str) {
+    return `${str[0].toUpperCase()}${str.slice(1)}`
+  }
+
+  capitalpluralize (str) {
+    return this.pluralize(this.capitalize(str))
   }
 }
 
@@ -1336,3 +1337,4 @@ function generateAudio (file) {
   }
   return '<div>Could not load</div>'
 }
+
