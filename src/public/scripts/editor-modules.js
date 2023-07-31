@@ -812,13 +812,17 @@ function getSearchQueryModule (type) {
   return SearchQueryModule
 }
 
-/**
- * Get a search query module for the wiki references
- * @returns {ElementModule} Module for the reference search query
- */
-function getReferenceSearchModule () {
-  return getSearchQueryModule('wiki_reference')
-}
+/** Module with a reference search query */
+const ReferenceQueryModule = getSearchQueryModule('wiki_reference')
+
+/** Module with a source search query */
+const SourceQueryModule = getSearchQueryModule('source')
+
+/** Module with a category seach query */
+const CategoryQueryModule = getSearchQueryModule('category')
+
+/** Module with a song search query */
+const SongQueryModule = getSearchQueryModule('song')
 
 /**
  * Module for editting the data for a localization name
@@ -834,7 +838,7 @@ class LocalizationNameModule extends TableModule {
   modules () {
     return [
       new TableChild('Localized Name', TextInputModule, 'name'),
-      new TableChild('Name Reference', getReferenceSearchModule(), 'reference'),
+      new TableChild('Name Reference', ReferenceQueryModule, 'reference'),
       new TableChild('Translation Notes', TextAreaModule, 'translationNotes')
     ]
   }
@@ -921,7 +925,7 @@ class SongNameModule extends TableModule {
   modules () {
     return [
       new TableChild('Main Name', TextInputModule, 'name'),
-      new TableChild('Name Reference', getReferenceSearchModule(), 'reference'),
+      new TableChild('Name Reference', ReferenceQueryModule, 'reference'),
       new TableChild('Localization Name', LocalizationNamesModule, '')
     ]
   }
@@ -936,7 +940,7 @@ class SongAuthorModule extends TableModule {
   modules () {
     return [
       new TableChild('Author Name', getSearchQueryModule('author'), 'author'),
-      new TableChild('Reference', getReferenceSearchModule(), 'reference')
+      new TableChild('Reference', ReferenceQueryModule, 'reference')
     ]
   }
 }
@@ -1066,7 +1070,7 @@ class SongFileEditor extends ObjectModule {
       : FileUploadModule
 
     return [
-      new ObjectChild(getSearchQueryModule('source'), 'source'),
+      new ObjectChild(SourceQueryModule, 'source'),
       new ObjectChild(TextInputModule, 'link'),
       new ObjectChild(CheckboxModule, 'isHQ'),
       new ObjectChild(lastClass, '')
@@ -1090,7 +1094,7 @@ export class SongEditor extends EditorModule {
       new TableChild('Page Source Code', TextAreaModule, 'page'),
       new TableChild('Key Signatures', MoveableRowsModule, 'keySignatures', getSearchQueryModule('key_signature')),
       new TableChild('Musical Genres', MoveableRowsModule, 'genres', getSearchQueryModule('genre')),
-      new TableChild('Page Categories', MoveableRowsModule, 'categories', getSearchQueryModule('category')),
+      new TableChild('Page Categories', MoveableRowsModule, 'categories', CategoryQueryModule),
       new TableChild('Song Versions', MoveableRowsModule, 'versions', SongVersionModule),
       new TableChild('Date Composed', DateEstimateModule, 'composedDate'),
       new TableChild('External Release Date', DateInputModule, 'externalReleaseDate')
@@ -1155,8 +1159,8 @@ export class FileEditor extends EditorModule {
       fileHeader = 'Upload the audio file'
     }
     return [
-      new TableChild('File Song', getSearchQueryModule('song'), 'song'),
-      new TableChild('File Source', getSearchQueryModule('source'), 'source'),
+      new TableChild('File Song', SongQueryModule, 'song'),
+      new TableChild('File Source', SourceQueryModule, 'source'),
       new TableChild('Link to Source (if needed)', TextInputModule, 'link'),
       new TableChild('Is it HQ?', CheckboxModule, 'isHQ'),
       new TableChild(fileHeader, FileClass, '')
@@ -1262,7 +1266,7 @@ export class PageEditor extends EditorModule {
     return [
       new TableChild('Page Title', TextInputModule, 'name'),
       new TableChild('Content', TextAreaModule, 'content'),
-      new TableChild('Categories', MoveableRowsModule, 'categories', getSearchQueryModule('category'))
+      new TableChild('Categories', MoveableRowsModule, 'categories', CategoryQueryModule)
     ]
   }
 }
@@ -1272,8 +1276,8 @@ class SongAppearanceModule extends ObjectModule {
     return [
       new ObjectChild(CheckboxModule, 'isUnused'),
       new ObjectChild(TimeRangeModule, 'available'),
-      new ObjectChild(getSearchQueryModule('song'), 'song'),
-      new ObjectChild(getReferenceSearchModule(), 'reference')
+      new ObjectChild(SongQueryModule, 'song'),
+      new ObjectChild(ReferenceQueryModule, 'reference')
     ]
   }
 }
@@ -1298,7 +1302,7 @@ class PartySongModule extends ObjectModule {
       }),
       new ObjectChild(CheckboxModule, 'usePartyDate'),
       new ObjectChild(TimeRangeModule, 'available'),
-      new ObjectChild(getSearchQueryModule('song'), 'song')
+      new ObjectChild(SongQueryModule, 'song')
     ]
   }
 }
@@ -1317,7 +1321,7 @@ class CatalogueItemModule extends ObjectModule {
   modules () {
     return [
       new ObjectChild(TextInputModule, 'displayName'),
-      new ObjectChild(getSearchQueryModule('song'), 'song')
+      new ObjectChild(SongQueryModule, 'song')
     ]
   }
 }
@@ -1329,7 +1333,7 @@ export class MuscatalogEditor extends EditorModule {
       new TableChild('Catalogue Notes', TextAreaModule, 'description'),
       new TableChild('Catalogue Date', DateEstimateModule, 'date'),
       new TableChild('Song List', GridModule, 'songs', CatalogueItemModule),
-      new TableChild('Catalogue Reference', getReferenceSearchModule(), 'reference')
+      new TableChild('Catalogue Reference', ReferenceQueryModule, 'reference')
     ]
   }
 }
@@ -1339,7 +1343,7 @@ class StageAppearanceModule extends ObjectModule {
     return [
       new ObjectChild(CheckboxModule, 'isUnused'),
       new ObjectChild(TimeRangeModule, 'appearance'),
-      new ObjectChild(getReferenceSearchModule(), 'reference')
+      new ObjectChild(ReferenceQueryModule, 'reference')
     ]
   }
 }
@@ -1348,7 +1352,7 @@ export class StageEditor extends EditorModule {
   modules () {
     return [
       new TableChild('Stage Play Name', TextInputModule, 'name'),
-      new TableChild('Play Theme Song', getSearchQueryModule('song'), 'song'),
+      new TableChild('Play Theme Song', SongQueryModule, 'song'),
       new TableChild('Play Debuts', MoveableRowsModule, 'appearances', StageAppearanceModule)
     ]
   }
@@ -1358,7 +1362,7 @@ class MinigameSongModule extends ObjectModule {
   modules () {
     return [
       new ObjectChild(CheckboxModule, 'isUnused'),
-      new ObjectChild(getSearchQueryModule('song'), 'song'),
+      new ObjectChild(SongQueryModule, 'song'),
       new ObjectChild(CheckboxModule, 'useMinigameDates'),
       new ObjectChild(TimeRangeModule, 'available')
     ]
