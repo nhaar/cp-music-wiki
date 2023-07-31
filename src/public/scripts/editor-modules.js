@@ -163,6 +163,7 @@ class ChildModule extends BaseModule {
     this.e = element || parent.e
     if (this.earlyinit) this.earlyinit()
     if (this.initialize) this.initialize()
+    if (this.style) styleElement(this.e, ...this.style())
     this.children = this.getmodules()
   }
 }
@@ -318,6 +319,8 @@ class TableChild {
  * contains a name and a module
  */
 class TableModule extends ObjectModule {
+  style () { return ['header-row', 'grid'] }
+
   constructModule (o) {
     const TableClass = getHeaderRowModule(o.header, o.Class, o.args)
     return new TableClass(this, o.childOut)
@@ -594,10 +597,10 @@ class MoveableRowsModule extends ArrayModule {
  */
 class GridModule extends ArrayModule {
   /**
-   * @param {BaseModule} parent 
-   * @param {Pointer} out 
-   * @param {HTMLElement} element 
-   * @param {BaseModule} ChildClass 
+   * @param {BaseModule} parent
+   * @param {Pointer} out
+   * @param {HTMLElement} element
+   * @param {BaseModule} ChildClass
    */
   constructor (parent, out, element, ChildClass) {
     super(parent, out, element, ChildClass)
@@ -786,27 +789,16 @@ function getSearchQueryModule (type) {
      */
     prebuild () {
       this.inputElement = createElement({ parent: this.e, tag: 'input' })
+      this.int = new Pointer(this.inputElement.dataset, 'id')
     }
 
-    /**
-     * Create pointer to query
-     */
-    postbuild () { this.int = new Pointer(this.inputElement.dataset, 'id') }
-
     convertinput (input) { return input || '' }
+    convertoutput (output) { return output ? Number(output) : null }
 
     /**
      * Setup search query
      */
     presetup () { createSearchQuery(this.inputElement, type) }
-
-    /**
-     * Convert the data before outputting it
-     */
-    async postoutput () {
-      const id = this.int.read()
-      this.out.assign(id ? Number(id) : null)
-    }
   }
 
   return SearchQueryModule
@@ -917,11 +909,6 @@ class LocalizationNamesModule extends ObjectModule {
  * Module for editting a song name (official)
  */
 class SongNameModule extends TableModule {
-  /**
-   * Style row
-   */
-  initialize () { styleElement(this.e, 'name-row', 'header-row') }
-
   modules () {
     return [
       new TableChild('Main Name', TextInputModule, 'name'),
@@ -935,8 +922,6 @@ class SongNameModule extends TableModule {
  * Module for editting a song author
  */
 class SongAuthorModule extends TableModule {
-  prebuild () { styleElement(this.e, 'grid', 'header-row') }
-
   modules () {
     return [
       new TableChild('Author Name', getSearchQueryModule('author'), 'author'),
@@ -961,8 +946,6 @@ class AudioFileModule extends ReadonlyModule {
  * Module for an unofficial name
  */
 class UnofficialNameModule extends TableModule {
-  prebuild () { styleElement(this.e, 'header-row', 'grid') }
-
   modules () {
     return [
       new TableChild('Name', TextInputModule, 'name'),
@@ -975,7 +958,6 @@ class UnofficialNameModule extends TableModule {
  * Module for a song version object
  */
 class SongVersionModule extends TableModule {
-  prebuild () { styleElement(this.e, 'header-row', 'grid') }
   modules () {
     return [
       new TableChild('Version Name', TextInputModule, 'name'),
@@ -1015,8 +997,9 @@ class CheckboxModule extends ElementModule {
 }
 
 class EstimateCheckboxModule extends CheckboxModule {
+  style () { return ['date-estimate'] }
+
   prebuild () {
-    styleElement(this.e, 'date-estimate')
     this.div = createElement({ parent: this.e, className: 'is-estimate' })
     this.text = createElement({ parent: this.div, innerHTML: 'Is estimate?' })
     this.checkbox = createElement({ parent: this.div, tag: 'input', type: 'checkbox' })
