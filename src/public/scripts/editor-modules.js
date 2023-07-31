@@ -593,48 +593,50 @@ class GridModule extends ArrayModule {
     Object.assign(this, { ChildClass })
     this.rows = 0
     this.columns = 1
+
+    this.names = ['row', 'column']
+    this.pluralNames = this.names.map(name => `${name}s`)
+    const capitalize = x => `${x[0].toUpperCase()}${x.slice(1)}`
+    this.capitalizedNames = this.names.map(name => capitalize(name))
+    this.capitalizedPlural = this.pluralNames.map(name => capitalize(name))
   }
 
-  addRow (values = []) {
-    this.rows++
-    for (let i = 0; i < this.columns; i++) {
-      const newElement = createElement({ parent: this.grid })
+  addNew (values = [], index, callbackfn) {
+    const name = this.pluralNames[index]
+    const otherName = this.pluralNames[index ? 0 : 1]
+    console.log(name, otherName)
+    this[name]++
+    for (let i = 0; i < this[otherName]; i++) {
+      const newElement = callbackfn(i)
       const child = this.newchild(values[i], newElement)
       child.build()
       child.setup()
     }
-    this.setTemplateRows()
+    this.setTemplate(index)
   }
 
-  addColumn (values = []) {
-    this.columns++
-    for (let i = 0; i < this.rows; i++) {
+  addRow (values) {
+    this.addNew(values, 0, () => createElement({ parent: this.grid }))
+  }
+
+  addColumn (values) {
+    this.addNew(values, 1, i => {
       const newElement = createElement({})
-      this.grid.insertBefore(newElement, this.grid.children[this.columns - 1 + i])
-      const child = this.newchild(values[i], newElement)
-      child.build()
-      child.setup()
-    }
-    this.setTemplateColumns()
+      this.grid.children[i * 2].insertAdjacentElement('afterend', newElement)
+      return newElement
+    })
   }
 
-  setTemplateColumns () {
-    this.grid.style.gridTemplateColumns = this.getCSS(this.columns)
-  }
-
-  setTemplateRows () {
-    this.grid.style.gridTemplateRows = this.getCSS(this.rows)
-  }
-
-  getCSS (number) {
-    return `repeat(${number}, 1fr)`
+  setTemplate (index) {
+    this.grid.style[`gridTemplate${this.capitalizedPlural[index]}`] = `repeat(${this[this.pluralNames[index]]}, 1fr)`
   }
 
   prebuild () {
     this.grid = createElement({ parent: this.e })
     this.grid.style.display = 'grid'
-    this.rowButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Add row' })
-    this.colButton = createElement({ parent: this.e, tag: 'button', innerHTML: 'Add column' })
+    this.names.forEach(name => {
+      this[`${name}Button`] = createElement({ parent: this.e, tag: 'button', innerHTML: `Add ${name}` })
+    })
   }
 
   postbuild () {
@@ -642,7 +644,7 @@ class GridModule extends ArrayModule {
     if (grid.length) {
       const firstRow = grid[0]
       this.columns = firstRow.length
-      this.setTemplateColumns()
+      this.setTemplate(1)
       for (let i = 0; i < grid.length; i++) {
         this.addRow(grid[i])
       }
@@ -656,12 +658,13 @@ class GridModule extends ArrayModule {
   }
 
   setupButtons () {
-    this.rowButton.addEventListener('click', () => {
-      this.addRow()
-    })
-
-    this.colButton.addEventListener('click', () => {
-      this.addColumn()
+    this.names.forEach((name, i) => {
+      this[`${name}Button`].addEventListener('click', () => {
+        const capitalized = this.capitalizedNames[i]
+        console.log(this, `add${capitalized}`)
+        this[`add${capitalized}`]()
+        console.log(this.rows, this.columns)
+      })
     })
   }
 
