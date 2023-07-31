@@ -618,7 +618,7 @@ class GridModule extends ArrayModule {
   addColumn (values) {
     this.addNew(values, 1, i => {
       const newElement = createElement({})
-      this.grid.children[i * 2].insertAdjacentElement('afterend', newElement)
+      this.grid.children[this.columns - 2 + i * this.columns].insertAdjacentElement('afterend', newElement)
       return newElement
     })
   }
@@ -635,11 +635,14 @@ class GridModule extends ArrayModule {
   }
 
   removeColumn () {
-    for (let i = this.grid.children.length - 1; i > 0; i -= this.columns) {
-      this.grid.removeChild(this.grid.children[i])
+    // minimum is 1
+    if (this.columns > 1) {
+      for (let i = this.grid.children.length - 1; i > 0; i -= this.columns) {
+        this.grid.removeChild(this.grid.children[i])
+      }
+      this.columns--
+      this.setTemplate(1)
     }
-    this.columns--
-    this.setTemplate(1)
   }
 
   setTemplate (index) {
