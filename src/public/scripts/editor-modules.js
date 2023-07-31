@@ -587,10 +587,23 @@ class MoveableRowsModule extends ArrayModule {
   }
 }
 
+/**
+ * Module that represents a grid where children modules can be placed in a row-column orientation
+ * and the UI lets the user edit the number of rows and columns,
+ * and outputs the data as a two dimensional array
+ */
 class GridModule extends ArrayModule {
+  /**
+   * @param {BaseModule} parent 
+   * @param {Pointer} out 
+   * @param {HTMLElement} element 
+   * @param {BaseModule} ChildClass 
+   */
   constructor (parent, out, element, ChildClass) {
     super(parent, out, element, ChildClass)
     Object.assign(this, { ChildClass })
+
+    // control the grid dimensions
     this.rows = 0
     this.columns = 1
 
@@ -598,6 +611,12 @@ class GridModule extends ArrayModule {
     this.actions = ['add', 'remove']
   }
 
+  /**
+   * Add a new row or column
+   * @param {any[]} values - Values to be passed down to the modules of the column/row
+   * @param {number} index - 0 for 'row' and 1 for 'column'
+   * @param {function(any[]) : void} callbackfn - Takes as arguments the values argument of this function, and adds a new element to the grid
+   */
   addNew (values = [], index, callbackfn) {
     const name = this.pluralize(this.names[index])
     const otherName = this.pluralize(this.names[index ? 0 : 1])
@@ -610,10 +629,18 @@ class GridModule extends ArrayModule {
     }
   }
 
+  /**
+   * Add a new row
+   * @param {any[]} values - Values to be passed down to the modules of the row
+   */
   addRow (values) {
     this.addNew(values, 0, () => createElement({ parent: this.grid }))
   }
 
+  /**
+   * Add a new column
+   * @param {any[]} values - Values to be passed down to the modules of the column
+   */
   addColumn (values) {
     this.addNew(values, 1, i => {
       const newElement = createElement({})
@@ -622,6 +649,9 @@ class GridModule extends ArrayModule {
     })
   }
 
+  /**
+   * Remove the last row
+   */
   removeRow () {
     // don't remove if at 0
     if (this.rows > 0) {
@@ -633,6 +663,9 @@ class GridModule extends ArrayModule {
     }
   }
 
+  /**
+   * Remove the last column
+   */
   removeColumn () {
     // minimum is 1
     if (this.columns > 1) {
@@ -643,12 +676,18 @@ class GridModule extends ArrayModule {
     }
   }
 
+  /**
+   * Updates the CSS for the grid
+   */
   setTemplate () {
     this.names.forEach(name => {
       this.grid.style[`gridTemplate${this.capitalpluralize(name)}`] = `repeat(${this[this.pluralize(name)]}, 1fr)`
     })
   }
 
+  /**
+   * Renders the HTML elements
+   */
   prebuild () {
     this.grid = createElement({ parent: this.e })
     this.grid.style.display = 'grid'
@@ -660,6 +699,9 @@ class GridModule extends ArrayModule {
     })
   }
 
+  /**
+   * Add new rows and columns according to the data inputted, if any
+   */
   postbuild () {
     const grid = this.out.read()
     if (grid.length) {
@@ -674,11 +716,10 @@ class GridModule extends ArrayModule {
     }
   }
 
+  /**
+   * Add control to the buttons
+   */
   presetup () {
-    this.setupButtons()
-  }
-
-  setupButtons () {
     this.actions.forEach(action => {
       this.names.forEach(name => {
         const capitalized = this.capitalize(name)
@@ -690,6 +731,9 @@ class GridModule extends ArrayModule {
     })
   }
 
+  /**
+   * Get the two dimensional array from the grid values and pass to output
+   */
   postmidoutput () {
     const gridArray = []
     for (let i = 0; i < this.rows; i++) {
@@ -699,14 +743,29 @@ class GridModule extends ArrayModule {
     this.array = gridArray
   }
 
+  /**
+   * Adds 's' to the end of a string
+   * @param {string} str - String to modify
+   * @returns Modified string
+   */
   pluralize (str) {
     return `${str}s`
   }
 
+  /**
+   * Makes the first letter of a string uppercase
+   * @param {string} str - String to modify
+   * @returns Modified string
+   */
   capitalize (str) {
     return `${str[0].toUpperCase()}${str.slice(1)}`
   }
 
+  /**
+   * Makes the first letter of a string uppercase and 's' to the end of it
+   * @param {string} str - String to modify
+   * @returns Modified string
+   */
   capitalpluralize (str) {
     return this.pluralize(this.capitalize(str))
   }
