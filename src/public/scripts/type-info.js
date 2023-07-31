@@ -1,4 +1,9 @@
-import { FileEditor, FlashgameEditor, FlashpartyEditor, FlashroomEditor, GenreEditor, InstrumentEditor, KeysigEditor, MuscatalogEditor, NameOnlyEditor, PageEditor, ReferenceEditor, SongEditor, StageEditor } from './editor-modules.js'
+import {
+  FileEditor, FlashgameEditor, FlashpartyEditor, FlashroomEditor,
+  GenreEditor, InstrumentEditor, KeysigEditor, MuscatalogEditor,
+  NameOnlyEditor, PageEditor, ReferenceEditor, SongEditor,
+  StageEditor
+} from './modules/editor-modules.js'
 
 class TypeInfo {
   constructor (type, name, editor, input = {}) {
