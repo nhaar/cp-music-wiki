@@ -608,7 +608,6 @@ class GridModule extends ArrayModule {
       child.build()
       child.setup()
     }
-    this.setTemplate(index)
   }
 
   addRow (values) {
@@ -641,12 +640,13 @@ class GridModule extends ArrayModule {
         this.grid.removeChild(this.grid.children[i])
       }
       this.columns--
-      this.setTemplate(1)
     }
   }
 
-  setTemplate (index) {
-    this.grid.style[`gridTemplate${this.capitalpluralize(this.names[index])}`] = `repeat(${this[this.pluralize(this.names[index])]}, 1fr)`
+  setTemplate () {
+    this.names.forEach(name => {
+      this.grid.style[`gridTemplate${this.capitalpluralize(name)}`] = `repeat(${this[this.pluralize(name)]}, 1fr)`
+    })
   }
 
   prebuild () {
@@ -684,6 +684,7 @@ class GridModule extends ArrayModule {
         const capitalized = this.capitalize(name)
         this[`${action}${capitalized}Button`].addEventListener('click', () => {
           this[`${action}${capitalized}`]()
+          this.setTemplate()
         })
       })
     })
@@ -1340,4 +1341,3 @@ function generateAudio (file) {
   }
   return '<div>Could not load</div>'
 }
-
