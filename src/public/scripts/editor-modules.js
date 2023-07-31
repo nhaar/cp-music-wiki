@@ -322,7 +322,7 @@ class TableModule extends ObjectModule {
   style () { return ['header-row', 'grid'] }
 
   constructModule (o) {
-    const TableClass = getHeaderRowModule(o.header, o.Class, o.args)
+    const TableClass = getEditorRowModule(o.header, o.Class, false, ...o.args)
     return new TableClass(this, o.childOut)
   }
 }
@@ -1130,7 +1130,6 @@ class FileUploadModule extends ElementModule {
 /**
  * Module for the file editor
  */
-
 export class FileEditor extends EditorModule {
   modules () {
     const id = this.r.file.id
@@ -1158,7 +1157,7 @@ export class FileEditor extends EditorModule {
  * @param {string} header - Header of the row
  * @param {Class} ChildClass - Constructor for the class to be included
  * @param {boolean} useExpand - True if wants to use and expand button for the row
- * @param {*[]} args - Arbitrary arguments for the constructor
+ * @param  {...any} args - Arbitrary arguments for the constructor
  * @returns {EditorModule} - Constructor for the editor's row
  */
 function getEditorRowModule (header, ChildClass, useExpand, ...args) {
@@ -1215,10 +1214,9 @@ function getEditorRowModule (header, ChildClass, useExpand, ...args) {
   return EditorRowModule
 }
 
-function getHeaderRowModule (header, ChildClass, ...args) {
-  return getEditorRowModule(header, ChildClass, false, ...args)
-}
-
+/**
+ * Module for the musical genre editor
+ */
 export class GenreEditor extends EditorModule {
   modules () {
     return [
@@ -1228,6 +1226,9 @@ export class GenreEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for the musical instrument editor
+ */
 export class InstrumentEditor extends EditorModule {
   modules () {
     return [
@@ -1237,6 +1238,9 @@ export class InstrumentEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for the key signature editor
+ */
 export class KeysigEditor extends EditorModule {
   modules () {
     return [
@@ -1246,6 +1250,9 @@ export class KeysigEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for the wiki page editor
+ */
 export class PageEditor extends EditorModule {
   modules () {
     return [
@@ -1256,6 +1263,9 @@ export class PageEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for the song apperances
+ */
 class SongAppearanceModule extends ObjectModule {
   modules () {
     return [
@@ -1267,6 +1277,9 @@ class SongAppearanceModule extends ObjectModule {
   }
 }
 
+/**
+ * Module for the flash room editor
+ */
 export class FlashroomEditor extends EditorModule {
   modules () {
     return [
@@ -1277,6 +1290,9 @@ export class FlashroomEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for a party song object
+ */
 class PartySongModule extends ObjectModule {
   modules () {
     return [
@@ -1292,6 +1308,9 @@ class PartySongModule extends ObjectModule {
   }
 }
 
+/**
+ * Module for the flash party editor
+ */
 export class FlashpartyEditor extends EditorModule {
   modules () {
     return [
@@ -1302,6 +1321,9 @@ export class FlashpartyEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for a catalogue item object
+ */
 class CatalogueItemModule extends ObjectModule {
   modules () {
     return [
@@ -1311,6 +1333,9 @@ class CatalogueItemModule extends ObjectModule {
   }
 }
 
+/**
+ * Module for the music catalogue editor
+ */
 export class MuscatalogEditor extends EditorModule {
   modules () {
     return [
@@ -1323,6 +1348,9 @@ export class MuscatalogEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for a stage appearance objecy
+ */
 class StageAppearanceModule extends ObjectModule {
   modules () {
     return [
@@ -1333,6 +1361,9 @@ class StageAppearanceModule extends ObjectModule {
   }
 }
 
+/**
+ * Module for the stage play editor
+ */
 export class StageEditor extends EditorModule {
   modules () {
     return [
@@ -1343,6 +1374,9 @@ export class StageEditor extends EditorModule {
   }
 }
 
+/**
+ * Module for a flash minigame song object
+ */
 class MinigameSongModule extends ObjectModule {
   modules () {
     return [
@@ -1354,6 +1388,9 @@ class MinigameSongModule extends ObjectModule {
   }
 }
 
+/**
+ * Module for the flash minigame editor
+ */
 export class FlashgameEditor extends EditorModule {
   modules () {
     return [
