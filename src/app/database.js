@@ -76,14 +76,35 @@ class WikiDatabase {
       )`
     ).then(() => {
       for (const type in staticTypes) {
-        this.handler.insertStatic(type)
+        this.handler.insertStatic(type, JSON.stringify(this.defaults[type]))
       }
     })
   }
 
-  isType (type) {
-    return Object.keys(this.databaseTypes).includes(type)
-  }
+  /**
+   * Check if a string belongs to the keys of an object
+   * @param {object} obj - Object to check
+   * @param {string} key - String to find
+   * @returns {boolean} True if the keys include the key
+   */
+  keysInclude = (obj, key) => Object.keys(obj).includes(key)
+  
+
+  /**
+   * Check if a value is a static type
+   * @param {any} type - Value to check 
+   * @returns {boolean} True if it is a static type
+   */
+  isStaticType = type => this.keysInclude(this.staticTypes, type)
+  
+
+  /**
+   * Check if a value is a database type
+   * @param {any} type 
+   * @returns {boolean} True if it is a database type
+   */
+  isType = type => this.keysInclude(this.databaseTypes, type)
+  
 
   /**
    * Get the data from an object type give the id
@@ -99,7 +120,7 @@ class WikiDatabase {
    * @param {TypeData} data - Object to validate
    * @returns {string[]} Array where each element is a string describing an error
    */
-  validate (type, data) {
+  validate (type, data, isStatic) {
     const errors = []
     const db = this
 
@@ -178,7 +199,10 @@ class WikiDatabase {
       })
     }
 
-    const databaseType = db.databaseTypes[type]
+    const databaseType = isStatic
+      ? db.staticTypes[type]
+      : db.databaseTypes[type]
+
     iterateObject(databaseType.code, databaseType.validators, data, [`[${type} Object]`])
 
     return errors
@@ -434,8 +458,8 @@ class SQLHandler {
    * Insert a static type if it doesn't exist yet
    * @param {TypeName} type - Name of the type
    */
-  insertStatic = async (type) => {
-    await this.insert('static', 'id, data', [type, JSON.stringify(this.defaults[type])], 'ON CONFLICT (id) DO NOTHING')
+  insertStatic = async (type, defaultData) => {
+    await this.insert('static', 'id, data', [type, defaultData], 'ON CONFLICT (id) DO NOTHING')
   }
 
   /**

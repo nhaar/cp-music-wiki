@@ -28,12 +28,16 @@ router.post('/get', async (req, res) => {
   }
 })
 
+// get static row
 router.post('/get-static', async (req, res) => {
   const { type } = req.body
-  const row = await db.getStatic(type)
-  res.status(200).send(row)
+  if (checkType(res, type, true)) {
+    const row = await db.getStatic(type)
+    res.status(200).send(row)
+  }
 })
 
+// update static row
 router.post('/update-static', async (req, res) => {
   const { row } = req.body
   await db.updateStatic(row)
@@ -42,20 +46,26 @@ router.post('/update-static', async (req, res) => {
 
 // update a data type
 router.post('/update', async (req, res) => {
-  const { type, row } = req.body
+  const { type, row, isStatic } = req.body
   const error = msg => sendBadReq(res, msg)
 
   // validate data
-  if (checkType(res, type)) {
-    if (typeof row !== 'object') error('Invalid row data')
+  if (checkType(res, type, isStatic)) {
+    if (isStatic && type !== row.id) error('Invalid id')
+    else if (typeof row !== 'object') error('Invalid row data')
     else {
       const { data } = row
       if (typeof data !== 'object') error('Invalid data')
       else {
-        const validationErrors = db.validate(type, data)
+        const validationErrors = db.validate(type, data, isStatic)
         if (validationErrors.length === 0) {
-          await db.updateType(type, row)
-          res.sendStatus(200)
+          if (isStatic) {
+            await db.updateStatic(row)
+            res.sendStatus(200)
+          } else {
+            await db.updateType(type, row)
+            res.sendStatus(200)
+          }
         } else sendBadReqJSON(res, { errors: validationErrors })
       }
     }
@@ -136,8 +146,13 @@ function checkValid (res, callback, msg) {
  * @param {import('../app/database').TypeName} value - Value to check
  * @returns {boolean} Whether the value is valid or not
  */
-function checkType (res, value) {
-  return checkValid(res, () => db.isType(value), 'Invalid type provided')
+function checkType (res, value, isStatic = false) {
+  const msg = 'Invalid type provided'
+  if (isStatic) {
+    return checkValid(res, () => db.isStaticType(value), msg)
+  } else {
+    return checkValid(res, () => db.isType(value), msg)
+  }
 }
 
 /**

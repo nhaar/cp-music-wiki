@@ -20,11 +20,7 @@ class Page {
     this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
       console.log(deepcopy(row))
-      if (this.isStatic) {
-        postJSON('api/update-static', { row })
-      } else {
-        postJSON('api/update', { type, row })
-      }
+      postJSON('api/update', { type, row, isStatic: this.isStatic })
     })
   }
 
