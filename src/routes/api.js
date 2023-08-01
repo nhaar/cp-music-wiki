@@ -52,6 +52,7 @@ router.post('/update', async (req, res) => {
       else {
         const validationErrors = db.validate(type, data, isStatic)
         if (validationErrors.length === 0) {
+          await db.addChange(type, row, isStatic)
           if (isStatic) {
             await db.updateStatic(row)
             res.sendStatus(200)

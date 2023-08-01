@@ -1,4 +1,6 @@
 const { Pool } = require('pg')
+const jsondiffpatch = require('jsondiffpatch')
+
 const { deepcopy } = require('./utils')
 
 /**
@@ -79,6 +81,16 @@ class WikiDatabase {
         this.handler.insertStatic(type, JSON.stringify(this.defaults[type]))
       }
     })
+
+    // create DB for patches
+    this.handler.create(`
+      changes (
+        id SERIAL PRIMARY KEY,
+        type TEXT,
+        type_id INT,
+        patch JSONB
+      )
+    `)
   }
 
   /**
@@ -268,6 +280,27 @@ class WikiDatabase {
   }
 
   /**
+   * Adds a patch to the changes table
+   * @param {TypeName} type - Type of the data being changed
+   * @param {Row} row - Row for the data being changed
+   * @param {boolean} isStatic - True if the type is static
+   */
+  async addChange (type, row, isStatic) {
+    let oldRow
+    if (isStatic) {
+      oldRow = await this.getStatic(type)
+    } else {
+      oldRow = await this.handler.selectId(type, row.id)
+    }
+    const delta = jsondiffpatch.diff(oldRow.data, row.data)
+    this.handler.insert(
+      'changes',
+      'type, type_id, patch',
+      [type, isStatic ? 0 : row.id, JSON.stringify(delta)]
+    )
+  }
+
+  /**
    * Create and save an object that maps each `TypeName` in the database
    * onto an array representing paths that lead to the search query properties
    *
@@ -447,9 +480,12 @@ class SQLHandler {
    * @param {string} columns - Name of all the columns to insert, comma separated
    * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
    */
-  insert = async (type, columns, values, condition) => (await this.pool.query(
+  insert = async (type, columns, values, condition = '') => {
+    console.log('aaaaaaaaaaaaaa', type, columns, values, condition)
+    return (await this.pool.query(
     `INSERT INTO ${type} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
-  ))
+    ))
+  }
 
   /**
    * Insert a static type if it doesn't exist yet
