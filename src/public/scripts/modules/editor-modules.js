@@ -216,3 +216,14 @@ export class FlashgameEditor extends EditorModule {
     ]
   }
 }
+
+/**
+ * Module for the EPF OST editor
+ */
+export class EPFEditor extends EditorModule {
+  modules () {
+    return [
+      new TableChild('Songs', MoveableRowsModule, 'songs', SongQueryModule)
+    ]
+  }
+}

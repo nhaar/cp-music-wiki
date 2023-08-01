@@ -1,6 +1,6 @@
 import { createSearchQuery } from './query-options.js'
 import { types } from './type-info.js'
-import { selectElement, createElement } from './utils.js'
+import { selectElement, createElement, styleElement } from './utils.js'
 
 class View {
   constructor () {
@@ -28,15 +28,25 @@ class Controller {
       const value = this.view.select.value
       if (value) {
         this.type = Number(value)
-        const { type } = types[this.type]
-        // reset query
-        this.view.input.innerHTML = ''
-        const input = createElement({ parent: this.view.input, tag: 'input' })
+        const { type, isStatic } = types[this.type]
+        Object.assign(this, { isStatic })
 
-        createSearchQuery(
-          input,
-          type
-        )
+        if (isStatic) {
+          // leave only editor button available
+          this.view.input.innerHTML = ''
+          styleElement(this.view.create, 'hidden')
+        } else {
+          // reset query
+          this.view.input.innerHTML = ''
+          const input = createElement({ parent: this.view.input, tag: 'input' })
+
+          this.view.create.classList.remove('hidden')
+
+          createSearchQuery(
+            input,
+            type
+          )
+        }
       } else {
         this.view.input.innerHTML = ' '
       }
@@ -49,8 +59,13 @@ class Controller {
 
     // edit existing entry
     this.view.edit.addEventListener('click', () => {
-      const input = this.view.input.querySelector('input')
-      if (Number.isInteger(this.type) && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
+      const isInt = Number.isInteger(this.type)
+      if (this.isStatic) {
+        if (isInt) window.location.href = this.getEditorParam()
+      } else {
+        const input = this.view.input.querySelector('input')
+        if (isInt && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
+      }
     })
   }
 

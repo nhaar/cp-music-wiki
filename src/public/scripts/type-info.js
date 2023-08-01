@@ -1,4 +1,5 @@
 import {
+  EPFEditor,
   FileEditor, FlashgameEditor, FlashpartyEditor, FlashroomEditor,
   GenreEditor, InstrumentEditor, KeysigEditor, MuscatalogEditor,
   NameOnlyEditor, PageEditor, ReferenceEditor, SongEditor,
@@ -6,8 +7,8 @@ import {
 } from './modules/editor-modules.js'
 
 class TypeInfo {
-  constructor (type, name, editor, input = {}) {
-    Object.assign(this, { type, name, Editor: editor, input })
+  constructor (type, name, editor, isStatic = false) {
+    Object.assign(this, { type, name, Editor: editor, isStatic })
   }
 }
 
@@ -15,13 +16,7 @@ export const types = [
   new TypeInfo(
     'song',
     'Song',
-    SongEditor,
-    {
-      file: `
-        SELECT file
-        WHERE data ->> 'song' = '$id'
-      `
-    }
+    SongEditor
   ),
   new TypeInfo(
     'author',
@@ -92,5 +87,11 @@ export const types = [
     'flash_minigame',
     'Club Penguin Minigame',
     FlashgameEditor
+  ),
+  new TypeInfo(
+    'epf_ost',
+    'Elite Penguin Force OST',
+    EPFEditor,
+    true
   )
 ]

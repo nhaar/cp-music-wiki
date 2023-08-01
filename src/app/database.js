@@ -57,15 +57,28 @@ class WikiDatabase {
    * @param {object} databaseTypes - Object mapping `TypeName` to `ObjectType`, and defines all the database types used
    * @param {object} propertyTypes - Object mapping names to `ObjectType` which are meant to be helper object structures to be used as properties in other objects
    */
-  constructor (databaseTypes, propertyTypes) {
+  constructor (databaseTypes, propertyTypes, staticTypes) {
     this.handler = new SQLHandler()
-    Object.assign(this, { databaseTypes, propertyTypes })
+    Object.assign(this, { databaseTypes, propertyTypes, staticTypes })
 
-    for (const type in this.databaseTypes) {
+    for (const type in databaseTypes) {
       this.handler.createType(type)
     }
+
     this.assignDefaults()
     this.queryIndexing()
+
+    // handle static types
+    this.handler.create(`
+      static (
+        id TEXT PRIMARY KEY,
+        data JSONB
+      )`
+    ).then(() => {
+      for (const type in staticTypes) {
+        this.handler.insertStatic(type)
+      }
+    })
   }
 
   isType (type) {
@@ -191,14 +204,30 @@ class WikiDatabase {
   getDefault = type => this.defaults[type]
 
   /**
+   * Get the row for a static type
+   * @param {TypeName} type - Type to get
+   * @returns {Row} Fetched row
+   */
+  getStatic = async type => (await this.handler.select('static', 'id', type))[0]
+
+  /**
+   * Update the row for a static type
+   * @param {Row} row - Row to update with
+   */
+  async updateStatic (row) {
+    await this.handler.update('static', 'data', 'id', [row.id, JSON.stringify(row.data)])
+  }
+
+  /**
    * Create and save the default object structure for each database type, where every array is replaced with an empty array, every object is expanded with its properties, and every other variable is kept null
    */
   assignDefaults () {
     this.defaults = {}
     this.standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
-    const databaseTypes = this.databaseTypes
+    const mergedTypes = {}
+    Object.assign(mergedTypes, this.databaseTypes, this.staticTypes)
 
-    for (const v in databaseTypes) {
+    for (const v in mergedTypes) {
       const defaultObject = {}
       const iterate = (object, code) => {
         this.iterateDeclarations(code, (property, type) => {
@@ -211,7 +240,7 @@ class WikiDatabase {
         })
       }
 
-      iterate(defaultObject, databaseTypes[v].code)
+      iterate(defaultObject, mergedTypes[v].code)
 
       this.defaults[v] = defaultObject
     }
@@ -397,9 +426,17 @@ class SQLHandler {
    * @param {string} columns - Name of all the columns to insert, comma separated
    * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
    */
-  insert = async (type, columns, values) => (await this.pool.query(
-    `INSERT INTO ${type} (${columns}) VALUES (${values.map((value, i) => `$${i + 1}`)})`, values
+  insert = async (type, columns, values, condition) => (await this.pool.query(
+    `INSERT INTO ${type} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
   ))
+
+  /**
+   * Insert a static type if it doesn't exist yet
+   * @param {TypeName} type - Name of the type
+   */
+  insertStatic = async (type) => {
+    await this.insert('static', 'id, data', [type, JSON.stringify(this.defaults[type])], 'ON CONFLICT (id) DO NOTHING')
+  }
 
   /**
    * Insert a row into a table associated with a `TypeData`
@@ -407,7 +444,7 @@ class SQLHandler {
    * @param {TypeValues} values - Values for the type
    * @returns
    */
-  insertData = async (type, values) => (await this.insert(type, this.columns, values))
+  insertData = async (type, values) => (await this.insert(type, this.columns, values, ''))
 
   /**
    * Update a row inside a table which a column matches a value
@@ -682,6 +719,16 @@ const db = new WikiDatabase({
     isHQ BOOLEAN
     originalname TEXT
     filename TEXT
+  `)
+}, {
+  epf_ost: new ObjectType(`
+    songs INT[]
+  `),
+  epfhr_ost: new ObjectType(`
+    songs INT[]
+  `),
+  game_day_ost: new ObjectType(`
+    songs INT[]
   `)
 })
 

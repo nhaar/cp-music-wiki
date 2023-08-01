@@ -20,7 +20,11 @@ class Page {
     this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
       console.log(deepcopy(row))
-      postJSON('api/update', { type, row })
+      if (this.isStatic) {
+        postJSON('api/update-static', { row })
+      } else {
+        postJSON('api/update', { type, row })
+      }
     })
   }
 
@@ -35,17 +39,24 @@ class Page {
 
     // t corresponds to a `DataType`
     // id is for the id of whatever type is being editted
-    const type = params.t ? Number(params.t) : null
+    const typeNumber = params.t ? Number(params.t) : null
     const id = Number(params.id)
-    const typeInfo = types[type]
+    const typeInfo = types[typeNumber]
+    const { isStatic, type } = typeInfo
+    Object.assign(this, { isStatic })
     let row
     let data
-    if (id) {
-      row = await postAndGetJSON('api/get', { type: typeInfo.type, id })
+    if (isStatic) {
+      row = await postAndGetJSON('api/get-static', { type })
       data = row.data
     } else {
-      data = await postAndGetJSON('api/default', { type: typeInfo.type })
-      row = { data }
+      if (id) {
+        row = await postAndGetJSON('api/get', { type, id })
+        data = row.data
+      } else {
+        data = await postAndGetJSON('api/default', { type })
+        row = { data }
+      }
     }
     console.log(deepcopy(row))
     const editor = new typeInfo.Editor(data, this.editor)
