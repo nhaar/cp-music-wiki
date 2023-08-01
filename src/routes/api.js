@@ -37,13 +37,6 @@ router.post('/get-static', async (req, res) => {
   }
 })
 
-// update static row
-router.post('/update-static', async (req, res) => {
-  const { row } = req.body
-  await db.updateStatic(row)
-  res.sendStatus(200)
-})
-
 // update a data type
 router.post('/update', async (req, res) => {
   const { type, row, isStatic } = req.body

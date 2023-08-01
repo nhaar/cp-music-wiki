@@ -88,23 +88,20 @@ class WikiDatabase {
    * @returns {boolean} True if the keys include the key
    */
   keysInclude = (obj, key) => Object.keys(obj).includes(key)
-  
 
   /**
    * Check if a value is a static type
-   * @param {any} type - Value to check 
+   * @param {any} type - Value to check
    * @returns {boolean} True if it is a static type
    */
   isStaticType = type => this.keysInclude(this.staticTypes, type)
-  
 
   /**
    * Check if a value is a database type
-   * @param {any} type 
+   * @param {any} type
    * @returns {boolean} True if it is a database type
    */
   isType = type => this.keysInclude(this.databaseTypes, type)
-  
 
   /**
    * Get the data from an object type give the id
