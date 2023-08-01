@@ -58,7 +58,8 @@ export class SongEditor extends EditorModule {
       new TableChild('Page Categories', MoveableRowsModule, 'categories', CategoryQueryModule),
       new TableChild('Song Versions', MoveableRowsModule, 'versions', SongVersionModule),
       new TableChild('Date Composed', DateEstimateModule, 'composedDate'),
-      new TableChild('External Release Date', DateInputModule, 'externalReleaseDate')
+      new TableChild('External Release Date', DateInputModule, 'externalReleaseDate'),
+      new TableChild('Priorty Number', NumberInputModule, 'priority')
     ]
   }
 }

@@ -292,6 +292,7 @@ class WikiDatabase {
     } else {
       oldRow = await this.handler.selectId(type, row.id)
     }
+    if (!oldRow) oldRow = { data: this.defaults[type] }
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
     this.handler.insert(
       'changes',
@@ -480,12 +481,10 @@ class SQLHandler {
    * @param {string} columns - Name of all the columns to insert, comma separated
    * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
    */
-  insert = async (type, columns, values, condition = '') => {
-    console.log('aaaaaaaaaaaaaa', type, columns, values, condition)
-    return (await this.pool.query(
+  insert = async (type, columns, values, condition = '') => (await this.pool.query(
     `INSERT INTO ${type} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
     ))
-  }
+  
 
   /**
    * Insert a static type if it doesn't exist yet
@@ -580,6 +579,7 @@ const db = new WikiDatabase({
     versions VERSION[]
     composedDate DATE_ESTIMATE
     externalReleaseDate DATE
+    priority INT
   `, [
     new Validator(
       o => o.names.length > 0 || o.unofficialNames.length > 0,
