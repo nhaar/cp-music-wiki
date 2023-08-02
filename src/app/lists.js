@@ -161,8 +161,13 @@ class Generator {
           ? '?'
           : instance.date
 
+        const isOfficial = Boolean(songData.names[0])
+        const name = isOfficial
+          ? `<span style="color: blue;">${songData.names[0].name}</span>`
+          : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
+
         list.push([
-          songData.names[0].name,
+          name,
           authorsList.join(', '),
           order,
           songData.link,
