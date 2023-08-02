@@ -23,12 +23,19 @@ async function getAllVersions (type, id) {
     const nextVersion = jsondiffpatch.patch(deepcopy(versions[i]), patch)
     versions.push(nextVersion)
   })
-  console.log(patches)
-  console.log(versions)
 
-  fs.writeFileSync('test.json', JSON.stringify(versions, null, 2))
+  // fs.writeFileSync('test.json', JSON.stringify(versions, null, 2))
 
   return versions
+}
+
+async function overridePatches (type, id, versions) {
+  const patchIds = await db.handler.selectPatchIds(type, id)
+  if (versions.length - 1 !== patchIds.length) throw new Error('Versions given cannot describe the patches to override')
+  patchIds.forEach((id, i) => {
+    const patch = JSON.stringify(jsondiffpatch.diff(versions[i], versions[i + 1]))
+    db.handler.update('changes', 'patch', 'id', [id, patch])
+  })
 }
 
 function addPath (obj, path) {
@@ -36,7 +43,6 @@ function addPath (obj, path) {
 
   const iterator = (obj, current) => {
     const step = steps[current]
-    console.log(steps, current)
     const dimension = step.match(/(\[\])*/)[0].length
     const property = step.replace(/\[\]|\./g, '')
     const nextObj = obj[property]
@@ -74,4 +80,17 @@ function addPath (obj, path) {
   }
 
   iterator(obj, 0)
+
+  return obj
 }
+
+async function addPathToAll (type, path) {
+  const seq = await db.handler.getBiggestSerial(type)
+  for (let i = 1; i <= seq; i++) {
+    let versions = await getAllVersions(type, i)
+    versions = versions.map(version => addPath(version, path))
+    overridePatches(type, i, versions)
+  }
+}
+
+// addPathToAll('song', '.names[].lmao')

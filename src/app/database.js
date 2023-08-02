@@ -223,9 +223,9 @@ class WikiDatabase {
    * @param {TypeInfo} row - Info for the row
    */
   async updateType (type, row) {
-    const { id, data } = row
+    const { id, data, isNew } = row
     const typeValues = [JSON.stringify(data), this.getQueryWords(type, data)]
-    if (!id) await this.handler.insertData(type, typeValues)
+    if (isNew) await this.handler.insertData(type, typeValues)
     else await this.handler.updateData(type, id, typeValues)
   }
 
@@ -295,7 +295,8 @@ class WikiDatabase {
     if (!oldRow) {
       if (!isStatic) {
         // to add id to row if creating new entry
-        row.id = (await this.handler.getBiggestSerial(type)) + 1
+        row.id = (await this.handler.getBiggestSerial(type))
+        row.isNew = true
       }
       oldRow = { data: this.defaults[type] }
     }
@@ -472,9 +473,17 @@ class SQLHandler {
    */
   select = async (type, column, value, selecting = '*') => (await this.pool.query(`SELECT ${selecting} FROM ${type} WHERE ${column} = $1`, [value])).rows
 
+  async selectChanges (type, id, column) {
+    return ((await this.pool.query(`SELECT ${column} FROM changes WHERE type = $1 AND type_id = $2 ORDER BY id ASC`, [type, id])).rows)
+      .map(change => change[column])
+  }
+
   async selectPatches (type, id) {
-    return ((await this.pool.query('SELECT patch FROM changes WHERE type = $1 AND type_id = $2 ORDER BY id ASC', [type, id])).rows)
-      .map(patch => patch.patch)
+    return await this.selectChanges(type, id, 'patch')
+  }
+
+  async selectPatchIds (type, id) {
+    return await this.selectChanges(type, id, 'id')
   }
 
   selectAll = async table => (await this.pool.query(`SELECt * FROM ${table}`)).rows
