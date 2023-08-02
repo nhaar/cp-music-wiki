@@ -147,21 +147,21 @@ class Generator {
     })
 
     const list = []
-    const addedSongs = []
+    const addedSongs = {}
 
     let order = 0
     instances.forEach(instance => {
       const { song } = instance
-
-      if (!addedSongs.includes(song)) {
+      console.log(addedSongs)
+      if (!Object.keys(addedSongs).includes(song + '')) {
+        order++
         const songRow = findByKey(songs, 'id', song)
-        addedSongs.push(songRow.id)
+        addedSongs[song] = order
         const songData = songRow.data
 
         const authorsList = songData.authors.map(author => {
           return findByKey(authors, 'id', author.author).data.name
         })
-        order++
 
         const altNames = (songData.names.splice(1)).map(name => name.name)
 
@@ -188,6 +188,9 @@ class Generator {
           hqSources.join(' + '),
           date
         ])
+      } else {
+        console.log(addedSongs[song], list)
+        list[addedSongs[song] - 1][4] += `, ${instance.name}`
       }
     })
 
