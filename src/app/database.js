@@ -466,6 +466,8 @@ class SQLHandler {
    */
   select = async (type, column, value, selecting = '*') => (await this.pool.query(`SELECT ${selecting} FROM ${type} WHERE ${column} = $1`, [value])).rows
 
+  selectAll = async table => (await this.pool.query(`SELECt * FROM ${table}`)).rows
+
   /**
    * Select the row matchin an id in a table
    * @param {TypeName} type - Type of the data associated with the table
@@ -483,8 +485,7 @@ class SQLHandler {
    */
   insert = async (type, columns, values, condition = '') => (await this.pool.query(
     `INSERT INTO ${type} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
-    ))
-  
+  ))
 
   /**
    * Insert a static type if it doesn't exist yet
@@ -748,6 +749,7 @@ const db = new WikiDatabase({
   STAGE_APPEARANCE: new ObjectType(`
     isUnused BOOLEAN
     appearance TIME_RANGE
+    song INT
     reference INT
   `),
   GAME_SONG: new ObjectType(`

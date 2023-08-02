@@ -6,6 +6,7 @@ const multer = require('multer')
 const path = require('path')
 
 const db = require('../app/database')
+// const gen = require('../app/lists')
 
 // get default data
 router.post('/default', async (req, res) => {

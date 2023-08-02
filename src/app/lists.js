@@ -1,8 +1,13 @@
-// const fs = require('fs')
-// const path = require('path')
+const fs = require('fs')
+const path = require('path')
 
 const db = require('./database')
-const { youtubify, deepcopy } = require('./utils')
+
+class SongInstance {
+  constructor (name, date, song, estimate) {
+    Object.assign(this, { name, date, song, estimate })
+  }
+}
 
 class Generator {
   /**
@@ -13,212 +18,188 @@ class Generator {
     this.db = db
   }
 
-  /**
-   * Generates a two-dimensional array representing the list
-   * @returns
-   */
-  async generateLists (medias) {
-    const mediaRows = {}
-    medias.forEach(media => {
-      mediaRows[media] = []
-    })
-
-    const songs = await this.db.getAll('songs')
-    const names = await this.db.getAll('song_names')
-    const songNames = this.organizeBySongId(names, 'name_text')
-
-    const authors = await this.db.getAll('authors')
-    const songAuthor = await this.db.getAll('song_author')
-    const authorNames = this.getIdToNameMap(authors, 'author_id')
-    const songAuthors = this.organizeBySongId(songAuthor, 'author_id')
-
-    const sources = await this.db.getAll('sources')
-    const sourceNames = this.getIdToNameMap(sources, 'source_id')
-
-    const files = await this.db.getAll('files')
-    const songFiles = this.organizeBySongId(files)
-
-    const mediaData = await this.db.getAll('medias')
-    const mediaNames = this.getIdToNameMap(mediaData, 'media_id')
-    const songFeature = await this.db.getAll('song_feature')
-    const songFeatureBySong = this.organizeBySongId(songFeature, 'media_id')
-    const features = await this.db.getAll('features')
-    const featureNames = this.getIdToNameMap(features, 'feature_id')
-    const featureInfo = this.getIdToNameMap(features, 'feature_id', true)
-    const featureBySong = this.organizeBySongId(songFeature)
-
-    songs.forEach(song => {
-      const songId = song.song_id
-      // get name
-      const name = songNames[songId][0]
-
-      // get authors
-      const authorArray = []
-      const authorIds = songAuthors[songId] || []
-      authorIds.forEach(author => {
-        authorArray.push(authorNames[author])
-      })
-      const authors = this.arrayToCommaSeparated(authorArray)
-
-      // link
-      const link = youtubify(song.link)
-
-      // hq sources
-      const filesUsed = songFiles[songId] || []
-      const sourceIds = []
-      filesUsed.forEach(file => {
-        if (file.is_hq) {
-          const source = file.source_id
-          if (!sourceIds.includes(source)) sourceIds.push(source)
-        }
-      })
-      const sourceArray = sourceIds.map(id => sourceNames[id])
-      const sources = this.arrayToCommaSeparated(sourceArray)
-
-      // alternate names
-      const alternateArray = songNames[songId]
-      alternateArray.splice(0, 1)
-      const altNames = this.arrayToCommaSeparated(alternateArray)
-
-      // medias AND related to
-      const mediaAndRelatedTo = {}
-
-      const featuresContained = [...new Set(songFeatureBySong[songId])]
-      medias.forEach(media => {
-        if (media === 0) {
-          let mediasRelated = deepcopy(featuresContained)
-          mediasRelated = mediasRelated.map(id => mediaNames[id])
-          mediasRelated = this.arrayToCommaSeparated(mediasRelated)
-
-          mediaAndRelatedTo[0] = mediasRelated
-        } else {
-          const featuresInMedia = []
-          featuresContained.forEach(feature => {
-            if (mediaNames[feature] === Number(media)) featuresInMedia.push(featureNames[feature])
-          })
-          mediaAndRelatedTo[media] = this.arrayToCommaSeparated(featuresInMedia)
-        }
-      })
-
-      // earliest date
-      const features = featureBySong[songId]
-      features.forEach(feature => {
-        if (feature.use_release_date) {
-          feature.date = featureInfo[feature.feature_id].release_date
-          feature.is_date_estimate = featureInfo[feature.feature_id].is_date_estimate
-        }
-      })
-      features.sort((a, b) => {
-        const aDate = Date.parse(a.date)
-        const bDate = Date.parse(b.date)
-        return aDate - bDate
-      })
-
-      const earliestDate = features[0].is_date_estimate ? '?' : features[0].date
-
-      medias.forEach(media => {
-        mediaRows[media].push([name, authors, link, sources, altNames, mediaAndRelatedTo[media], earliestDate, Date.parse(features[0].date)])
-      })
-    })
-
-    medias.forEach(media => {
-      const rows = mediaRows[media]
-      rows.sort((a, b) => a[7] - b[7])
-      const finalRows = []
-      rows.forEach((row, i) => {
-        const dateless = row.splice(0, 7)
-        dateless.splice(2, 0, i + 1)
-        finalRows.push(dateless)
-      })
-      mediaRows[media] = finalRows
-    })
-
-    return mediaRows
-  }
-
-  /**
-   * Gives an object mapping id -> name/the whole row
-   * @param {Row[]} array
-   * @param {string} idName - Name of the id column
-   * @param {boolean} useElement If true, uses whole row instead of name
-   * @returns {object}
-   */
-  getIdToNameMap (array, idName, useElement) {
-    const map = {}
-
-    array.forEach(element => {
-      if (!useElement) map[element[idName]] = element.name
-      else map[element[idName]] = element
-    })
-
-    return map
-  }
-
-  /**
-   * Creates an object where each key is a song id, and the value is an array of all values in a certain column from a table that contain the song id
-   *
-   * Eg, song id -> list of author ids
-   * @param {Row[]} array - All rows of the table to organize
-   * @param {string} column - Name of the column to target (in the example it would be author_id)
-   * @returns {object}
-   */
-  organizeBySongId (array, column) {
-    const map = {}
-
-    array.forEach(element => {
-      if (!map[element.song_id]) map[element.song_id] = []
-      if (column) map[element.song_id].push(element[column])
-      else map[element.song_id].push(element)
-    })
-
-    return map
-  }
-
-  /**
-   * Converts an array into a "comma list" (not a csv, meant for readability)
-   * @param {object} array
-   * @returns {string}
-   */
-  arrayToCommaSeparated (array) {
-    let string = ''
-    let isFirst = true
-    array.forEach(element => {
-      if (isFirst) isFirst = false
-      else string += ', '
-
-      string += element
-    })
-
-    return string
-  }
-
-  /**
-   * Creates a CSV from a two-dimensional array
-   * @param {*[][]} matrix
-   * @returns
-   */
-  generateCSV (matrix) {
-    let csv = ''
-    for (const row of matrix) {
-      for (let i = 0; i < row.length; i++) {
-        let value = row[i]
-        if (typeof value === 'string') {
-          // check if contains a comma or double quote
-          if (value.includes(',') || value.includes('"')) {
-            // escape them
-            value = '"' + value.replace(/"/g, '""') + '"'
-          }
-        }
-        csv += value
-        // add comma if not the last column
-        if (i < row.length - 1) {
-          csv += ','
-        }
-      }
-      // end of row
-      csv += '\n'
+  async generateFlashOST () {
+    const tables = [
+      'flash_room',
+      'flash_party',
+      'music_catalogue',
+      'stage_play',
+      'flash_minigame',
+      'flash_misc'
+    ]
+    for (let i = 0; i < tables.length; i++) {
+      tables[i] = await db.handler.selectAll(tables[i])
     }
-    return csv
+    const songs = await db.handler.selectAll('song')
+    const authors = await db.handler.selectAll('author')
+    const sources = await db.handler.selectAll('source')
+
+    const songPriority = {}
+    songs.forEach(song => {
+      songPriority[song.id] = song.data.priority
+    })
+
+    const instances = []
+
+    const tableIterate = (rows, useVar, callbackfn) => {
+      rows.forEach(row => {
+        const { data } = row
+        data[useVar].forEach(use => callbackfn(use, data))
+      })
+    }
+
+    tableIterate(tables[0], 'songUses', (use, data) => {
+      if (!use.isUnused) {
+        instances.push(
+          new SongInstance(
+            data.name,
+            use.available.start.date,
+            use.song,
+            use.available.start.isEstimate
+          )
+        )
+      }
+    })
+    tableIterate(tables[1], 'partySongs', (use, data) => {
+      if (!use.isUnused) {
+        const { usePartyDate } = use
+        const date = usePartyDate
+          ? data.active.start.date
+          : use.available.start.date
+        const estimate = usePartyDate
+          ? false
+          : use.available.start.isEstimate
+
+        instances.push(
+          new SongInstance(
+            data.name,
+            date,
+            use.song,
+            estimate
+          )
+        )
+      }
+    })
+
+    tableIterate(tables[2], 'songs', (gridRow, data) => {
+      gridRow.forEach(song => {
+        instances.push(
+          new SongInstance(
+            'Igloo',
+            data.launch.date,
+            song.song,
+            data.launch.isEstimate
+          )
+        )
+      })
+    })
+
+    tableIterate(tables[3], 'appearances', (use, data) => {
+      if (!use.isUnused) {
+        instances.push(
+          new SongInstance(
+            data.name,
+            use.appearance.start.date,
+            use.song,
+            use.appearance.start.isEstimate
+          )
+        )
+      }
+    })
+
+    tableIterate(tables[4], 'songs', (use, data) => {
+      if (!use.isUnused) {
+        const { useMinigameDates } = use
+        const date = useMinigameDates
+          ? data.available.start.date
+          : use.available.start.date
+        const estimate = useMinigameDates
+          ? false
+          : use.available.start.isEstimate
+        instances.push(
+          new SongInstance(
+            data.name,
+            date,
+            use.song,
+            estimate
+          )
+        )
+      }
+    })
+
+    tables[5].forEach(use => {
+      if (!use.isUnused) {
+        instances.push(
+          new SongInstance(
+            use.name,
+            use.available.start.date,
+            use.song,
+            use.available.start.isEstimate
+          )
+        )
+      }
+    })
+
+    instances.sort((a, b) => {
+      const ab = [a, b]
+      const dates = ab.map(instance => Date.parse(instance.date))
+
+      const difference = dates[0] - dates[1] || 0
+      if (difference === 0) {
+        const priorities = [a, b].map(instance => songPriority[instance.song])
+        return priorities[0] - priorities[1] || 0
+      } else {
+        return difference
+      }
+    })
+
+    const list = []
+    const addedSongs = []
+
+    let order = 0
+    instances.forEach(instance => {
+      const { song } = instance
+
+      if (!addedSongs.includes(song)) {
+        const songRow = findByKey(songs, 'id', song)
+        addedSongs.push(songRow.id)
+        const songData = songRow.data
+
+        const authorsList = songData.authors.map(author => {
+          return findByKey(authors, 'id', author).name
+        })
+        order++
+
+        const altNames = (songData.names.splice(1)).map(name => name.name)
+
+        const hqSources = []
+        songData.files.forEach(file => {
+          if (file.isHQ) {
+            const sourceName = findByKey(sources, 'id', file.source).data.name
+
+            hqSources.push(sourceName)
+          }
+        })
+
+        const date = instance.estimate
+          ? '?'
+          : instance.date
+
+        list.push([
+          songData.names[0].name,
+          authorsList.join(', '),
+          order,
+          songData.link,
+          instance.name,
+          altNames.join(', '),
+          hqSources.join(' + '),
+          date
+        ])
+      }
+    })
+
+    const flashOST = this.generateHTML(list)
+    fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), flashOST)
   }
 
   /**
@@ -271,6 +252,14 @@ class Generator {
   }
 }
 
+function findByKey (array, key, value) {
+  for (let i = 0; i < array.length; i++) {
+    if (array[i][key] === value) return array[i]
+  }
+}
+
 const gen = new Generator(db)
+
+gen.generateFlashOST()
 
 module.exports = gen

@@ -170,7 +170,7 @@ export class FlashroomEditor extends EditorModule {
 export class FlashpartyEditor extends EditorModule {
   modules () {
     return [
-      new TableChild('Party Name', TextInputModule, '.name'),
+      new TableChild('Party Name', TextInputModule, 'name'),
       new TableChild('Period the party was actiuve', TimeRangeModule, 'active'),
       new TableChild('Songs used in the party', MoveableRowsModule, 'partySongs', PartySongModule)
     ]
@@ -185,7 +185,7 @@ export class MuscatalogEditor extends EditorModule {
     return [
       new TableChild('Catalogue Title', TextInputModule, 'name'),
       new TableChild('Catalogue Notes', TextAreaModule, 'description'),
-      new TableChild('Catalogue Date', DateEstimateModule, 'date'),
+      new TableChild('Catalogue Date', DateEstimateModule, 'launch'),
       new TableChild('Song List', GridModule, 'songs', CatalogueItemModule),
       new TableChild('Catalogue Reference', ReferenceQueryModule, 'reference')
     ]

@@ -131,6 +131,7 @@ export class StageAppearanceModule extends ObjectModule {
     return [
       new ObjectChild(CheckboxModule, 'isUnused'),
       new ObjectChild(TimeRangeModule, 'appearance'),
+      new ObjectChild(SongQueryModule, 'song'),
       new ObjectChild(ReferenceQueryModule, 'reference')
     ]
   }
