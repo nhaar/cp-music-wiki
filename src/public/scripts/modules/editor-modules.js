@@ -228,3 +228,17 @@ export class EPFEditor extends EditorModule {
     ]
   }
 }
+// name QUERY
+// description TEXT
+// song INT
+// available TIME_RANGE
+export class PCAppearanceEditor extends EditorModule {
+  modules () {
+    return [
+      new TableChild('Name', TextInputModule, 'name'),
+      new TableChild('Description', TextAreaModule, 'description'),
+      new TableChild('Song', SongQueryModule, 'song'),
+      new TableChild('Available Period', TimeRangeModule, 'available')
+    ]
+  }
+}

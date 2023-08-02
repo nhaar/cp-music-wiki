@@ -2,7 +2,7 @@ import {
   EPFEditor,
   FileEditor, FlashgameEditor, FlashpartyEditor, FlashroomEditor,
   GenreEditor, InstrumentEditor, KeysigEditor, MuscatalogEditor,
-  NameOnlyEditor, PageEditor, ReferenceEditor, SongEditor,
+  NameOnlyEditor, PCAppearanceEditor, PageEditor, ReferenceEditor, SongEditor,
   StageEditor
 } from './modules/editor-modules.js'
 
@@ -93,5 +93,10 @@ export const types = [
     'Elite Penguin Force OST',
     EPFEditor,
     true
+  ),
+  new TypeInfo(
+    'penguin_chat_appearance',
+    'Penguin Chat Music Use',
+    PCAppearanceEditor
   )
 ]

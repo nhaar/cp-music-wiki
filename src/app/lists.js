@@ -18,18 +18,7 @@ class Generator {
     this.db = db
   }
 
-  async generateFlashOST () {
-    const tables = [
-      'flash_room',
-      'flash_party',
-      'music_catalogue',
-      'stage_play',
-      'flash_minigame',
-      'flash_misc'
-    ]
-    for (let i = 0; i < tables.length; i++) {
-      tables[i] = await db.handler.selectAll(tables[i])
-    }
+  async OSTListGenerator (media) {
     const songs = await db.handler.selectAll('song')
     const authors = await db.handler.selectAll('author')
     const sources = await db.handler.selectAll('source')
@@ -41,9 +30,12 @@ class Generator {
 
     const instances = []
 
+    let tables
+
     const base1 = (uses, callback) => {
       uses.forEach(use => {
         const args = callback(use)
+        console.log(args)
         if (args) {
           instances.push(new SongInstance(...args.concat(use)))
         }
@@ -52,7 +44,7 @@ class Generator {
 
     const base2 = (row, callback) => {
       const { data } = row
-      callback(data)
+      return callback(data)
     }
 
     const base3 = (use, callback) => {
@@ -90,29 +82,74 @@ class Generator {
 
     const base9 = base8('available')
 
-    // room music
-    base6(0, 'songUses', base9)
-
-    // party music
-    base7(1, 'partySongs', 'usePartyDate', 'active')
-
-    // igloo music
-    tables[2].forEach(row => {
-      base2(row, data => {
-        data.songs.forEach(gridRow => {
-          base5(gridRow, () => ['Igloo', data.launch])
+    const base10 = (i) => {
+      base1(tables[i], use => {
+        return base2(use, data => {
+          return [data.name, data.available.start, data]
         })
       })
-    })
+    }
 
-    // stage music
-    base6(3, 'appearances', base8('appearance'))
+    const getTables = async (...args) => {
+      tables = args
+      for (let i = 0; i < tables.length; i++) {
+        tables[i] = await db.handler.selectAll(tables[i])
+      }
+    }
 
-    // minigame music
-    base7(4, 'songs', 'useMinigameDates', 'availabe')
+    let dest
 
-    // misc music
-    base5(tables[5], base9)
+    switch (media) {
+      case 'flash': {
+        await getTables(
+          'flash_room',
+          'flash_party',
+          'music_catalogue',
+          'stage_play',
+          'flash_minigame',
+          'flash_misc'
+        )
+        // tables = [
+        // ]
+        // await getAllTables()
+
+        dest = 'flash-ost'
+
+        // room music
+        base6(0, 'songUses', base9)
+
+        // party music
+        base7(1, 'partySongs', 'usePartyDate', 'active')
+
+        // igloo music
+        tables[2].forEach(row => {
+          base2(row, data => {
+            data.songs.forEach(gridRow => {
+              base5(gridRow, () => ['Igloo', data.launch])
+            })
+          })
+        })
+
+        // stage music
+        base6(3, 'appearances', base8('appearance'))
+
+        // minigame music
+        base7(4, 'songs', 'useMinigameDates', 'availabe')
+
+        // misc music
+        base10(5)
+        base5(tables[5], base9)
+
+        break
+      }
+      case 'pc': {
+        await getTables('penguin_chat_appearance')
+        dest = 'penguin-chat-ost'
+
+        // pc misc
+        base10(0)
+      }
+    }
 
     instances.sort((a, b) => {
       const ab = [a, b]
@@ -127,15 +164,12 @@ class Generator {
       }
     })
 
-    console.log('insts', instances)
-
     const list = []
     const addedSongs = {}
 
     let order = 0
     instances.forEach(instance => {
       const { song } = instance
-      console.log(addedSongs)
       if (!Object.keys(addedSongs).includes(song + '')) {
         order++
         const songRow = findByKey(songs, 'id', song)
@@ -177,13 +211,20 @@ class Generator {
           date
         ])
       } else {
-        console.log(addedSongs[song], list)
         list[addedSongs[song] - 1][4] += `, ${instance.name}`
       }
     })
 
     const flashOST = this.generateHTML(list)
-    fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), flashOST)
+    fs.writeFileSync(path.join(__dirname, `../views/generated/${dest}.html`), flashOST)
+  }
+
+  async generateFlashOST () {
+    await this.OSTListGenerator('flash')
+  }
+
+  async generatePenguinChatOST () {
+    await this.OSTListGenerator('pc')
   }
 
   /**
@@ -244,6 +285,6 @@ function findByKey (array, key, value) {
 
 const gen = new Generator(db)
 
-gen.generateFlashOST()
+gen.generatePenguinChatOST()
 
 module.exports = gen
