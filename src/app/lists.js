@@ -44,19 +44,20 @@ class Generator {
     const tableIterate = (rows, useVar, callbackfn) => {
       rows.forEach(row => {
         const { data } = row
-        data[useVar].forEach(use => callbackfn(use, data))
+        data[useVar].forEach(use => {
+          const instance = callbackfn(use, data)
+          if (instance) instances.push(instance)
+        })
       })
     }
 
     tableIterate(tables[0], 'songUses', (use, data) => {
       if (!use.isUnused) {
-        instances.push(
-          new SongInstance(
-            data.name,
-            use.available.start.date,
-            use.song,
-            use.available.start.isEstimate
-          )
+        return new SongInstance(
+          data.name,
+          use.available.start.date,
+          use.song,
+          use.available.start.isEstimate
         )
       }
     })
@@ -70,39 +71,33 @@ class Generator {
           ? false
           : use.available.start.isEstimate
 
-        instances.push(
-          new SongInstance(
-            data.name,
-            date,
-            use.song,
-            estimate
-          )
+        return new SongInstance(
+          data.name,
+          date,
+          use.song,
+          estimate
         )
       }
     })
 
     tableIterate(tables[2], 'songs', (gridRow, data) => {
       gridRow.forEach(song => {
-        instances.push(
-          new SongInstance(
-            'Igloo',
-            data.launch.date,
-            song.song,
-            data.launch.isEstimate
-          )
+        return new SongInstance(
+          'Igloo',
+          data.launch.date,
+          song.song,
+          data.launch.isEstimate
         )
       })
     })
 
     tableIterate(tables[3], 'appearances', (use, data) => {
       if (!use.isUnused) {
-        instances.push(
-          new SongInstance(
-            data.name,
-            use.appearance.start.date,
-            use.song,
-            use.appearance.start.isEstimate
-          )
+        return new SongInstance(
+          data.name,
+          use.appearance.start.date,
+          use.song,
+          use.appearance.start.isEstimate
         )
       }
     })
@@ -116,13 +111,11 @@ class Generator {
         const estimate = useMinigameDates
           ? false
           : use.available.start.isEstimate
-        instances.push(
-          new SongInstance(
-            data.name,
-            date,
-            use.song,
-            estimate
-          )
+        return new SongInstance(
+          data.name,
+          date,
+          use.song,
+          estimate
         )
       }
     })
@@ -166,7 +159,7 @@ class Generator {
         const songData = songRow.data
 
         const authorsList = songData.authors.map(author => {
-          return findByKey(authors, 'id', author).name
+          return findByKey(authors, 'id', author.author).data.name
         })
         order++
 
@@ -231,9 +224,9 @@ class Generator {
             <th> Composers </th>
             <th> Order </th>
             <th> Link </th>
-            <th> HQ Source(s) </th>
+            <th> Related To </th>
             <th> Alternate Names </th>
-            <th> Medias </th>
+            <th> HQ Source(s) </th>
             <th> EarliestDate </th>
           </tr>
           ${tableHTML}
