@@ -155,26 +155,26 @@ class Generator {
 
       const serieInstances = []
       for (const mediaName in medias) {
+        const mediaInfo = medias[mediaName]
         await getTables(mediaName)
-        medias[mediaName].updateMethod()
+        mediaInfo.updateMethod()
         const mediaAddedSongs = {}
         instances.forEach(instance => {
-          if (!Object.keys(mediaAddedSongs).includes(instance.song)) {
-            mediaAddedSongs[instance.song] = {
-              date: instance.date,
-              isEstimate: instance.estimate
-            }
-            instances.name = medias[mediaName].name
+          const { song } = instance
+          const dateInfo = {
+            date: instance.date,
+            isEstimate: instance.estimate
+          }
+          if (!Object.keys(mediaAddedSongs).includes(song)) {
+            mediaAddedSongs[song] = dateInfo
           } else {
             const dates = [
-              mediaAddedSongs[instance.song].date,
+              mediaAddedSongs[song].date,
               instance.date
             ].map(date => Date.parse(date))
+
             if (dates[0] > dates[1]) {
-              mediaAddedSongs[instance.song] = {
-                date: instance.date,
-                isEstimate: instance.estimate
-              }
+              mediaAddedSongs[song] = dateInfo
             }
           }
         })
