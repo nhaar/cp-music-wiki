@@ -4,8 +4,8 @@ const path = require('path')
 const db = require('./database')
 
 class SongInstance {
-  constructor (name, date, song, estimate) {
-    Object.assign(this, { name, date, song, estimate })
+  constructor (name, dateEst, song) {
+    Object.assign(this, { name, date: dateEst.date, song: song.song, estimate: dateEst.isEstimate })
   }
 }
 
@@ -41,97 +41,78 @@ class Generator {
 
     const instances = []
 
-    const tableIterate = (rows, useVar, callbackfn) => {
-      rows.forEach(row => {
-        const { data } = row
-        data[useVar].forEach(use => {
-          const instance = callbackfn(use, data)
-          if (instance) instances.push(instance)
+    const base1 = (uses, callback) => {
+      uses.forEach(use => {
+        const args = callback(use)
+        if (args) {
+          instances.push(new SongInstance(...args.concat(use)))
+        }
+      })
+    }
+
+    const base2 = (row, callback) => {
+      const { data } = row
+      callback(data)
+    }
+
+    const base3 = (use, callback) => {
+      if (!use.isUnused) return callback(use)
+    }
+
+    const base4 = (data, use, useKey, dateKey) => {
+      const useParent = use[useKey]
+      const date = useParent
+        ? data[dateKey].start
+        : use.available.start
+
+      return [data.name, date]
+    }
+
+    const base5 = (uses, callback) => {
+      base1(uses, use => {
+        return base3(use, callback)
+      })
+    }
+
+    const base6 = (i, key, callback) => {
+      tables[i].forEach(row => {
+        base2(row, data => {
+          base5(data[key], use => callback(use, data))
         })
       })
     }
 
-    tableIterate(tables[0], 'songUses', (use, data) => {
-      if (!use.isUnused) {
-        return new SongInstance(
-          data.name,
-          use.available.start.date,
-          use.song,
-          use.available.start.isEstimate
-        )
-      }
-    })
-    tableIterate(tables[1], 'partySongs', (use, data) => {
-      if (!use.isUnused) {
-        const { usePartyDate } = use
-        const date = usePartyDate
-          ? data.active.start.date
-          : use.available.start.date
-        const estimate = usePartyDate
-          ? false
-          : use.available.start.isEstimate
+    const base7 = (i, key, useKey, dateKey) => {
+      base6(i, key, (use, data) => base4(data, use, useKey, dateKey))
+    }
 
-        return new SongInstance(
-          data.name,
-          date,
-          use.song,
-          estimate
-        )
-      }
-    })
+    const base8 = key => (use, data) => [data.name, use[key].start]
 
-    tableIterate(tables[2], 'songs', (gridRow, data) => {
-      gridRow.forEach(song => {
-        return new SongInstance(
-          'Igloo',
-          data.launch.date,
-          song.song,
-          data.launch.isEstimate
-        )
+    const base9 = base8('available')
+
+    // room music
+    base6(0, 'songUses', base9)
+
+    // party music
+    base7(1, 'partySongs', 'usePartyDate', 'active')
+
+    // igloo music
+    tables[2].forEach(row => {
+      base2(row, data => {
+        data.songs.forEach(gridRow => {
+          base5(gridRow, () => ['Igloo', data.launch])
+        })
       })
     })
 
-    tableIterate(tables[3], 'appearances', (use, data) => {
-      if (!use.isUnused) {
-        return new SongInstance(
-          data.name,
-          use.appearance.start.date,
-          use.song,
-          use.appearance.start.isEstimate
-        )
-      }
-    })
+    // stage music
+    base6(3, 'appearances', base8('appearance'))
 
-    tableIterate(tables[4], 'songs', (use, data) => {
-      if (!use.isUnused) {
-        const { useMinigameDates } = use
-        const date = useMinigameDates
-          ? data.available.start.date
-          : use.available.start.date
-        const estimate = useMinigameDates
-          ? false
-          : use.available.start.isEstimate
-        return new SongInstance(
-          data.name,
-          date,
-          use.song,
-          estimate
-        )
-      }
-    })
+    // minigame music
+    base7(4, 'songs', 'useMinigameDates', 'availabe')
 
-    tables[5].forEach(use => {
-      if (!use.isUnused) {
-        instances.push(
-          new SongInstance(
-            use.name,
-            use.available.start.date,
-            use.song,
-            use.available.start.isEstimate
-          )
-        )
-      }
-    })
+    // misc music
+    base5(tables[5], base9)
 
     instances.sort((a, b) => {
       const ab = [a, b]
@@ -145,6 +126,8 @@ class Generator {
         return difference
       }
     })
+
+    console.log('insts', instances)
 
     const list = []
     const addedSongs = {}
