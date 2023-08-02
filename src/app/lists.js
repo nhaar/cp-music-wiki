@@ -19,7 +19,7 @@ class Generator {
     this.db = db
   }
 
-  async OSTListGenerator (media) {
+  async OSTListGenerator (...mediaList) {
     const songs = await db.handler.selectAll('song')
     const authors = await db.handler.selectAll('author')
     const sources = await db.handler.selectAll('source')
@@ -91,8 +91,8 @@ class Generator {
     }
 
     class MediaInfo {
-      constructor (name, updateMethod, ...tables) {
-        Object.assign(this, { name, updateMethod, tables })
+      constructor (name, updateMethod, dest, ...tables) {
+        Object.assign(this, { name, updateMethod, dest, tables })
       }
     }
 
@@ -124,6 +124,8 @@ class Generator {
           // misc music
           base10(5)
         },
+        'flash-ost'
+        ,
         'flash_room',
         'flash_party',
         'music_catalogue',
@@ -137,6 +139,7 @@ class Generator {
           // pc misc
           base10(0)
         },
+        'penguin-chat-ost',
         'penguin_chat_appearance'
       )
     }
@@ -148,148 +151,132 @@ class Generator {
       }
     }
 
-    let dest
+    const sortInstances = () => {
+      instances.sort((a, b) => {
+        const ab = [a, b]
+        const dates = ab.map(instance => Date.parse(instance.date))
 
-    if (media === 'series') {
-      dest = 'series-ost'
-
-      const serieInstances = []
-      for (const mediaName in medias) {
-        const mediaInfo = medias[mediaName]
-        await getTables(mediaName)
-        mediaInfo.updateMethod()
-        const mediaAddedSongs = {}
-        instances.forEach(instance => {
-          const { song } = instance
-          const dateInfo = {
-            date: instance.date,
-            isEstimate: instance.estimate
-          }
-          if (!Object.keys(mediaAddedSongs).includes(song)) {
-            mediaAddedSongs[song] = dateInfo
-          } else {
-            const dates = [
-              mediaAddedSongs[song].date,
-              instance.date
-            ].map(date => Date.parse(date))
-
-            if (dates[0] > dates[1]) {
-              mediaAddedSongs[song] = dateInfo
-            }
-          }
-        })
-
-        for (const song in mediaAddedSongs) {
-          serieInstances.push(new SongInstance(
-            medias[mediaName].name,
-            mediaAddedSongs[song],
-            song
-          ))
+        const difference = dates[0] - dates[1] || 0
+        if (difference === 0) {
+          const priorities = [a, b].map(instance => songPriority[instance.song])
+          return priorities[0] - priorities[1] || 0
+        } else {
+          return difference
         }
-      }
-      instances = serieInstances
-    } else {
-      await getTables(media)
-      medias[media].updateMethod()
-
-      switch (media) {
-        case 'flash': {
-          dest = 'flash-ost'
-          break
-        }
-        case 'pc': {
-          dest = 'penguin-chat-ost'
-        }
-      }
+      })
     }
 
-    instances.sort((a, b) => {
-      const ab = [a, b]
-      const dates = ab.map(instance => Date.parse(instance.date))
+    const outputList = (dest, isSeries) => {
+      const list = []
+      const addedSongs = {}
 
-      const difference = dates[0] - dates[1] || 0
-      if (difference === 0) {
-        const priorities = [a, b].map(instance => songPriority[instance.song])
-        return priorities[0] - priorities[1] || 0
-      } else {
-        return difference
-      }
-    })
+      let order = 0
+      instances.forEach(instance => {
+        const { song } = instance
+        if (!Object.keys(addedSongs).includes(song + '')) {
+          order++
+          const songRow = findByKey(songs, 'id', song)
+          addedSongs[song] = order
+          const songData = songRow.data
 
-    const list = []
-    const addedSongs = {}
+          const authorsList = songData.authors.map(author => {
+            return findByKey(authors, 'id', author.author).data.name
+          })
 
-    let order = 0
-    instances.forEach(instance => {
-      const { song } = instance
-      if (!Object.keys(addedSongs).includes(song + '')) {
-        order++
-        const songRow = findByKey(songs, 'id', song)
-        addedSongs[song] = order
-        const songData = songRow.data
+          const altNames = (songData.names.slice(1)).map(name => name.name)
 
-        const authorsList = songData.authors.map(author => {
-          return findByKey(authors, 'id', author.author).data.name
-        })
+          const hqSources = []
+          songData.files.forEach(file => {
+            if (file.isHQ) {
+              const sourceName = findByKey(sources, 'id', file.source).data.name
 
-        const altNames = (songData.names.splice(1)).map(name => name.name)
+              hqSources.push(sourceName)
+            }
+          })
 
-        const hqSources = []
-        songData.files.forEach(file => {
-          if (file.isHQ) {
-            const sourceName = findByKey(sources, 'id', file.source).data.name
+          const date = instance.estimate
+            ? '?'
+            : instance.date
 
-            hqSources.push(sourceName)
+          const isOfficial = Boolean(songData.names[0])
+          const name = isOfficial
+            ? `<span style="color: blue;">${songData.names[0].name}</span>`
+            : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
+
+          const newLine = [
+            name,
+            authorsList.join(', '),
+            order,
+            songData.link,
+            instance.name,
+            altNames.join(', '),
+            hqSources.join(' + '),
+            date
+          ]
+
+          if (isSeries) {
+            const temp = newLine[4]
+            newLine[4] = newLine[6]
+            newLine[6] = temp
           }
-        })
 
-        const date = instance.estimate
-          ? '?'
-          : instance.date
-
-        const isOfficial = Boolean(songData.names[0])
-        const name = isOfficial
-          ? `<span style="color: blue;">${songData.names[0].name}</span>`
-          : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
-
-        const newLine = [
-          name,
-          authorsList.join(', '),
-          order,
-          songData.link,
-          instance.name,
-          altNames.join(', '),
-          hqSources.join(' + '),
-          date
-        ]
-
-        if (media === 'series') {
-          const temp = newLine[4]
-          newLine[4] = newLine[6]
-          newLine[6] = temp
+          list.push(newLine)
+        } else {
+          const relatedIndex = isSeries ? 6 : 4
+          list[addedSongs[song] - 1][relatedIndex] += `, ${instance.name}`
         }
+      })
 
-        list.push(newLine)
-      } else {
-        const relatedIndex = media === 'series' ? 6 : 4
-        list[addedSongs[song] - 1][relatedIndex] += `, ${instance.name}`
+      const ost = this.generateHTML(list, isSeries)
+      fs.writeFileSync(path.join(__dirname, `../views/generated/${dest}.html`), ost)
+    }
+
+    const serieInstances = []
+    for (const mediaName in medias) {
+      const mediaInfo = medias[mediaName]
+      await getTables(mediaName)
+      instances = []
+      mediaInfo.updateMethod()
+
+      // update specific one because it is included
+      if (mediaList.includes(mediaName)) {
+        sortInstances()
+        outputList(mediaInfo.dest)
       }
-    })
 
-    const flashOST = this.generateHTML(list, media === 'series')
-    fs.writeFileSync(path.join(__dirname, `../views/generated/${dest}.html`), flashOST)
-  }
+      const mediaAddedSongs = {}
+      instances.forEach(instance => {
+        const { song } = instance
+        const dateInfo = {
+          date: instance.date,
+          isEstimate: instance.estimate
+        }
+        if (!Object.keys(mediaAddedSongs).includes(song)) {
+          mediaAddedSongs[song] = dateInfo
+        } else {
+          const dates = [
+            mediaAddedSongs[song].date,
+            instance.date
+          ].map(date => Date.parse(date))
 
-  async generateFlashOST () {
-    await this.OSTListGenerator('flash')
-  }
+          if (dates[0] > dates[1]) {
+            mediaAddedSongs[song] = dateInfo
+          }
+        }
+      })
 
-  async generatePenguinChatOST () {
-    await this.OSTListGenerator('pc')
-  }
+      for (const song in mediaAddedSongs) {
+        serieInstances.push(new SongInstance(
+          medias[mediaName].name,
+          mediaAddedSongs[song],
+          song
+        ))
+      }
+    }
+    instances = serieInstances
 
-  async generateSeriesOST () {
-    await this.OSTListGenerator('series')
+    sortInstances()
+    outputList('series-ost', true)
   }
 
   /**
@@ -350,8 +337,9 @@ function findByKey (array, key, value) {
 
 const gen = new Generator(db)
 
-gen.generatePenguinChatOST()
-gen.generateFlashOST()
-gen.generateSeriesOST()
+gen.OSTListGenerator(
+  'flash',
+  'pc'
+)
 
 module.exports = gen
