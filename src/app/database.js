@@ -292,7 +292,13 @@ class WikiDatabase {
     } else {
       oldRow = await this.handler.selectId(type, row.id)
     }
-    if (!oldRow) oldRow = { data: this.defaults[type] }
+    if (!oldRow) {
+      if (!isStatic) {
+        // to add id to row if creating new entry
+        row.id = (await this.handler.getBiggestSerial(type)) + 1
+      }
+      oldRow = { data: this.defaults[type] }
+    }
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
     this.handler.insert(
       'changes',
@@ -534,6 +540,10 @@ class SQLHandler {
    * @returns {Row[]}
    */
   selectLike = async (type, column, matching) => (await this.pool.query(`SELECT * FROM ${type} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
+
+  async getBiggestSerial (table) {
+    return Number((await this.pool.query(`SELECT last_value FROM ${table}_id_seq`)).rows[0].last_value)
+  }
 }
 
 /**
