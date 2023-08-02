@@ -252,7 +252,7 @@ class Generator {
           ? `<span style="color: blue;">${songData.names[0].name}</span>`
           : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
 
-        list.push([
+        const newLine = [
           name,
           authorsList.join(', '),
           order,
@@ -261,13 +261,22 @@ class Generator {
           altNames.join(', '),
           hqSources.join(' + '),
           date
-        ])
+        ]
+
+        if (media === 'series') {
+          const temp = newLine[4]
+          newLine[4] = newLine[6]
+          newLine[6] = temp
+        }
+
+        list.push(newLine)
       } else {
-        list[addedSongs[song] - 1][4] += `, ${instance.name}`
+        const relatedIndex = media === 'series' ? 6 : 4
+        list[addedSongs[song] - 1][relatedIndex] += `, ${instance.name}`
       }
     })
 
-    const flashOST = this.generateHTML(list)
+    const flashOST = this.generateHTML(list, media === 'series')
     fs.writeFileSync(path.join(__dirname, `../views/generated/${dest}.html`), flashOST)
   }
 
@@ -288,7 +297,7 @@ class Generator {
    * @param {*[][]} matrix
    * @returns {string}
    */
-  generateHTML (matrix) {
+  generateHTML (matrix, isSeries) {
     let tableHTML = ''
     matrix.forEach(row => {
       let rowHTML = ''
@@ -309,13 +318,13 @@ class Generator {
         <table>
           <tr>
             <th> Name </th>
-            <th> Composers </th>
+            <th> Artist(s) </th>
             <th> Order </th>
             <th> Link </th>
-            <th> Related To </th>
+            <th> ${isSeries ? 'HQ Source(s)' : 'Related To'} </th>
             <th> Alternate Names </th>
-            <th> HQ Source(s) </th>
-            <th> EarliestDate </th>
+            <th> ${isSeries ? 'Medias' : 'HQ Source(s)'} </th>
+            <th> Earliest Date </th>
           </tr>
           ${tableHTML}
         </table>
