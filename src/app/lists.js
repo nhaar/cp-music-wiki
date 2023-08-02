@@ -5,7 +5,8 @@ const db = require('./database')
 
 class SongInstance {
   constructor (name, dateEst, song) {
-    Object.assign(this, { name, date: dateEst.date, song: song.song, estimate: dateEst.isEstimate })
+    const properSong = typeof song === 'object' ? song.song : Number(song)
+    Object.assign(this, { name, date: dateEst.date, song: properSong, estimate: dateEst.isEstimate })
   }
 }
 
@@ -28,14 +29,13 @@ class Generator {
       songPriority[song.id] = song.data.priority
     })
 
-    const instances = []
+    let instances = []
 
     let tables
 
     const base1 = (uses, callback) => {
       uses.forEach(use => {
         const args = callback(use)
-        console.log(args)
         if (args) {
           instances.push(new SongInstance(...args.concat(use)))
         }
@@ -90,8 +90,59 @@ class Generator {
       })
     }
 
-    const getTables = async (...args) => {
-      tables = args
+    class MediaInfo {
+      constructor (name, updateMethod, ...tables) {
+        Object.assign(this, { name, updateMethod, tables })
+      }
+    }
+
+    const medias = {
+      flash: new MediaInfo(
+        'Club Penguin (Flash)',
+        () => {
+          // room music
+          base6(0, 'songUses', base9)
+
+          // party music
+          base7(1, 'partySongs', 'usePartyDate', 'active')
+
+          // igloo music
+          tables[2].forEach(row => {
+            base2(row, data => {
+              data.songs.forEach(gridRow => {
+                base5(gridRow, () => ['Igloo', data.launch])
+              })
+            })
+          })
+
+          // stage music
+          base6(3, 'appearances', base8('appearance'))
+
+          // minigame music
+          base7(4, 'songs', 'useMinigameDates', 'availabe')
+
+          // misc music
+          base10(5)
+        },
+        'flash_room',
+        'flash_party',
+        'music_catalogue',
+        'stage_play',
+        'flash_minigame',
+        'flash_misc'
+      ),
+      pc: new MediaInfo(
+        'Penguin Chat',
+        () => {
+          // pc misc
+          base10(0)
+        },
+        'penguin_chat_appearance'
+      )
+    }
+
+    const getTables = async media => {
+      tables = medias[media].tables
       for (let i = 0; i < tables.length; i++) {
         tables[i] = await db.handler.selectAll(tables[i])
       }
@@ -99,55 +150,56 @@ class Generator {
 
     let dest
 
-    switch (media) {
-      case 'flash': {
-        await getTables(
-          'flash_room',
-          'flash_party',
-          'music_catalogue',
-          'stage_play',
-          'flash_minigame',
-          'flash_misc'
-        )
-        // tables = [
-        // ]
-        // await getAllTables()
+    if (media === 'series') {
+      dest = 'series-ost'
 
-        dest = 'flash-ost'
-
-        // room music
-        base6(0, 'songUses', base9)
-
-        // party music
-        base7(1, 'partySongs', 'usePartyDate', 'active')
-
-        // igloo music
-        tables[2].forEach(row => {
-          base2(row, data => {
-            data.songs.forEach(gridRow => {
-              base5(gridRow, () => ['Igloo', data.launch])
-            })
-          })
+      const serieInstances = []
+      for (const mediaName in medias) {
+        await getTables(mediaName)
+        medias[mediaName].updateMethod()
+        const mediaAddedSongs = {}
+        instances.forEach(instance => {
+          if (!Object.keys(mediaAddedSongs).includes(instance.song)) {
+            mediaAddedSongs[instance.song] = {
+              date: instance.date,
+              isEstimate: instance.estimate
+            }
+            instances.name = medias[mediaName].name
+          } else {
+            const dates = [
+              mediaAddedSongs[instance.song].date,
+              instance.date
+            ].map(date => Date.parse(date))
+            if (dates[0] > dates[1]) {
+              mediaAddedSongs[instance.song] = {
+                date: instance.date,
+                isEstimate: instance.estimate
+              }
+            }
+          }
         })
 
-        // stage music
-        base6(3, 'appearances', base8('appearance'))
-
-        // minigame music
-        base7(4, 'songs', 'useMinigameDates', 'availabe')
-
-        // misc music
-        base10(5)
-        base5(tables[5], base9)
-
-        break
+        for (const song in mediaAddedSongs) {
+          serieInstances.push(new SongInstance(
+            medias[mediaName].name,
+            mediaAddedSongs[song],
+            song
+          ))
+        }
       }
-      case 'pc': {
-        await getTables('penguin_chat_appearance')
-        dest = 'penguin-chat-ost'
+      instances = serieInstances
+    } else {
+      await getTables(media)
+      medias[media].updateMethod()
 
-        // pc misc
-        base10(0)
+      switch (media) {
+        case 'flash': {
+          dest = 'flash-ost'
+          break
+        }
+        case 'pc': {
+          dest = 'penguin-chat-ost'
+        }
       }
     }
 
@@ -227,6 +279,10 @@ class Generator {
     await this.OSTListGenerator('pc')
   }
 
+  async generateSeriesOST () {
+    await this.OSTListGenerator('series')
+  }
+
   /**
    * Creates a table HTML for a two-dimensional series list
    * @param {*[][]} matrix
@@ -286,5 +342,7 @@ function findByKey (array, key, value) {
 const gen = new Generator(db)
 
 gen.generatePenguinChatOST()
+gen.generateFlashOST()
+gen.generateSeriesOST()
 
 module.exports = gen
