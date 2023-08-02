@@ -472,6 +472,11 @@ class SQLHandler {
    */
   select = async (type, column, value, selecting = '*') => (await this.pool.query(`SELECT ${selecting} FROM ${type} WHERE ${column} = $1`, [value])).rows
 
+  async selectPatches (type, id) {
+    return ((await this.pool.query('SELECT patch FROM changes WHERE type = $1 AND type_id = $2 ORDER BY id ASC', [type, id])).rows)
+      .map(patch => patch.patch)
+  }
+
   selectAll = async table => (await this.pool.query(`SELECt * FROM ${table}`)).rows
 
   /**
