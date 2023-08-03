@@ -92,7 +92,6 @@ function dropPath (obj, path) {
     const dimension = step.match(/(\[\])*/)[0].length
     const property = step.replace(/\[\]|\./g, '')
     const nextObj = obj[property]
-    console.log(step, current, steps.length - 1)
 
     if (current < steps.length - 1) {
       if (step.includes('[')) {
@@ -272,7 +271,6 @@ class DatabaseManipulator {
     const tableName = tableDeclr.match(/(?!(static|property))(?<=\s)\w+/)[0]
     const setDeclr = code.match(/(?<=SET\s+)\w+\s+\w+(\[\])*/)[0]
     const propAndType = setDeclr.match(/\w+(\[\])*/g)
-    console.log(propAndType)
 
     if (tableDeclr.includes('static')) {
 
@@ -295,13 +293,14 @@ class DatabaseManipulator {
     delete object[property]
   }
 
-  mapInObject(object1, object2, path1, path2, tpath) {
+  mapInObject(object1, object2, path1, path2, type) {
     const paths = [path1, path2]
     // check whether it is an array mapping or not
     const arrayMapping = paths.map(path => path.includes('[*]'))
     // if (arrayMapping[0] && arrayMapping[1]) {
       // one to one mapping
     const steps = paths.map(path => path.match(/(?<=\.)\w+|(?<=\[).(?=\])/g))
+    const tpath = this.getTypePath(type, steps.slice(0, steps.length - 1))
     const readIterator = (reading, i = 0) => {
       if (i < steps[0].length) {
         const step = steps[0][i]
@@ -321,7 +320,6 @@ class DatabaseManipulator {
     }
 
     const reading = readIterator(object1)
-    console.log(reading)
     // let reading = object1
     // steps[0].forEach(step => {
     //   reading = reading[step]
@@ -331,7 +329,6 @@ class DatabaseManipulator {
       const step = steps[1][i]
       const curType = tpath[i]
 
-      console.log(steps[1], steps[1][i], i)
 
       if (i < steps[1].length - 1) {
         if (step === '*') {
@@ -343,10 +340,8 @@ class DatabaseManipulator {
             assignIterator(next, nextReading, i + 1)
           })
         } else {
-          console.log('hello')
           const next = assigning[step]
           if (!next) {
-            console.log('heyo',curType, tpath, i)
             if (curType === '[]') assigning[step] = []
             else assignPath[step] = deepcopy(db.defaults[curType])
           }
@@ -385,6 +380,28 @@ class DatabaseManipulator {
     // }
   }
 
+  getTypePath (type, steps) {
+    const tpath = []
+    const mergedTypes = Object.assign({}, db.databaseTypes, db.propertyTypes, db.staticTypes)
+
+    steps.forEach(step => {
+      if (isNaN(step) && step !== '*') {
+        const code = mergedTypes[type].code
+        type = code.match(new RegExp(`(?<=${step}\\s+)\\w+(\\[\\])*`))[0]
+        const arrayless = type.match(/\w+/)[0]
+        let dim = 0
+        if (type.includes('[')) dim = type.match(/\[\]/g).length
+        for (let i = 0; i < dim; i++) {
+          tpath.push('[]')
+        } 
+        tpath.push(arrayless)
+        type = arrayless
+      }
+    })
+
+    return tpath
+  }
+
   async updatePatches (type, callback) {
     // find biggest ID to iterate through everything
     const seq = await db.handler.getBiggestSerial(type)
@@ -398,28 +415,3 @@ class DatabaseManipulator {
 }
 
 const dbm = new DatabaseManipulator()
-
-const test = {
-  names: [
-    'a',
-    'b',
-    'c'
-  ]
-}
-
-const testerino = {
-  names: []
-}
-
-// console.log(db.defaults['NAME '])
-// dbm.mapInObject(test, testerino, '.name[*]', '.names[*].name')
-
-dbm.mapInObject(test, testerino, '.names[*]', '.names[*].name',
-['[]', 'NAME', 'TEXT'])
-
-// `
-// .names[*].name
-// [] NAME TEXT
-// `
-
-console.log(testerino)
