@@ -295,25 +295,89 @@ class DatabaseManipulator {
     delete object[property]
   }
 
-  mapInObject(object1, object2, path1, path2) {
+  mapInObject(object1, object2, path1, path2, tpath) {
     const paths = [path1, path2]
     // check whether it is an array mapping or not
     const arrayMapping = paths.map(path => path.includes('[*]'))
     // if (arrayMapping[0] && arrayMapping[1]) {
       // one to one mapping
     const steps = paths.map(path => path.match(/(?<=\.)\w+|(?<=\[).(?=\])/g))
-    let reading = object1
-    steps[0].forEach(step => {
-      reading = reading[step]
-    })
-    let assigning = object2
-    steps[1].forEach((step, i) => {
-      if (i < steps[1].length - 1) {
-        assigning = assigning[step]
+    const readIterator = (reading, i = 0) => {
+      if (i < steps[0].length) {
+        const step = steps[0][i]
+        if (step === '*') {
+          const children = []
+          reading.forEach(next => {
+            children.push(readIterator(next, i + 1))
+          })
+          return children
+        } else {
+          const next = reading[step]
+          return readIterator(next, i + 1)
+        }
       } else {
-        assigning[step] = reading
+        return reading
       }
-    })
+    }
+
+    const reading = readIterator(object1)
+    console.log(reading)
+    // let reading = object1
+    // steps[0].forEach(step => {
+    //   reading = reading[step]
+    // })
+
+    const assignIterator = (assigning, currentReading, i = 0) => {
+      const step = steps[1][i]
+      const curType = tpath[i]
+
+      console.log(steps[1], steps[1][i], i)
+
+      if (i < steps[1].length - 1) {
+        if (step === '*') {
+          currentReading.forEach((nextReading) => {
+            let next
+            if (curType === '[]') next = []
+            else next = deepcopy(db.defaults[curType])
+            assigning.push(next)
+            assignIterator(next, nextReading, i + 1)
+          })
+        } else {
+          console.log('hello')
+          const next = assigning[step]
+          if (!next) {
+            console.log('heyo',curType, tpath, i)
+            if (curType === '[]') assigning[step] = []
+            else assignPath[step] = deepcopy(db.defaults[curType])
+          }
+
+          assignIterator(assigning[step], currentReading, i + 1)
+        }
+      } else {
+        if (step === '*') {
+          currentReading.forEach((nextReading) => {
+            assigning.push(nextReading)
+          })
+        } else {
+          assigning[step] = currentReading
+        }
+        // let newAssign = reading
+        // for (let j = 0; j < indexes.length - 1; j++) {
+        //   newAssign = newAssign[indexes[j]]
+        // }
+        // assigning[step] = newAssign
+      }
+    }
+
+    assignIterator(object2, reading)
+    // let assigning = object2
+    // steps[1].forEach((step, i) => {
+    //   if (i < steps[1].length - 1) {
+    //     assigning = assigning[step]
+    //   } else {
+    //     assigning[step] = reading
+    //   }
+    // })
     // } else if (!arrayMapping[0] && !arrayMapping[1]) {
 
     // } else {
@@ -336,17 +400,26 @@ class DatabaseManipulator {
 const dbm = new DatabaseManipulator()
 
 const test = {
-  name: 'hello'
+  names: [
+    'a',
+    'b',
+    'c'
+  ]
 }
 
 const testerino = {
-  'haha': {
-    lmao: []
-  }
+  names: []
 }
 
 // console.log(db.defaults['NAME '])
 // dbm.mapInObject(test, testerino, '.name[*]', '.names[*].name')
 
+dbm.mapInObject(test, testerino, '.names[*]', '.names[*].name',
+['[]', 'NAME', 'TEXT'])
+
+// `
+// .names[*].name
+// [] NAME TEXT
+// `
 
 console.log(testerino)
