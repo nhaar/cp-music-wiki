@@ -212,6 +212,7 @@ async function addPathToAll (type, path) {
 
 
 
+
 /*
 
 ADD/DROP song
@@ -222,12 +223,13 @@ IN song SET name TEXT
 IN static song SET name TEXT
 IN property LOCALIZATION_NAME SET name TEXT
 
-the above should be all the commands for structure
+IN song DROP name
 
-MAP song.name -> song.names[0] (* represents arrayfication *)
-MAP song.names[] -> song.names[].name (* array mapping *)
-MAP song.names[0] -> song.name (de-arrayfication, I doubt I'll ever use it though)
-MAP song.name -> song.name.name (one to one mapping) 
+
+IN song MAP .name -> .names[0] (* represents arrayfication *)
+IN song MAP .names[*] -> .names[*].name (* array mapping *)
+IN song MAP .names[0] -> .name (de-arrayfication, I doubt I'll ever use it though)
+IN song MAP .name -> .name.name (one to one mapping) 
 
 TRANSFER song [*] TO authors
 TRANSFER song [1, 2] TO authors
@@ -278,8 +280,73 @@ class DatabaseManipulator {
       
     }
   }
+
+  setInObject(object, property, type) {
+    if (type.includes('[')) {
+      object[property] = []
+    } else if (db.standardVariables.includes(type)) {
+      object[property] = null
+    } else {
+      object[property] = db.defaults[type]
+    }
+  }
+
+  dropInObject(object, property) {
+    delete object[property]
+  }
+
+  mapInObject(object1, object2, path1, path2) {
+    const paths = [path1, path2]
+    // check whether it is an array mapping or not
+    const arrayMapping = paths.map(path => path.includes('[*]'))
+    // if (arrayMapping[0] && arrayMapping[1]) {
+      // one to one mapping
+    const steps = paths.map(path => path.match(/(?<=\.)\w+|(?<=\[).(?=\])/g))
+    let reading = object1
+    steps[0].forEach(step => {
+      reading = reading[step]
+    })
+    let assigning = object2
+    steps[1].forEach((step, i) => {
+      if (i < steps[1].length - 1) {
+        assigning = assigning[step]
+      } else {
+        assigning[step] = reading
+      }
+    })
+    // } else if (!arrayMapping[0] && !arrayMapping[1]) {
+
+    // } else {
+    //   throw new Error('Array mapping must be in both sides')
+    // }
+  }
+
+  async updatePatches (type, callback) {
+    // find biggest ID to iterate through everything
+    const seq = await db.handler.getBiggestSerial(type)
+    // iterate every ID, presuming no deletion
+    for (let i = 1; i <= seq; i++) {
+      let versions = await getAllVersions(type, i)
+      versions = versions.map(version => callback(version))
+      overridePatches(type, i, versions)
+    }
+  }
 }
 
 const dbm = new DatabaseManipulator()
 
-dbm.evaluateSet('IN static song SET name TEXT[][] ')
+const test = {
+  name: 'hello'
+}
+
+const testerino = {
+  'haha': {
+    lmao: []
+  }
+}
+
+// console.log(db.defaults['NAME '])
+// dbm.mapInObject(test, testerino, '.name[*]', '.names[*].name')
+
+
+console.log(testerino)
