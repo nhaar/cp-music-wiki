@@ -257,25 +257,49 @@ class WikiDatabase {
   assignDefaults () {
     this.defaults = {}
     this.standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
+
+    const createDefault = (prop, code) => {
+      const defaultObject = {}
+      this.iterateDeclarations(code, (property, type) => {
+        if (type.includes('[')) {
+          defaultObject[property] = []
+        } else if (this.standardVariables.includes(type)) {
+          defaultObject[property] = null
+        } else {
+          defaultObject[property] = this.defaults[type]
+        }
+      })
+      this.defaults[prop] = defaultObject
+    }
+    
+    const propertiesOnHold = []
+    while (true) {
+      for (const prop in this.propertyTypes) {
+        const code = this.propertyTypes[prop].code
+        const nonStandardTypes = code.match(/(?<=[a-z]+\s+)(?!(TEXT|INT|BOOLEAN|DATE|QUERY))\w+/g)
+        let onHold = false
+        if (nonStandardTypes) {
+          nonStandardTypes.forEach(type => {
+            if (!this.defaults[type]) onHold = true
+          })
+        }
+        if (onHold) {
+          if (!propertiesOnHold.includes(prop)) propertiesOnHold.push(prop)
+        } else {
+          const index = propertiesOnHold.findIndex(item => item === prop)
+          if (index > -1) propertiesOnHold.splice(index, 1)
+          createDefault(prop, code)
+        }
+      }
+      
+      if (propertiesOnHold.length === 0) break
+    }
+
     const mergedTypes = {}
     Object.assign(mergedTypes, this.databaseTypes, this.staticTypes)
 
     for (const v in mergedTypes) {
-      const defaultObject = {}
-      const iterate = (object, code) => {
-        this.iterateDeclarations(code, (property, type) => {
-          if (type.includes('[')) object[property] = []
-          else if (this.standardVariables.includes(type)) object[property] = null
-          else {
-            object[property] = {}
-            iterate(object[property], this.propertyTypes[type].code)
-          }
-        })
-      }
-
-      iterate(defaultObject, mergedTypes[v].code)
-
-      this.defaults[v] = defaultObject
+      createDefault(v, mergedTypes[v].code)
     }
   }
 

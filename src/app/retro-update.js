@@ -38,7 +38,7 @@ async function overridePatches (type, id, versions) {
   })
 }
 
-function addPath (obj, path) {
+function addPath (reference, path) {
   const steps = path.match(/\.\w+(\[\])*/g)
 
   const iterator = (obj, current) => {
@@ -79,9 +79,9 @@ function addPath (obj, path) {
     }
   }
 
-  iterator(obj, 0)
+  iterator(reference, 0)
 
-  return obj
+  return reference
 }
 
 function dropPath (obj, path) {
@@ -209,3 +209,77 @@ async function addPathToAll (type, path) {
     overridePatches(type, i, versions)
   }
 }
+
+
+
+/*
+
+ADD/DROP song
+ADD static song
+ADD property LOCALIZATION_NAME
+
+IN song SET name TEXT
+IN static song SET name TEXT
+IN property LOCALIZATION_NAME SET name TEXT
+
+the above should be all the commands for structure
+
+MAP song.name -> song.names[0] (* represents arrayfication *)
+MAP song.names[] -> song.names[].name (* array mapping *)
+MAP song.names[0] -> song.name (de-arrayfication, I doubt I'll ever use it though)
+MAP song.name -> song.name.name (one to one mapping) 
+
+TRANSFER song [*] TO authors
+TRANSFER song [1, 2] TO authors
+TRANSFER song [1...3] TO authors
+*/
+
+class DatabaseManipulator {
+  constructor (code, db) {
+    Object.assign(this, { db, code })
+  }
+
+  collectCommands (code) {
+    const matches = {
+      add: code.match(/ADD\s+(?:static\s+|property\s+)?\w+/g),
+      drop: code.match(/DROP\s+(?:static\s+)?\w+/g),
+      set: code.match(/IN\s+(?:static\s+|property\s+)?\w+\s+SET\s+\w+\s+\w+(\[\])*/g),
+      map: code.match(/MAP\s+\w+(\.\w+|\[[^\]]*\])*\s+->\s+\w+(\.\w+|\[[^\]]*\])*/g),
+      transfer: code.match(/TRANSFER\s+\w+\s+\[(\*|\d+(?:\s*(,|...)\s*\d+)*)\]\s+TO\s+\w+/g)
+    }
+  
+    return matches
+  }
+
+  evaluateAdd (code) {
+    const words = code.match(/\w+/g)
+    let type
+    if (words.length === 2) {
+      type = words[1]
+      db.handler.createType(type)
+    } else {
+      type = words[2]
+      if (words[1] === 'static') {
+        db.handler.insertStatic(type, {})
+      }
+    }
+  }
+
+  evaluateSet (code) {
+    const tableDeclr = code.match(/(?<=IN\s+)(?:(static|property)\s+)?\w+/)[0]
+    const tableName = tableDeclr.match(/(?!(static|property))(?<=\s)\w+/)[0]
+    const setDeclr = code.match(/(?<=SET\s+)\w+\s+\w+(\[\])*/)[0]
+    const propAndType = setDeclr.match(/\w+(\[\])*/g)
+    console.log(propAndType)
+
+    if (tableDeclr.includes('static')) {
+
+    } else if (!tableDeclr.includes('property')) {
+      
+    }
+  }
+}
+
+const dbm = new DatabaseManipulator()
+
+dbm.evaluateSet('IN static song SET name TEXT[][] ')
