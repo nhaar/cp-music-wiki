@@ -271,7 +271,7 @@ class WikiDatabase {
       })
       this.defaults[prop] = defaultObject
     }
-    
+
     const propertiesOnHold = []
     while (true) {
       for (const prop in this.propertyTypes) {
@@ -291,7 +291,7 @@ class WikiDatabase {
           createDefault(prop, code)
         }
       }
-      
+
       if (propertiesOnHold.length === 0) break
     }
 
