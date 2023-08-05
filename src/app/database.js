@@ -143,7 +143,8 @@ class WikiDatabase {
           errors.push(`Validation exception at ${path.join()}\n${error}`)
         }
       })
-      this.iterateDeclarations(code, (property, type) => {
+      this.iterateDeclarations(code, (property, type, params) => {
+        console.log(property, type, params)
         // check if the type of a property is the same as it was defined
         const checkType = (value, type, path) => {
           if (type.includes('[')) {
@@ -171,8 +172,8 @@ class WikiDatabase {
           } else {
             const errorMsg = indefiniteDescription => errors.push(`${path.join('')} must be ${indefiniteDescription}`)
 
-            if (db.standardVariables.includes(type)) {
-              if (type === 'QUERY') {
+            if (!type.includes('{')) {
+              if (params.includes('QUERY')) {
                 if (typeof value !== 'string' || !value) {
                   errors.push(`Must give a name (error at ${path.join('')})`)
                 }
@@ -347,14 +348,14 @@ class WikiDatabase {
       queryIndex[v] = []
 
       const iterate = (code, path) => {
-        this.iterateDeclarations(code, (property, type) => {
+        this.iterateDeclarations(code, (property, type, params) => {
           const newPath = deepcopy(path).concat([property])
           const dimension = this.getDimension(type)
           for (let i = 0; i < dimension; i++) {
             newPath.push('[]')
           }
           const arrayless = type.replace(/(\[\])*/g, '')
-          if (arrayless === 'QUERY') {
+          if (params.includes('QUERY')) {
             queryIndex[v].push(newPath)
           } else if (arrayless.includes('{')) {
             iterate(this.propertyTypes[arrayless].code, newPath)
@@ -374,9 +375,12 @@ class WikiDatabase {
     const declarations = code.split('\n').map(line => line.trim()).filter(line => line)
     declarations.forEach(declr => {
       const names = declr.match(/\w+(\[\])*/g)
-      const property = names[0]
-      const type = names[1]
-      callbackfn(property, type)
+      const property = declr.match(/\w+/)[0]
+      const type = declr.match(/(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*/)[0]
+      const rest = declr.match(/(?<=(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*\s+).*/)
+      let params = []
+      if (rest) params = rest[0].match(/\S+/g)
+      callbackfn(property, type, params)
     })
   }
 
