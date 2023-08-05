@@ -94,11 +94,11 @@ const def = [{
     'Page', `
     name TEXTSHORT QUERY "Name"
     content TEXTLONG "Content"
-    categories TEXTSHORT[] "Categories"
+    categories ID(category)[] "Categories"
   `),
   category: new MainType(
     'Category', `
-    name QUERY
+    name TEXTSHORT QUERY "Name"
   `),
   flash_room: new MainType(
     'Club Penguin Room', `

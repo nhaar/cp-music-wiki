@@ -144,7 +144,6 @@ class WikiDatabase {
         }
       })
       this.iterateDeclarations(code, (property, type, params) => {
-        console.log(property, type, params)
         // check if the type of a property is the same as it was defined
         const checkType = (value, type, path) => {
           if (type.includes('[')) {
@@ -376,7 +375,7 @@ class WikiDatabase {
     declarations.forEach(declr => {
       const names = declr.match(/\w+(\[\])*/g)
       const property = declr.match(/\w+/)[0]
-      const type = declr.match(/(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*/)[0]
+      const type = declr.match(/(?<=\w+\s+)(?:{)?(\w|\(|\))+(?:})?(\[\])*/)[0]
       const rest = declr.match(/(?<=(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*\s+).*/)
       let params = []
       if (rest) params = rest[0].match(/\S+/g)
