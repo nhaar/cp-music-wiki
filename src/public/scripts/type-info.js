@@ -29,11 +29,6 @@ export const types = [
     NameOnlyEditor
   ),
   new TypeInfo(
-    'file',
-    'File',
-    FileEditor
-  ),
-  new TypeInfo(
     'wiki_reference',
     'Reference',
     ReferenceEditor

@@ -264,6 +264,10 @@ function buildEditor (code) {
         moduleType = TextInputModule
         break
       }
+      case 'TEXTLONG': {
+        moduleType = TextAreaModule
+        break
+      }
     }
     moduleList.push(new TableChild(headerName, moduleType, property))
   })

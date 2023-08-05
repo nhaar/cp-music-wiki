@@ -67,13 +67,13 @@ const def = [{
   `),
   source: new MainType(
     'Source', `
-    name QUERY
+    name TEXTSHORT QUERY "Name"
   `),
   wiki_reference: new MainType(
     'Wiki Reference', `
-    name QUERY
-    link TEXT
-    description TEXT
+    name TEXTSHORT QUERY "Name"
+    link TEXTSHORT "Link"
+    description TEXTLONG "Description"
   `),
   genre: new MainType(
     'Music Genre', `
