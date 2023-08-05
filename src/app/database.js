@@ -460,15 +460,29 @@ class WikiDatabase {
   }
 
   getPreeditorData () {
-    const data = {}
+    const data = []
     const base = (typeObject, isStatic) => {
       for (const v in typeObject) {
-        data[v] = { name: typeObject[v].name, static: isStatic }
+        data.push({ type: v, name: typeObject[v].name, isStatic })
       }
     }
 
     base(db.databaseTypes, false)
     base(db.staticTypes, true)
+
+    return data
+  }
+
+  getEditorData (t) {
+    const data = {}
+    const { type, isStatic } = this.getPreeditorData()[t]
+    if (isStatic) data.main = db.staticTypes[type].code
+    else data.main = db.databaseTypes[type].code
+    data.isStatic = isStatic
+
+    for (const v in db.propertyTypes) {
+      data[v] = db.propertyTypes[v].code
+    }
 
     return data
   }
