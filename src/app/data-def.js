@@ -77,24 +77,24 @@ const def = [{
   `),
   genre: new MainType(
     'Music Genre', `
-    name QUERY
-    link TEXT
+    name TEXTSHORT QUERY "Name"
+    link TEXTSHORT "Link"
   `),
   instrument: new MainType(
     'Musical Instrument', `
-    name QUERY
-    link TEXT
+    name TEXTSHORT QUERY "Name"
+    link TEXTSHORT "Link"
   `),
   key_signature: new MainType(
     'Key Signature', `
-    name QUERY
-    link TEXT
+    name TEXTSHORT QUERY "Name"
+    link TEXTSHORT "Link"
   `),
   page: new MainType(
     'Page', `
-    name QUERY
-    content TEXT
-    categories INT[]
+    name TEXTSHORT QUERY "Name"
+    content TEXTLONG "Content"
+    categories TEXTSHORT[] "Categories"
   `),
   category: new MainType(
     'Category', `

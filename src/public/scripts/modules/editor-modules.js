@@ -249,7 +249,7 @@ function buildEditor (code) {
 
   lines.forEach(line => {
     const property = line.match(/\w+/)[0]
-    const type = line.match(/(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*/)[0]
+    let type = line.match(/(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*/)[0]
     const rest = line.match(/(?<=(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*\s+).*/)
     let params = []
     if (rest) params = rest[0].match(/\S+/g)
@@ -258,6 +258,18 @@ function buildEditor (code) {
     params.forEach(param => {
       if (param.includes('"')) headerName = param.match(/(?<=").*(?=")/)[0]
     })
+
+    const brackets = type.match(/\[\]/g)
+    let arrayModule
+    if (brackets) {
+      type = type.match(/\w+/)[0]
+      if (brackets.length === 1) {
+        arrayModule = MoveableRowsModule
+      } else if (brackets.length === 2) {
+        arrayModule = GridModule
+      }
+    }
+
     let moduleType
     switch (type) {
       case 'TEXTSHORT': {
@@ -269,7 +281,12 @@ function buildEditor (code) {
         break
       }
     }
-    moduleList.push(new TableChild(headerName, moduleType, property))
+
+    if (brackets) {
+      moduleList.push(new TableChild(headerName, arrayModule, property, moduleType))
+    } else {
+      moduleList.push(new TableChild(headerName, moduleType, property))
+    }
   })
 
   class Editor extends EditorModule {
