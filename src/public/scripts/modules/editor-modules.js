@@ -250,6 +250,14 @@ function buildEditor (code) {
   lines.forEach(line => {
     const property = line.match(/\w+/)[0]
     const type = line.match(/(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*/)[0]
+    const rest = line.match(/(?<=(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*\s+).*/)
+    let params = []
+    if (rest) params = rest[0].match(/\S+/g)
+
+    let headerName = 'PLACEHOLDER'
+    params.forEach(param => {
+      if (param.includes('"')) headerName = param.match(/(?<=").*(?=")/)[0]
+    })
     let moduleType
     switch (type) {
       case 'TEXTSHORT': {
@@ -257,7 +265,7 @@ function buildEditor (code) {
         break
       }
     }
-    moduleList.push(new TableChild('PLACEHOLDER', moduleType, property))
+    moduleList.push(new TableChild(headerName, moduleType, property))
   })
 
   class Editor extends EditorModule {
