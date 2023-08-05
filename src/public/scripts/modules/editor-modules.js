@@ -4,7 +4,7 @@ import {
   NumberInputModule, ReferenceQueryModule, SongQueryModule, SourceQueryModule,
   TextAreaModule, TextInputModule, getSearchQueryModule
 } from './element-modules.js'
-import { EditorModule, ObjectChild, ObjectModule, TableChild } from './main-modules.js'
+import { EditorModule, ObjectChild, ObjectModule, TableChild, TableModule } from './main-modules.js'
 import {
   CatalogueItemModule, DateEstimateModule, MinigameSongModule, PartySongModule,
   SongAppearanceModule, StageAppearanceModule, TimeRangeModule
@@ -243,7 +243,7 @@ export class PCAppearanceEditor extends EditorModule {
   }
 }
 
-function buildEditor (code) {
+function buildEditor (code, data, topModule) {
   const lines = code.split('\n').map(line => line.trim()).filter(line => Boolean(line))
   const moduleList = []
 
@@ -252,7 +252,13 @@ function buildEditor (code) {
     let type = line.match(/(?<=\w+\s+)(?:{)?(\w|\(|\))+(?:})?(\[\])*/)[0]
     const rest = line.match(/(?<=(?<=\w+\s+)(?:{)?(\w|\(|\))+(?:})?(\[\])*\s+).*/)
     let params = []
-    if (rest) params = rest[0].match(/\S+/g)
+    if (rest) {
+      const restString = rest[0]
+      const quoted = restString.match(/".*"/)
+      params = restString.replace(/".*"/, '').match(/\S+/g) || []
+      if (quoted) params.push(quoted[0])
+
+    }
 
     let headerName = 'PLACEHOLDER'
     params.forEach(param => {
@@ -278,18 +284,32 @@ function buildEditor (code) {
     }
 
     let moduleType
-    switch (type) {
-      case 'TEXTSHORT': {
-        moduleType = TextInputModule
-        break
-      }
-      case 'TEXTLONG': {
-        moduleType = TextAreaModule
-        break
-      }
-      case 'ID': {
-        moduleType = getSearchQueryModule(arg)
-        break
+    if (type.includes('{')) {
+      type = type.replace(/\{|\}/g, '')
+
+      moduleType = buildEditor(data[type], data, false)
+    } else {
+      switch (type) {
+        case 'TEXTSHORT': {
+          moduleType = TextInputModule
+          break
+        }
+        case 'TEXTLONG': {
+          moduleType = TextAreaModule
+          break
+        }
+        case 'ID': {
+          moduleType = getSearchQueryModule(arg)
+          break
+        }
+        case 'DATE': {
+          moduleType = DateInputModule
+          break
+        }
+        case 'BOOLEAN': {
+          moduleType = CheckboxModule
+          break
+        }
       }
     }
 
@@ -300,15 +320,41 @@ function buildEditor (code) {
     }
   })
 
-  class Editor extends EditorModule {
+  const Extending = topModule ? EditorModule : TableModule
+
+  class Editor extends Extending {
     modules () {
       return moduleList
     }
   }
-
   return Editor
 }
 
 export function constructEditorModule (editorData) {
-  return buildEditor(editorData.main)
+  return buildEditor(editorData.main, editorData, true)
 }
+
+
+
+/*
+0. CPT is defined
+1. Frontend goes to the preeditor and get the CPT (only that is necessary because validators are backend only anyways), with that, it can list the names similarly to what we have already, static and non static types alike, then redirect to editor page
+2. IN editor page, get CPT for the type being edited + all property types, then fetch the usual data, and build the editor using the CPT for it
+3. The editor assembler: building modules recursively, with different modules corresponding to different datatypes:
+* TYPE[] -> moveable rows with modules following TYPE
+* TYPE[][] -> grid module with modules following TYPE
+* TEXTSHORT -> text input module
+* TEXTLONG -> text area module
+* INT -> number input module
+* ID(type) -> search query module of the type in parenthesis
+* DATE -> date input module
+* BOOLEAN -> Checkbox module
+* FILE(audio) -> file input module
+
+Modules that we could try adapting?
+* option select module ->
+
+TODO
+- handle query stuff
+
+*/

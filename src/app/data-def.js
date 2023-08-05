@@ -102,9 +102,9 @@ const def = [{
   `),
   flash_room: new MainType(
     'Club Penguin Room', `
-    name QUERY
-    open TIME_RANGE
-    songUses SONG_APPEARANCE[]
+    name TEXTSHORT QUERY "Name"
+    open {TIME_RANGE} "Open"
+    songUses {SONG_APPEARANCE}[] "Song Uses"
   `),
   flash_party: new MainType(
     'Club Penguin Party', `
@@ -212,10 +212,10 @@ const def = [{
     description TEXT
   `),
   SONG_APPEARANCE: new ObjectType(`
-    isUnused BOOLEAN
-    available TIME_RANGE
-    song INT
-    reference INT
+    isUnused BOOLEAN "Is Unused?"
+    available {TIME_RANGE} "Available"
+    song ID(song) "Song"
+    reference ID(reference) "Reference"
   `),
   PARTY_SONG: new ObjectType(`
     isUnused BOOLEAN
@@ -247,12 +247,12 @@ const def = [{
     endTime INT
   `),
   DATE_ESTIMATE: new ObjectType(`
-    date DATE
-    isEstimate BOOLEAN
+    date DATE "Date"
+    isEstimate BOOLEAN "Is Estimate?"
   `),
   TIME_RANGE: new ObjectType(`
-    start DATE_ESTIMATE
-    end DATE_ESTIMATE
+    start {DATE_ESTIMATE} "Start"
+    end {DATE_ESTIMATE} "End"
   `),
   SONG_FILE: new ObjectType(`
     source INT

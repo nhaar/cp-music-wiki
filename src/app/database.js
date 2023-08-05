@@ -260,14 +260,15 @@ class WikiDatabase {
     this.standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
 
     const createDefault = (prop, code) => {
+      const braceless = type => type.replace(/{|}/g, '')
       const defaultObject = {}
       this.iterateDeclarations(code, (property, type) => {
         if (type.includes('[')) {
           defaultObject[property] = []
-        } else if (this.standardVariables.includes(type)) {
+        } else if (!type.includes('{')) {
           defaultObject[property] = null
         } else {
-          defaultObject[property] = this.defaults[type]
+          defaultObject[property] = this.defaults[braceless(type)]
         }
       })
       this.defaults[prop] = defaultObject
@@ -277,7 +278,11 @@ class WikiDatabase {
     while (true) {
       for (const prop in this.propertyTypes) {
         const code = this.propertyTypes[prop].code
-        const nonStandardTypes = code.match(/(?<=[a-z]+\s+)(?!(TEXT|INT|BOOLEAN|DATE|QUERY))\w+/g)
+        let nonStandardTypes = []
+        this.iterateDeclarations(code, (property, type) => {
+          if (type.includes('{')) nonStandardTypes.push(type.replace(/{|}/g, ''))
+        })
+
         let onHold = false
         if (nonStandardTypes) {
           nonStandardTypes.forEach(type => {
@@ -357,7 +362,8 @@ class WikiDatabase {
           if (params.includes('QUERY')) {
             queryIndex[v].push(newPath)
           } else if (arrayless.includes('{')) {
-            iterate(this.propertyTypes[arrayless].code, newPath)
+            const braceless = arrayless.replace(/\{|\}/g, '')
+            iterate(this.propertyTypes[braceless].code, newPath)
           }
         })
       }
@@ -378,7 +384,13 @@ class WikiDatabase {
       const type = declr.match(/(?<=\w+\s+)(?:{)?(\w|\(|\))+(?:})?(\[\])*/)[0]
       const rest = declr.match(/(?<=(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*\s+).*/)
       let params = []
-      if (rest) params = rest[0].match(/\S+/g)
+      if (rest) {
+        const restString = rest[0]
+        const quoted = restString.match(/".*"/)
+        params = restString.replace(/".*"/, '').match(/\S+/g) || []
+        if (quoted) params.push(quoted[0])
+
+      }
       callbackfn(property, type, params)
     })
   }

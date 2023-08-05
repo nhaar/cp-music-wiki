@@ -321,7 +321,7 @@ export class TableModule extends ObjectModule {
   style () { return ['header-row', 'grid'] }
 
   constructModule (o) {
-    const TableClass = getEditorRowModule(o.header, o.Class, false, ...o.args)
+    const TableClass = getEditorRowModule(o.header, o.Class, true, ...o.args)
     return new TableClass(this, o.childOut)
   }
 }
