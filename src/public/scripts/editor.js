@@ -1,5 +1,5 @@
 import { createElement, deepcopy, postAndGetJSON, postJSON, selectElement } from './utils.js'
-import { types } from './type-info.js'
+import { constructEditorModule } from './modules/editor-modules.js'
 
 class Page {
   constructor () {
@@ -32,13 +32,12 @@ class Page {
     // get URL params
     const urlParams = new URLSearchParams(window.location.search)
     const params = this.paramsToObject(urlParams)
+    const editorData = await postAndGetJSON('api/editor-data', { t: Number(params.t) })
 
-    // t corresponds to a `DataType`
-    // id is for the id of whatever type is being editted
-    const typeNumber = params.t ? Number(params.t) : null
     const id = Number(params.id)
-    const typeInfo = types[typeNumber]
-    const { isStatic, type } = typeInfo
+
+    // const typeInfo = types[typeNumber]
+    const { isStatic, type } = editorData
     Object.assign(this, { isStatic })
     let row
     let data
@@ -55,13 +54,14 @@ class Page {
       }
     }
     console.log(deepcopy(row))
-    const editor = new typeInfo.Editor(data, this.editor)
+    const Editor = constructEditorModule(editorData)
+    const editor = new Editor(data, this.editor)
     editor.build()
     editor.input()
     editor.setup()
 
     this.renderSubmitButton()
-    this.setupSubmitButton(editor, row, typeInfo.type)
+    this.setupSubmitButton(editor, row, type)
   }
 
   /**

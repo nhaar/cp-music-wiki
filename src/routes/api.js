@@ -8,6 +8,12 @@ const path = require('path')
 const db = require('../app/database')
 const gen = require('../app/lists')
 
+router.post('/editor-data', async (req, res) => {
+  const { t } = req.body
+
+  res.status(200).send(db.getEditorData(t))
+})
+
 // get default data
 router.post('/default', async (req, res) => {
   const { type } = req.body

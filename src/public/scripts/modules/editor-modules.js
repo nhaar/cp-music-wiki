@@ -242,3 +242,33 @@ export class PCAppearanceEditor extends EditorModule {
     ]
   }
 }
+
+function buildEditor (code) {
+  const lines = code.split('\n').map(line => line.trim()).filter(line => Boolean(line))
+  const moduleList = []
+
+  lines.forEach(line => {
+    const property = line.match(/\w+/)[0]
+    const type = line.match(/(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*/)[0]
+    let moduleType
+    switch (type) {
+      case 'TEXTSHORT': {
+        moduleType = TextInputModule
+        break
+      }
+    }
+    moduleList.push(new TableChild('PLACEHOLDER', moduleType, property))
+  })
+
+  class Editor extends EditorModule {
+    modules () {
+      return moduleList
+    }
+  }
+
+  return Editor
+}
+
+export function constructEditorModule (editorData) {
+  return buildEditor(editorData.main)
+}

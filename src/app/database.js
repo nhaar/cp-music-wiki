@@ -356,7 +356,7 @@ class WikiDatabase {
           const arrayless = type.replace(/(\[\])*/g, '')
           if (arrayless === 'QUERY') {
             queryIndex[v].push(newPath)
-          } else if (!this.standardVariables.includes(arrayless)) {
+          } else if (arrayless.includes('{')) {
             iterate(this.propertyTypes[arrayless].code, newPath)
           }
         })
@@ -479,6 +479,7 @@ class WikiDatabase {
     if (isStatic) data.main = db.staticTypes[type].code
     else data.main = db.databaseTypes[type].code
     data.isStatic = isStatic
+    data.type = type
 
     for (const v in db.propertyTypes) {
       data[v] = db.propertyTypes[v].code

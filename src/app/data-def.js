@@ -63,7 +63,7 @@ const def = [{
     ]),
   author: new MainType(
     'Author', `
-    name QUERY
+    name TEXTSHORT QUERY
   `),
   source: new MainType(
     'Source', `
