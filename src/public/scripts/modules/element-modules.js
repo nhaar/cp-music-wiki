@@ -205,29 +205,74 @@ export class EstimateCheckboxModule extends CheckboxModule {
   }
 }
 
+export function getFileUploadModule (filetype) {
+
 /**
  * Module for a file upload element
  */
-export class FileUploadModule extends ElementModule {
+class FileUploadModule extends ElementModule {
   /**
    * Render the HTML element
    */
   prebuild () {
-    this.fileUpload = createElement({ parent: this.e, tag: 'input', type: 'file' })
+    this.loading = Boolean(this.out.read())
+    if (this.loading) {
+      switch (filetype) {
+        case 'audio': {
+          createElement({ parent: this.e, innerHTML: generateAudio(this.out.read()) })
+          break
+        }
+      }
+    } else {
+      this.fileUpload = createElement({ parent: this.e, tag: 'input', type: 'file' })
+    }
   }
 
   /**
    * Send the file to the backend to get its data and then output it
    */
   async middleoutput () {
-    const file = this.fileUpload.files[0]
-    const formData = new FormData()
-    formData.append('file', file)
-    const response = await fetch('api/submit-file', {
-      method: 'POST',
-      body: formData
-    })
-    const fileData = await response.json()
-    Object.assign(this.out.read(), fileData)
+    if (!this.loading) {
+      const file = this.fileUpload.files[0]
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await fetch('api/submit-file', {
+        method: 'POST',
+        body: formData
+      })
+      this.fileData = await response.json()
+      this.int = new Pointer(this, 'fileData')
+    }
   }
+}
+
+return FileUploadModule
+
+}
+
+
+/**
+ * Generates HTML for an audio element based on a file
+ * @param {import('../../app/database.js').TypeData} file - Data for the file
+ * @returns {string} Generated HTML for the audio element
+ */
+function generateAudio (file) {
+  const name = file.originalname || ''
+  const filePath = file.filename || ''
+  let extension = name.match(/\.(.*?)$/)
+  // in case there is no match
+  if (extension) extension = extension[1]
+
+  const validExtensions = [
+    'mp3',
+    'wav',
+    'flac',
+    'm4a',
+    'ogg'
+  ]
+
+  if (extension && validExtensions.includes(extension)) {
+    return `<audio src="../music/${filePath}" controls data-name="${name}"></audio>`
+  }
+  return '<div>Could not load</div>'
 }

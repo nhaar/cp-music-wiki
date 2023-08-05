@@ -36,21 +36,21 @@ const def = [{
   song: new MainType(
     'Song',
     `
-    names NAME[]
-    authors SONG_AUTHOR[]
-    link TEXT
-    files SONG_FILE[]
-    unofficialNames UNOFFICIAL_NAME[]
-    swfMusicNumbers INT[]
-    firstParagraph TEXT
-    page TEXT
-    keySignatures INT[]
-    genres INT[]
-    categories INT[]
-    versions VERSION[]
-    composedDate DATE_ESTIMATE
-    externalReleaseDate DATE
-    priority INT
+    names {NAME}[] "Names"
+    authors {SONG_AUTHOR}[] "Authors"
+    link TEXTSHORT "Link"
+    files {SONG_FILE}[] "Files"
+    unofficialNames {UNOFFICIAL_NAME}[] "Unofficial Names"
+    swfMusicNumbers INT[] "SWF Numbers"
+    firstParagraph TEXTLONG "First Paragraph"
+    page TEXTLONG "Page"
+    keySignatures ID(key_signature)[] "Key Signatures"
+    genres ID(genre)[] "Genres"
+    categories ID(category)[] "Categories"
+    versions {VERSION}[] "Versions"
+    composedDate {DATE_ESTIMATE} "Composed Date"
+    externalReleaseDate DATE "External Release Date"
+    priority INT "Priority"
   `, [
       new Validator(
         o => o.names.length > 0 || o.unofficialNames.length > 0,
@@ -108,9 +108,9 @@ const def = [{
   `),
   flash_party: new MainType(
     'Club Penguin Party', `
-    name QUERY
-    active TIME_RANGE
-    partySongs PARTY_SONG[]
+    name TEXTSHORT QUERY "Name"
+    active {TIME_RANGE} "Active"
+    partySongs {PARTY_SONG}[] "Songs"
   `),
   music_catalogue: new MainType(
     'Music Catalogue', `
@@ -181,18 +181,18 @@ const def = [{
   `)
 }, {
   NAME: new ObjectType(`
-    name QUERY
-    reference INT
-    pt LOCALIZATION_NAME
-    fr LOCALIZATION_NAME
-    es LOCALIZATION_NAME
-    de LOCALIZATION_NAME
-    ru LOCALIZATION_NAME
+    name TEXTSHORT QUERY "Name"
+    reference ID(wiki_reference) "Reference"
+    pt {LOCALIZATION_NAME} "Portuguese"
+    fr {LOCALIZATION_NAME} "French"
+    es {LOCALIZATION_NAME} "Spanish"
+    de {LOCALIZATION_NAME} "German"
+    ru {LOCALIZATION_NAME} "Russian"
   `),
   LOCALIZATION_NAME: new ObjectType(`
-    name TEXT
-    reference INT
-    translationNotes TEXT
+    name TEXTSHORT QUERY "Name"
+    reference ID(wiki_reference) "Reference"
+    translationNotes TEXTLONG "Translation Notes"
   `, [
     new Validator(
       o => ((!o.reference && !o.translationNotes) || o.name),
@@ -200,16 +200,16 @@ const def = [{
     )
   ]),
   UNOFFICIAL_NAME: new ObjectType(`
-    name QUERY
-    description TEXT
+    name TEXTSHORT QUERY "Name"
+    description TEXTLONG "Description"
   `),
   SONG_AUTHOR: new ObjectType(`
-    author INT
-    reference INT
+    author ID(author) "Author"
+    reference ID(wiki_reference) "Reference"
   `),
   VERSION: new ObjectType(`
-    name TEXT
-    description TEXT
+    name TEXTSHORT "Name"
+    description TEXTLONG "Description"
   `),
   SONG_APPEARANCE: new ObjectType(`
     isUnused BOOLEAN "Is Unused?"
@@ -218,33 +218,33 @@ const def = [{
     reference ID(reference) "Reference"
   `),
   PARTY_SONG: new ObjectType(`
-    isUnused BOOLEAN
-    type INT
-    usePartyDate BOOLEAN
-    available TIME_RANGE
-    song INT
+    isUnused BOOLEAN "Is unused?"
+    type INT "Type"
+    usePartyDate BOOLEAN "Use date from the party?"
+    available {TIME_RANGE} "Available"
+    song ID(song) "Song"
   `),
   CATALOGUE_ITEM: new ObjectType(`
-    displayName TEXT
-    song INT
+    displayName TEXTSHORT "Display Name"
+    song ID(song) "Song"
   `),
   STAGE_APPEARANCE: new ObjectType(`
-    isUnused BOOLEAN
-    appearance TIME_RANGE
-    song INT
-    reference INT
+    isUnused BOOLEAN "Is unused?"
+    appearance {TIME_RANGE} "Appearance"
+    song ID(song) "Song"
+    reference ID(reference) "Reference"
   `),
   GAME_SONG: new ObjectType(`
-    isUnused BOOLEAN
-    song INT
-    useMinigameDates BOOLEAN
-    available TIME_RANGE
+    isUnused BOOLEAN "Is unused"
+    song ID(song) "Song"
+    useMinigameDates BOOLEAN "Use Minigame Dates"
+    available {TIME_RANGE} "Available"
   `),
   VIDEO_APPEARANCE: new ObjectType(`
-    song INT
-    isEntireVideo BOOLEAN
-    startTime INT
-    endTime INT
+    song ID(song) "Song"
+    isEntireVideo BOOLEAN "Is Entire Video?"
+    startTime INT "Start Time"
+    endTime INT "End Time"
   `),
   DATE_ESTIMATE: new ObjectType(`
     date DATE "Date"
@@ -255,24 +255,23 @@ const def = [{
     end {DATE_ESTIMATE} "End"
   `),
   SONG_FILE: new ObjectType(`
-    source INT
-    link TEXT
-    isHQ BOOLEAN
-    originalname TEXT
-    filename TEXT
+    source ID(source) "Source"
+    link TEXTSHORT "Link"
+    isHQ BOOLEAN "Is HQ?"
+    file FILE(audio) "File"
   `)
 }, {
   epf_ost: new MainType(
     'Elite Penguin Force OST', `
-    songs INT[]
+    songs ID(song)[]
   `),
   epfhr_ost: new MainType(
     "Herbert's Revenge OST", `
-    songs INT[]
+    songs ID(song)[]
   `),
   game_day_ost: new MainType(
     'Game Day OST', `
-    songs INT[]
+    songs ID(song)[]
   `)
 }]
 

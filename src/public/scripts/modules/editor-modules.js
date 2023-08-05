@@ -1,8 +1,8 @@
 import { GridModule, MoveableRowsModule } from './array-modules.js'
 import {
-  CategoryQueryModule, CheckboxModule, DateInputModule, FileUploadModule,
+  CategoryQueryModule, CheckboxModule, DateInputModule,
   NumberInputModule, ReferenceQueryModule, SongQueryModule, SourceQueryModule,
-  TextAreaModule, TextInputModule, getSearchQueryModule
+  TextAreaModule, TextInputModule, getFileUploadModule, getSearchQueryModule
 } from './element-modules.js'
 import { EditorModule, ObjectChild, ObjectModule, TableChild, TableModule } from './main-modules.js'
 import {
@@ -268,7 +268,7 @@ function buildEditor (code, data, topModule) {
     const brackets = type.match(/\[\]/g)
     let arrayModule
     if (brackets) {
-      type = type.match(/(\w|\(|\))+/)[0]
+      type = type.replace(/(\[\])/g, '')
       if (brackets.length === 1) {
         arrayModule = MoveableRowsModule
       } else if (brackets.length === 2) {
@@ -310,13 +310,25 @@ function buildEditor (code, data, topModule) {
           moduleType = CheckboxModule
           break
         }
+        case 'FILE': {
+          moduleType = getFileUploadModule(arg)
+          break
+        }
+        case 'INT': {
+          moduleType = NumberInputModule
+          break
+        }
       }
     }
 
     if (brackets) {
       moduleList.push(new TableChild(headerName, arrayModule, property, moduleType))
+      console.log(headerName,moduleList)
+
     } else {
       moduleList.push(new TableChild(headerName, moduleType, property))
+      console.log(headerName,moduleList)
+    
     }
   })
 
