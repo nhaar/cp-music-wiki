@@ -132,7 +132,6 @@ class WikiDatabase {
    */
   validate (type, data, isStatic) {
     const errors = []
-    const db = this
 
     // iterate through each property and each validation statement in the object to validate it
     const iterateObject = (code, validators, data, path) => {
@@ -147,9 +146,8 @@ class WikiDatabase {
         // check if the type of a property is the same as it was defined
         const checkType = (value, type, path) => {
           if (type.includes('[')) {
-            // figure out dimension
-            const dimension = db.getDimension(type)
-            const realType = type.slice(0, type.length - 2 * dimension)
+            const dimension = this.getDimension(type)
+            const realType = removeBrackets(type)
 
             // iterate through all the nested arrays to find all destination paths
             const dimensionIterator = (array, level) => {
@@ -169,9 +167,15 @@ class WikiDatabase {
             }
             dimensionIterator(value, dimension)
           } else {
-            const errorMsg = indefiniteDescription => errors.push(`${path.join('')} must be ${indefiniteDescription}`)
-
-            if (!type.includes('{')) {
+            const errorMsg = indefiniteDescription => {
+              errors.push(`${path.join('')} must be ${indefiniteDescription}`)
+            }
+            if (type.includes('{')) {
+              if (isObject(value)) {
+                const propertyType = this.propertyTypes[removeBraces(type)]
+                iterateObject(propertyType.code, propertyType.validators, value, path)
+              } else errorMsg('a valid object')
+            } else {
               if (params.includes('QUERY')) {
                 if (typeof value !== 'string' || !value) {
                   errors.push(`Must give a name (error at ${path.join('')})`)
@@ -195,12 +199,6 @@ class WikiDatabase {
                   }
                 }
               }
-            } else {
-              if (!value) errorMsg('a valid object')
-              else {
-                const propertyType = db.propertyTypes[type.replace(/{|}/g, '')]
-                iterateObject(propertyType.code, propertyType.validators, value, path)
-              }
             }
           }
         }
@@ -210,8 +208,8 @@ class WikiDatabase {
     }
 
     const databaseType = isStatic
-      ? db.staticTypes[type]
-      : db.databaseTypes[type]
+      ? this.staticTypes[type]
+      : this.databaseTypes[type]
 
     iterateObject(databaseType.code, databaseType.validators, data, [`[${type} Object]`])
 
@@ -627,6 +625,18 @@ class SQLHandler {
   async getBiggestSerial (table) {
     return Number((await this.pool.query(`SELECT last_value FROM ${table}_id_seq`)).rows[0].last_value)
   }
+}
+
+function removeBrackets (str) {
+  return str.replace(/\[|\]/g, '')
+}
+
+function removeBraces (str) {
+  return str.replace(/{|}/g, '')
+}
+
+function isObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 const db = new WikiDatabase(...def)
