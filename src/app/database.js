@@ -393,7 +393,7 @@ class WikiDatabase {
    * @param {function(string, string) : void} callbackfn - Callback function for each iteration which takes as the first argument the name of the property in the declaration and as the second argument the type of the property being declared
    */
   iterateDeclarations (code, callbackfn) {
-    const declarations = code.split('\n').map(line => line.trim()).filter(line => line)
+    const declarations = splitStatements(code)
     declarations.forEach(declr => {
       const property = declr.match(/\w+/)[0]
       const typePattern = /(?:{)?(\w|\(|\))+(?:})?(\[\])*/
@@ -676,6 +676,10 @@ function removeArgs (type) {
 
 function isString (value) {
   return typeof value === 'string'
+}
+
+function splitStatements (code) {
+  return code.split('\n').map(line => line.trim()).filter(line => line)
 }
 
 const db = new WikiDatabase(...def)

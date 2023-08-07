@@ -6,31 +6,43 @@ import {
 } from './element-modules.js'
 import { EditorModule, TableChild, TableModule } from './main-modules.js'
 
+function splitStatements (code) {
+  return code.split('\n').map(line => line.trim()).filter(line => line)
+}
+
+function matchInside (str, lChar, rChar) {
+  if (!rChar) rChar = lChar
+  return str.match(`(?<=${lChar}).*(?=${rChar})`)
+}
+
 function buildEditor (code, data, topModule) {
-  const lines = code.split('\n').map(line => line.trim()).filter(line => Boolean(line))
+  const lines = splitStatements(code)
   const moduleList = []
 
   lines.forEach(line => {
     const property = line.match(/\w+/)[0]
-    let type = line.match(/(?<=\w+\s+)(?:{)?(\w|\(|\))+(?:})?(\[\])*/)[0]
-    const rest = line.match(/(?<=(?<=\w+\s+)(?:{)?(\w|\(|\))+(?:})?(\[\])*\s+).*/)
+    const firstWord = '\\w+\\s+'
+    const typePattern = '(?:{)?(\\w|\\(|\\))+(?:})?(\\[\\])*'
+    let type = line.match(`(?<=${firstWord})${typePattern}`)[0]
+    const rest = line.match(`(?<=(${firstWord}${typePattern}\\s+)).*`)
     let params = []
     if (rest) {
       const restString = rest[0]
-      const quoted = restString.match(/".*"/)
-      params = restString.replace(/".*"/, '').match(/\S+/g) || []
+      const quotePattern = /".*"/
+      const quoted = restString.match(quotePattern)
+      params = restString.replace(quotePattern, '').match(/\S+/g) || []
       if (quoted) params.push(quoted[0])
     }
 
     let headerName = 'PLACEHOLDER'
     params.forEach(param => {
-      if (param.includes('"')) headerName = param.match(/(?<=").*(?=")/)[0]
+      if (param.includes('"')) headerName = matchInside(param, '"')[0]
     })
 
     const brackets = type.match(/\[\]/g)
     let arrayModule
     if (brackets) {
-      type = type.replace(/(\[\])/g, '')
+      type = removeBrackets(type)
       if (brackets.length === 1) {
         arrayModule = MoveableRowsModule
       } else if (brackets.length === 2) {
@@ -38,7 +50,7 @@ function buildEditor (code, data, topModule) {
       }
     }
 
-    let arg = type.match(/(?<=\().*(?=\))/)
+    let arg = matchInside(type, '\\(', '\\)')
 
     if (arg) {
       arg = arg[0]
@@ -47,46 +59,29 @@ function buildEditor (code, data, topModule) {
 
     let moduleType
     if (type.includes('{')) {
-      type = type.replace(/\{|\}/g, '')
+      type = removeBraces(type)
 
       moduleType = buildEditor(data[type], data, false)
     } else {
-      switch (type) {
-        case 'TEXTSHORT': {
-          moduleType = TextInputModule
-          break
-        }
-        case 'TEXTLONG': {
-          moduleType = TextAreaModule
-          break
-        }
-        case 'ID': {
-          moduleType = getSearchQueryModule(arg)
-          break
-        }
-        case 'DATE': {
-          moduleType = DateInputModule
-          break
-        }
-        case 'BOOLEAN': {
-          moduleType = CheckboxModule
-          break
-        }
-        case 'FILE': {
-          moduleType = getFileUploadModule(arg)
-          break
-        }
-        case 'INT': {
-          moduleType = NumberInputModule
-          break
-        }
-      }
+      moduleType = {
+        TEXTSHORT: TextInputModule,
+        TEXTLONG: TextAreaModule,
+        ID: getSearchQueryModule(arg),
+        DATE: DateInputModule,
+        BOOLEAN: CheckboxModule,
+        FILE: getFileUploadModule(arg),
+        INT: NumberInputModule
+      }[type]
+    }
+
+    const pushfn = (main, arg) => {
+      moduleList.push(new TableChild(headerName, main, property, arg))
     }
 
     if (brackets) {
-      moduleList.push(new TableChild(headerName, arrayModule, property, moduleType))
+      pushfn(arrayModule, moduleType)
     } else {
-      moduleList.push(new TableChild(headerName, moduleType, property))
+      pushfn(moduleType)
     }
   })
 
@@ -102,6 +97,14 @@ function buildEditor (code, data, topModule) {
 
 export function constructEditorModule (editorData) {
   return buildEditor(editorData.main, editorData, true)
+}
+
+function removeBrackets (str) {
+  return str.replace(/\[|\]/g, '')
+}
+
+function removeBraces (str) {
+  return str.replace(/{|}/g, '')
 }
 
 /*
