@@ -4,7 +4,7 @@ every time a change to the database must be made, this must be accessed first
 */
 const db = require('./database')
 const jsondiffpatch = require('jsondiffpatch')
-const { deepcopy } = require('./utils')
+const { deepcopy, matchGroup } = require('./utils')
 
 // list of options:
 // * create a new path in a data variable (across all entries in a table)
@@ -132,26 +132,14 @@ class DatabaseManipulator {
             this.setInObject(version, property, type)
           } else {
             const pathPattern = this.patterns.path
-            const path1 = this.matchGroup(statement, undefined, pathPattern, /(?=\s+->)/)[0]
-            const path2 = this.matchGroup(statement, undefined, /(?<=->\s+)/, pathPattern)[0]
+            const path1 = matchGroup(statement, undefined, pathPattern, /(?=\s+->)/)[0]
+            const path2 = matchGroup(statement, undefined, /(?<=->\s+)/, pathPattern)[0]
             this.mapInObject(original, version, path1, path2, type)
           }
         })
         return version
       })
     }
-  }
-
-  groupPatterns (...patterns) {
-    const sources = (patterns.map(pattern => pattern.source))
-    const combined = sources.reduce((accumulator, cur) => {
-      return accumulator + cur
-    }, '')
-    return new RegExp(combined)
-  }
-
-  matchGroup (str, flags, ...patterns) {
-    return str.match(new RegExp(this.groupPatterns(...patterns), flags))
   }
 
   patterns = {
@@ -171,7 +159,7 @@ class DatabaseManipulator {
     const { inDeclr, table, type, word, path } = this.patterns
 
     const matchfn = (...expressions) => {
-      return this.matchGroup(code, 'g', ...expressions)
+      return matchGroup(code, 'g', ...expressions)
     }
     const inPatterns = (...expressions) => {
       return [inDeclr, table, ...expressions]

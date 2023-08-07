@@ -32,7 +32,8 @@ class SimpleTextModule extends ElementModule {
   /**
    * Retrieve data
    */
-  middleoutput () { this.int = new Pointer(this.textInput, this.access)
+  middleoutput () {
+    this.int = new Pointer(this.textInput, this.access)
   }
 
   /**
@@ -177,6 +178,8 @@ export class DateInputModule extends ElementModule {
     this.dateInput = createElement({ parent: this.e, tag: 'input', type: 'date' })
     this.int = new Pointer(this.dateInput, 'value')
   }
+
+  convertoutput (output) { return output || null }
 }
 
 /**
@@ -207,50 +210,47 @@ export class EstimateCheckboxModule extends CheckboxModule {
 }
 
 export function getFileUploadModule (filetype) {
-
 /**
  * Module for a file upload element
  */
-class FileUploadModule extends ElementModule {
+  class FileUploadModule extends ElementModule {
   /**
    * Render the HTML element
    */
-  prebuild () {
-    this.loading = Boolean(this.out.read())
-    if (this.loading) {
-      switch (filetype) {
-        case 'audio': {
-          createElement({ parent: this.e, innerHTML: generateAudio(this.out.read()) })
-          break
+    prebuild () {
+      this.loading = Boolean(this.out.read())
+      if (this.loading) {
+        switch (filetype) {
+          case 'audio': {
+            createElement({ parent: this.e, innerHTML: generateAudio(this.out.read()) })
+            break
+          }
         }
+      } else {
+        this.fileUpload = createElement({ parent: this.e, tag: 'input', type: 'file' })
       }
-    } else {
-      this.fileUpload = createElement({ parent: this.e, tag: 'input', type: 'file' })
     }
-  }
 
-  /**
+    /**
    * Send the file to the backend to get its data and then output it
    */
-  async middleoutput () {
-    if (!this.loading) {
-      const file = this.fileUpload.files[0]
-      const formData = new FormData()
-      formData.append('file', file)
-      const response = await fetch('api/submit-file', {
-        method: 'POST',
-        body: formData
-      })
-      this.fileData = await response.json()
-      this.int = new Pointer(this, 'fileData')
+    async middleoutput () {
+      if (!this.loading) {
+        const file = this.fileUpload.files[0]
+        const formData = new FormData()
+        formData.append('file', file)
+        const response = await fetch('api/submit-file', {
+          method: 'POST',
+          body: formData
+        })
+        this.fileData = await response.json()
+        this.int = new Pointer(this, 'fileData')
+      }
     }
   }
+
+  return FileUploadModule
 }
-
-return FileUploadModule
-
-}
-
 
 /**
  * Generates HTML for an audio element based on a file

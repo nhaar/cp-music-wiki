@@ -61,8 +61,6 @@ class Page {
     editor.input()
     editor.setup()
 
-
-
     this.renderSubmitButton()
     this.setupSubmitButton(editor, row, type)
   }

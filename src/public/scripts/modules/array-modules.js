@@ -78,7 +78,6 @@ export class MoveableRowsModule extends ArrayModule {
     // once by the parent calling all children
     if (!value) childModule.setup()
 
-
     // finish row setup
     if (this.addButton) this.div.insertBefore(newRow, this.addButton)
     else this.div.appendChild(newRow)

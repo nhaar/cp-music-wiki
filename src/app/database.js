@@ -2,7 +2,7 @@ const { Pool } = require('pg')
 const jsondiffpatch = require('jsondiffpatch')
 const def = require('./data-def')
 
-const { deepcopy } = require('./utils')
+const { deepcopy, matchGroup } = require('./utils')
 
 /**
  * Represents CPT code, used to define the properties of the database objects
@@ -134,7 +134,8 @@ class WikiDatabase {
     const errors = []
 
     // iterate through each property and each validation statement in the object to validate it
-    const iterateObject = (code, validators, data, path) => {
+    const iterateObject = (databaseObj, data, path) => {
+      const { code, validators } = databaseObj
       validators.forEach(validator => {
         try {
           if (!validator.f(data)) errors.push(validator.msg)
@@ -173,7 +174,7 @@ class WikiDatabase {
             if (type.includes('{')) {
               if (isObject(value)) {
                 const propertyType = this.propertyTypes[removeBraces(type)]
-                iterateObject(propertyType.code, propertyType.validators, value, path)
+                iterateObject(propertyType, value, path)
               } else errorMsg('a valid object')
             } else {
               if (params.includes('QUERY')) {
@@ -182,21 +183,28 @@ class WikiDatabase {
                 }
               } else if (value === null) return
 
-              if (type === 'TEXT') {
+              type = removeArgs(type)
+
+              if (['TEXTSHORT', 'TEXTLONG'].includes(type)) {
                 if (typeof value !== 'string') {
                   errorMsg('a text string')
                 }
-              } else if (type === 'INT') {
+              } else if (['ID', 'INT'].includes(type)) {
                 if (!Number.isInteger(value)) {
                   errorMsg('an integer number')
                 }
               } else if (type === 'BOOLEAN') {
                 if (typeof value !== 'boolean') {
                   errorMsg('a boolean value')
-                } else if (type === 'DATE') {
-                  if (!value.match(/\d+-\d{2}-\d{2}/)) {
-                    errorMsg('a valid date string (YYYY-MM-DD)')
-                  }
+                }
+              } else if (type === 'DATE') {
+                if (!value.match(/\d+-\d{2}-\d{2}/)) {
+                  errorMsg('a valid date string (YYYY-MM-DD)')
+                }
+              } else if (type === 'FILE') {
+                const { originalname, filename } = value
+                if (!isString(originalname) || !isString(filename)) {
+                  errorMsg('a valid file object')
                 }
               }
             }
@@ -211,7 +219,7 @@ class WikiDatabase {
       ? this.staticTypes[type]
       : this.databaseTypes[type]
 
-    iterateObject(databaseType.code, databaseType.validators, data, [`[${type} Object]`])
+    iterateObject(databaseType, data, [`[${type} Object]`])
 
     return errors
   }
@@ -255,30 +263,31 @@ class WikiDatabase {
    */
   assignDefaults () {
     this.defaults = {}
-    this.standardVariables = ['TEXT', 'INT', 'BOOLEAN', 'DATE', 'QUERY']
 
     const createDefault = (prop, code) => {
-      const braceless = type => type.replace(/{|}/g, '')
       const defaultObject = {}
       this.iterateDeclarations(code, (property, type) => {
         if (type.includes('[')) {
           defaultObject[property] = []
-        } else if (!type.includes('{')) {
-          defaultObject[property] = null
+        } else if (type.includes('{')) {
+          defaultObject[property] = this.getDefault(removeBraces(type))
         } else {
-          defaultObject[property] = this.defaults[braceless(type)]
+          defaultObject[property] = null
         }
       })
       this.defaults[prop] = defaultObject
     }
 
+    // iterate each property making sure
+    // we're not creating default for a property
+    // that doesn't have one of its children types defined
     const propertiesOnHold = []
     while (true) {
       for (const prop in this.propertyTypes) {
-        const code = this.propertyTypes[prop].code
-        let nonStandardTypes = []
+        const { code } = this.propertyTypes[prop]
+        const nonStandardTypes = []
         this.iterateDeclarations(code, (property, type) => {
-          if (type.includes('{')) nonStandardTypes.push(type.replace(/{|}/g, ''))
+          if (type.includes('{')) nonStandardTypes.push(removeBraces(type))
         })
 
         let onHold = false
@@ -299,12 +308,19 @@ class WikiDatabase {
       if (propertiesOnHold.length === 0) break
     }
 
-    const mergedTypes = {}
-    Object.assign(mergedTypes, this.databaseTypes, this.staticTypes, this.propertyTypes)
+    const mergedTypes = this.getMergedTypes()
 
     for (const v in mergedTypes) {
       createDefault(v, mergedTypes[v].code)
     }
+  }
+
+  getMergedTypes () {
+    return Object.assign(this.getMainTypes(), this.propertyTypes)
+  }
+
+  getMainTypes () {
+    return Object.assign({}, this.databaseTypes, this.staticTypes)
   }
 
   /**
@@ -324,6 +340,7 @@ class WikiDatabase {
       if (!isStatic) {
         // to add id to row if creating new entry
         row.id = (await this.handler.getBiggestSerial(type))
+        // this property is for the updating function
         row.isNew = true
       }
       oldRow = { data: this.defaults[type] }
@@ -346,7 +363,8 @@ class WikiDatabase {
     const queryIndex = {}
     Object.assign(this, { queryIndex })
 
-    for (const v in this.databaseTypes) {
+    const mainTypes = this.getMainTypes()
+    for (const v in mainTypes) {
       queryIndex[v] = []
 
       const iterate = (code, path) => {
@@ -356,16 +374,16 @@ class WikiDatabase {
           for (let i = 0; i < dimension; i++) {
             newPath.push('[]')
           }
-          const arrayless = type.replace(/(\[\])*/g, '')
+          const arrayless = removeBrackets(type)
           if (params.includes('QUERY')) {
             queryIndex[v].push(newPath)
           } else if (arrayless.includes('{')) {
-            const braceless = arrayless.replace(/\{|\}/g, '')
+            const braceless = removeBraces(arrayless)
             iterate(this.propertyTypes[braceless].code, newPath)
           }
         })
       }
-      iterate(this.databaseTypes[v].code, [])
+      iterate(mainTypes[v].code, [])
     }
   }
 
@@ -377,17 +395,17 @@ class WikiDatabase {
   iterateDeclarations (code, callbackfn) {
     const declarations = code.split('\n').map(line => line.trim()).filter(line => line)
     declarations.forEach(declr => {
-      const names = declr.match(/\w+(\[\])*/g)
       const property = declr.match(/\w+/)[0]
-      const type = declr.match(/(?<=\w+\s+)(?:{)?(\w|\(|\))+(?:})?(\[\])*/)[0]
-      const rest = declr.match(/(?<=(?<=\w+\s+)(?:{)?\w+(?:})?(\[\])*\s+).*/)
+      const typePattern = /(?:{)?(\w|\(|\))+(?:})?(\[\])*/
+      const type = matchGroup(declr, undefined, /(?<=\w+\s+)/, typePattern)[0]
+      const rest = declr.match(`(?<=\\w+\\s+${typePattern.source}\\s+).*`)
       let params = []
       if (rest) {
+        const quotePattern = /".*"/
         const restString = rest[0]
-        const quoted = restString.match(/".*"/)
-        params = restString.replace(/".*"/, '').match(/\S+/g) || []
+        const quoted = restString.match(quotePattern)
+        params = restString.replace(quotePattern, '').match(/\S+/g) || []
         if (quoted) params.push(quoted[0])
-
       }
       callbackfn(property, type, params)
     })
@@ -480,8 +498,12 @@ class WikiDatabase {
       }
     }
 
-    base(db.databaseTypes, false)
-    base(db.staticTypes, true)
+    [
+      ['database', false],
+      ['static', true]
+    ].forEach(element => {
+      base(this[`${element[0]}Types`], element[1])
+    })
 
     return data
   }
@@ -489,13 +511,14 @@ class WikiDatabase {
   getEditorData (t) {
     const data = {}
     const { type, isStatic } = this.getPreeditorData()[t]
-    if (isStatic) data.main = db.staticTypes[type].code
-    else data.main = db.databaseTypes[type].code
-    data.isStatic = isStatic
-    data.type = type
 
-    for (const v in db.propertyTypes) {
-      data[v] = db.propertyTypes[v].code
+    const assign = name => { data.main = this[`${name}Types`][type].code }
+    if (isStatic) assign('static')
+    else assign('database')
+    Object.assign(data, { type, isStatic })
+
+    for (const v in this.propertyTypes) {
+      data[v] = this.propertyTypes[v].code
     }
 
     return data
@@ -538,7 +561,9 @@ class SQLHandler {
    * @param {string} selecting - The columns to to include, separated by commas, or leave blank for all columns
    * @returns {Row[]} All the rows from the database
    */
-  select = async (type, column, value, selecting = '*') => (await this.pool.query(`SELECT ${selecting} FROM ${type} WHERE ${column} = $1`, [value])).rows
+  select = async (type, column, value, selecting = '*') => {
+    return (await this.pool.query(`SELECT ${selecting} FROM ${type} WHERE ${column} = $1`, [value])).rows
+  }
 
   async selectChanges (type, id, column) {
     return ((await this.pool.query(`SELECT ${column} FROM changes WHERE type = $1 AND type_id = $2 ORDER BY id ASC`, [type, id])).rows)
@@ -570,9 +595,11 @@ class SQLHandler {
    * @param {string} columns - Name of all the columns to insert, comma separated
    * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
    */
-  insert = async (type, columns, values, condition = '') => (await this.pool.query(
-    `INSERT INTO ${type} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
-  ))
+  insert = async (type, columns, values, condition = '') => {
+    return await this.pool.query(
+      `INSERT INTO ${type} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
+    )
+  }
 
   /**
    * Insert a static type if it doesn't exist yet
@@ -588,7 +615,9 @@ class SQLHandler {
    * @param {TypeValues} values - Values for the type
    * @returns
    */
-  insertData = async (type, values) => (await this.insert(type, this.columns, values, ''))
+  insertData = async (type, values) => {
+    (await this.insert(type, this.columns, values, ''))
+  }
 
   /**
    * Update a row inside a table which a column matches a value
@@ -620,7 +649,9 @@ class SQLHandler {
    * @param {string} matching - String to be matched
    * @returns {Row[]}
    */
-  selectLike = async (type, column, matching) => (await this.pool.query(`SELECT * FROM ${type} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
+  selectLike = async (type, column, matching) => {
+    return (await this.pool.query(`SELECT * FROM ${type} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
+  }
 
   async getBiggestSerial (table) {
     return Number((await this.pool.query(`SELECT last_value FROM ${table}_id_seq`)).rows[0].last_value)
@@ -635,8 +666,16 @@ function removeBraces (str) {
   return str.replace(/{|}/g, '')
 }
 
-function isObject(value) {
+function isObject (value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function removeArgs (type) {
+  return type.replace(/\(.*\)/, '')
+}
+
+function isString (value) {
+  return typeof value === 'string'
 }
 
 const db = new WikiDatabase(...def)

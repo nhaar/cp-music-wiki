@@ -257,7 +257,6 @@ function buildEditor (code, data, topModule) {
       const quoted = restString.match(/".*"/)
       params = restString.replace(/".*"/, '').match(/\S+/g) || []
       if (quoted) params.push(quoted[0])
-
     }
 
     let headerName = 'PLACEHOLDER'
@@ -323,9 +322,8 @@ function buildEditor (code, data, topModule) {
 
     if (brackets) {
       moduleList.push(new TableChild(headerName, arrayModule, property, moduleType))
-
     } else {
-      moduleList.push(new TableChild(headerName, moduleType, property))    
+      moduleList.push(new TableChild(headerName, moduleType, property))
     }
   })
 
@@ -342,8 +340,6 @@ function buildEditor (code, data, topModule) {
 export function constructEditorModule (editorData) {
   return buildEditor(editorData.main, editorData, true)
 }
-
-
 
 /*
 0. CPT is defined

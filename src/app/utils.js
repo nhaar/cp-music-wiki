@@ -21,4 +21,16 @@ function youtubify (videoCode) {
 
 function deepcopy (object) { return JSON.parse(JSON.stringify(object)) }
 
-module.exports = { compareObjects, youtubify, deepcopy }
+function groupPatterns (...patterns) {
+  const sources = (patterns.map(pattern => pattern.source))
+  const combined = sources.reduce((accumulator, cur) => {
+    return accumulator + cur
+  }, '')
+  return new RegExp(combined)
+}
+
+function matchGroup (str, flags, ...patterns) {
+  return str.match(new RegExp(groupPatterns(...patterns), flags))
+}
+
+module.exports = { compareObjects, youtubify, deepcopy, groupPatterns, matchGroup }
