@@ -155,18 +155,6 @@ export function getSearchQueryModule (type) {
   return SearchQueryModule
 }
 
-/** Module with a reference search query */
-export const ReferenceQueryModule = getSearchQueryModule('wiki_reference')
-
-/** Module with a source search query */
-export const SourceQueryModule = getSearchQueryModule('source')
-
-/** Module with a category seach query */
-export const CategoryQueryModule = getSearchQueryModule('category')
-
-/** Module with a song search query */
-export const SongQueryModule = getSearchQueryModule('song')
-
 /**
  * Module for a date input element
  */
@@ -197,16 +185,6 @@ export class CheckboxModule extends ElementModule {
    * Create the internal pointer
    */
   postbuild () { this.int = new Pointer(this.checkbox, 'checked') }
-}
-
-export class EstimateCheckboxModule extends CheckboxModule {
-  style () { return ['date-estimate'] }
-
-  prebuild () {
-    this.div = createElement({ parent: this.e, className: 'is-estimate' })
-    this.text = createElement({ parent: this.div, innerHTML: 'Is estimate?' })
-    this.checkbox = createElement({ parent: this.div, tag: 'input', type: 'checkbox' })
-  }
 }
 
 export function getFileUploadModule (filetype) {

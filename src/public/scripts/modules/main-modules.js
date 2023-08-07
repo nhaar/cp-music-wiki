@@ -292,13 +292,6 @@ export class ObjectModule extends ChildModule {
 export class ElementModule extends ChildModule {}
 
 /**
- * Modules that only read the external data and don't pass anything
- *
- * Currently only a semantic class
- */
-export class ReadonlyModule extends ChildModule {}
-
-/**
  * Object with the data for child modules in `TableModule` and `EditorModule`
  */
 export class TableChild {
