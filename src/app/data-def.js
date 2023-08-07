@@ -190,7 +190,7 @@ const def = [{
     ru {LOCALIZATION_NAME} "Russian"
   `),
   LOCALIZATION_NAME: new ObjectType(`
-    name TEXTSHORT QUERY "Name"
+    name TEXTSHORT "Name"
     reference ID(wiki_reference) "Reference"
     translationNotes TEXTLONG "Translation Notes"
   `, [

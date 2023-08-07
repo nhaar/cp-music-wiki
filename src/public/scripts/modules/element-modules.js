@@ -32,7 +32,8 @@ class SimpleTextModule extends ElementModule {
   /**
    * Retrieve data
    */
-  middleoutput () { this.int = new Pointer(this.textInput, this.access) }
+  middleoutput () { this.int = new Pointer(this.textInput, this.access)
+  }
 
   /**
    * Set default value for the input

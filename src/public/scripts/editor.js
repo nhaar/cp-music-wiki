@@ -56,9 +56,12 @@ class Page {
     console.log(deepcopy(row))
     const Editor = constructEditorModule(editorData)
     const editor = new Editor(data, this.editor)
+
     editor.build()
     editor.input()
     editor.setup()
+
+
 
     this.renderSubmitButton()
     this.setupSubmitButton(editor, row, type)

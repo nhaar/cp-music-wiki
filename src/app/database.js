@@ -198,7 +198,7 @@ class WikiDatabase {
             } else {
               if (!value) errorMsg('a valid object')
               else {
-                const propertyType = db.propertyTypes[type]
+                const propertyType = db.propertyTypes[type.replace(/{|}/g, '')]
                 iterateObject(propertyType.code, propertyType.validators, value, path)
               }
             }

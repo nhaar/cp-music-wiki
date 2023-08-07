@@ -73,7 +73,11 @@ export class MoveableRowsModule extends ArrayModule {
     // create module
     const childModule = this.newchild(value, childElement)
     childModule.build()
-    childModule.setup()
+    // if no value means it's being added via the add row button and not
+    // from building the page, which prevents setup being run twice, once here and
+    // once by the parent calling all children
+    if (!value) childModule.setup()
+
 
     // finish row setup
     if (this.addButton) this.div.insertBefore(newRow, this.addButton)

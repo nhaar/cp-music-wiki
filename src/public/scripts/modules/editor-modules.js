@@ -323,12 +323,9 @@ function buildEditor (code, data, topModule) {
 
     if (brackets) {
       moduleList.push(new TableChild(headerName, arrayModule, property, moduleType))
-      console.log(headerName,moduleList)
 
     } else {
-      moduleList.push(new TableChild(headerName, moduleType, property))
-      console.log(headerName,moduleList)
-    
+      moduleList.push(new TableChild(headerName, moduleType, property))    
     }
   })
 
