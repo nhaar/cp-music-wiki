@@ -29,7 +29,7 @@ router.post('/get', async (req, res) => {
   const { type, id } = req.body
 
   if (checkType(res, type) && checkId(res, id)) {
-    const row = await db.getDataById(type, id)
+    const row = await db.getItemById(type, id)
     if (!row) sendBadReq(res, 'Item not found in the database')
     else res.status(200).send(row)
   }
@@ -64,7 +64,7 @@ router.post('/update', async (req, res) => {
             await db.updateStatic(row)
             res.sendStatus(200)
           } else {
-            await db.updateType(type, row)
+            await db.updateItem(type, row)
             res.sendStatus(200)
           }
         } else sendBadReqJSON(res, { errors: validationErrors })

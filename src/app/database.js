@@ -5,90 +5,84 @@ const def = require('./data-def')
 const { deepcopy, matchGroup } = require('./utils')
 
 /**
- * Represents CPT code, used to define the properties of the database objects
+ * Represents CPT code, used to define the properties of the database classes
  * @typedef {string} CPT
  */
 
 /**
- * Represents the data type for a row extracted from one of the tables from the database
+ * An object of the row of a database item
  * @typedef {object} Row
- * @property {number} id - Unique id number
- * @property {TypeData} data - Object data
+ * @property {number} id - Id in table
+ * @property {ItemData} data - Item data
  * @property {string} querywords - String with words to be matched
  */
 
 /**
- * Represent the name of an object defining a table in the database, which has the same name as the type
- * @typedef {string} TypeName
+ * Represents the name of a database class
+ * @typedef {string} ClassName
  */
 
 /**
- * An object that follows the rules of a given type as defined
- * by the wiki database code
- * @typedef {object} TypeData
+ * An object that contains the data for an item of a class
+ * @typedef {object} ItemData
  */
 
 /**
- * Object containing id and data for a row
- * @typedef {object} TypeInfo
- * @property {number | null} id - Id is null if it doesn't exist in the database
- * @property {TypeData} data
- */
-
-/**
- * An array of strings. each representing a step needed to reach a property inside an object
- *
- * The string can be either "[#]" representing it's index "#"" of an array or ".#" representing it's the property "#" of an object
- * @typedef {string[]} PropertyPath
+ * An object that maps database class names to their
+ * respective definition object
+ * @typedef {object} DefMap
  */
 
 /**
  * An array containing values for a row in the following order:
  *
- * * Index 0 is the JSON string of `TypeData`
+ * * Index 0 is the JSON string of `ItemData`
  * * Index 1 is the string for the query words
- * @typedef {string[]} TypeValues
+ * @typedef {string[]} ItemValues
  */
 
 /**
- * Class containing the methods to communicate with the database
+ * Contains the methods to communicate with the database
  * via a defined database structure
  */
 class WikiDatabase {
   /**
-   * Connects to the database using the type definitions given
-   * @param {object} databaseTypes - Object mapping `TypeName` to `ObjectType`, and defines all the database types used
-   * @param {object} propertyTypes - Object mapping names to `ObjectType` which are meant to be helper object structures to be used as properties in other objects
+   * Connect to the database using the class definitions given
+   * @param {DefMap} mainClasses
+   * @param {DefMap} helperClasses
+   * @param {DefMap} staticClasses
    */
-  constructor (databaseTypes, propertyTypes, staticTypes) {
+  constructor (mainClasses, helperClasses, staticClasses) {
     this.handler = new SQLHandler()
-    Object.assign(this, { databaseTypes, propertyTypes, staticTypes })
+    Object.assign(this, { mainClasses, helperClasses, staticClasses })
 
-    for (const type in databaseTypes) {
-      this.handler.createType(type)
+    // create table for each main class
+    for (const cls in mainClasses) {
+      this.handler.createClass(cls)
     }
 
+    // general class information processing
     this.assignDefaults()
     this.queryIndexing()
 
-    // handle static types
+    // create static class table
     this.handler.create(`
       static (
         id TEXT PRIMARY KEY,
         data JSONB
       )`
     ).then(() => {
-      for (const type in staticTypes) {
-        this.handler.insertStatic(type, JSON.stringify(this.defaults[type]))
+      for (const cls in staticClasses) {
+        this.handler.insertStatic(cls, JSON.stringify(this.defaults[cls]))
       }
     })
 
-    // create DB for patches
+    // create table for patches
     this.handler.create(`
       changes (
         id SERIAL PRIMARY KEY,
-        type TEXT,
-        type_id INT,
+        class TEXT,
+        item_id INT,
         patch JSONB
       )
     `)
@@ -103,39 +97,39 @@ class WikiDatabase {
   keysInclude = (obj, key) => Object.keys(obj).includes(key)
 
   /**
-   * Check if a value is a static type
+   * Check if a value is the name of a static class
    * @param {any} type - Value to check
-   * @returns {boolean} True if it is a static type
+   * @returns {boolean} True if it is the name of a static class
    */
-  isStaticType = type => this.keysInclude(this.staticTypes, type)
+  isStaticClass = cls => this.keysInclude(this.staticClasses, cls)
 
   /**
-   * Check if a value is a database type
-   * @param {any} type
-   * @returns {boolean} True if it is a database type
+   * Check if a value is the name of a main class
+   * @param {any} type - Value to check
+   * @returns {boolean} True if it is the name of a main class
    */
-  isType = type => this.keysInclude(this.databaseTypes, type)
+  isMainClass = cls => this.keysInclude(this.mainClasses, cls)
 
   /**
-   * Get the data from an object type give the id
-   * @param {TypeName} type - Name of the type to get
+   * Get the data from a main class item given its id
+   * @param {ClassName} cls - Name of the main class
    * @param {number} id - Id of the row to get
    * @returns {Row} Data retrieved from the database
    */
-  getDataById = async (type, id) => await this.handler.selectId(type, id)
+  getItemById = async (cls, id) => await this.handler.selectId(cls, id)
 
   /**
-   * Check if the object for a type follows the rules defined and returns a list of all the errors found
-   * @param {TypeName} type - Type to validate
-   * @param {TypeData} data - Object to validate
+   * Check if the object for a database class follows the rules defined for it and returns a list of all the errors found
+   * @param {ClassName} cls - Class of the data to validate
+   * @param {ItemData} data - Data object to validate
    * @returns {string[]} Array where each element is a string describing an error
    */
-  validate (type, data, isStatic) {
+  validate (cls, data, isStatic) {
     const errors = []
 
-    // iterate through each property and each validation statement in the object to validate it
-    const iterateObject = (databaseObj, data, path) => {
-      const { code, validators } = databaseObj
+    // iterate through each property and each validation statement in the definition to validate it
+    const iterateObject = (classDef, data, path) => {
+      const { code, validators } = classDef
       validators.forEach(validator => {
         try {
           if (!validator.f(data)) errors.push(validator.msg)
@@ -173,7 +167,7 @@ class WikiDatabase {
             }
             if (type.includes('{')) {
               if (isObject(value)) {
-                const propertyType = this.propertyTypes[removeBraces(type)]
+                const propertyType = this.helperClasses[removeBraces(type)]
                 iterateObject(propertyType, value, path)
               } else errorMsg('a valid object')
             } else {
@@ -215,43 +209,43 @@ class WikiDatabase {
       })
     }
 
-    const databaseType = isStatic
-      ? this.staticTypes[type]
-      : this.databaseTypes[type]
+    const classDefinition = isStatic
+      ? this.staticClasses[cls]
+      : this.mainClasses[cls]
 
-    iterateObject(databaseType, data, [`[${type} Object]`])
+    iterateObject(classDefinition, data, [`[${cls} Object]`])
 
     return errors
   }
 
   /**
-   * Add or update a row in the database for a specific type to match the data given
-   * @param {TypeName} type - Name of the type being updated
-   * @param {TypeInfo} row - Info for the row
+   * Add or update a row in the database for a specific class to match the data given
+   * @param {ClassName} cls - Name of the class being updated
+   * @param {Row} row - Row data
    */
-  async updateType (type, row) {
+  async updateItem (cls, row) {
     const { id, data, isNew } = row
-    const typeValues = [JSON.stringify(data), this.getQueryWords(type, data)]
-    if (isNew) await this.handler.insertData(type, typeValues)
-    else await this.handler.updateData(type, id, typeValues)
+    const itemValues = [JSON.stringify(data), this.getQueryWords(cls, data)]
+    if (isNew) await this.handler.insertData(cls, itemValues)
+    else await this.handler.updateData(cls, id, itemValues)
   }
 
   /**
-   * Get the default `TypeData` object for a given type
-   * @param {TypeName} type - Type to target
-   * @returns {TypeData} Object representing default structure
+   * Get the default `ItemData` object for a given class
+   * @param {ClassName} cls - Class to target
+   * @returns {ItemData} Object representing the default structure
    */
-  getDefault = type => this.defaults[type]
+  getDefault = cls => this.defaults[cls]
 
   /**
-   * Get the row for a static type
-   * @param {TypeName} type - Type to get
+   * Get the row for a static class
+   * @param {ClassName} cls - Clas to get
    * @returns {Row} Fetched row
    */
-  getStatic = async type => (await this.handler.select('static', 'id', type))[0]
+  getStatic = async cls => (await this.handler.select('static', 'id', cls))[0]
 
   /**
-   * Update the row for a static type
+   * Update the row for a static clas
    * @param {Row} row - Row to update with
    */
   async updateStatic (row) {
@@ -259,12 +253,14 @@ class WikiDatabase {
   }
 
   /**
-   * Create and save the default object structure for each database type, where every array is replaced with an empty array, every object is expanded with its properties, and every other variable is kept null
+   * Create and save the default object structure for each database class, where every array is
+   * replaced with an empty array, every helper class is expanded with its defined properties,
+   * and every other property is kept null
    */
   assignDefaults () {
     this.defaults = {}
 
-    const createDefault = (prop, code) => {
+    const createDefault = (cls, code) => {
       const defaultObject = {}
       this.iterateDeclarations(code, (property, type) => {
         if (type.includes('[')) {
@@ -275,86 +271,95 @@ class WikiDatabase {
           defaultObject[property] = null
         }
       })
-      this.defaults[prop] = defaultObject
+      this.defaults[cls] = defaultObject
     }
 
-    // iterate each property making sure
-    // we're not creating default for a property
-    // that doesn't have one of its children types defined
-    const propertiesOnHold = []
+    // iterate each class making sure
+    // we're not creating the default data for a class
+    // that has a property that is a helper class
+    // while the helper class in question isn't done yet
+    const classesOnHold = []
     while (true) {
-      for (const prop in this.propertyTypes) {
-        const { code } = this.propertyTypes[prop]
-        const nonStandardTypes = []
+      for (const cls in this.helperClasses) {
+        const { code } = this.helperClasses[cls]
+        const helperClasses = []
         this.iterateDeclarations(code, (property, type) => {
-          if (type.includes('{')) nonStandardTypes.push(removeBraces(type))
+          if (type.includes('{')) helperClasses.push(removeBraces(type))
         })
 
         let onHold = false
-        if (nonStandardTypes) {
-          nonStandardTypes.forEach(type => {
-            if (!this.defaults[type]) onHold = true
+        if (helperClasses) {
+          helperClasses.forEach(cls => {
+            if (!this.defaults[cls]) onHold = true
           })
         }
         if (onHold) {
-          if (!propertiesOnHold.includes(prop)) propertiesOnHold.push(prop)
+          if (!classesOnHold.includes(cls)) classesOnHold.push(cls)
         } else {
-          const index = propertiesOnHold.findIndex(item => item === prop)
-          if (index > -1) propertiesOnHold.splice(index, 1)
-          createDefault(prop, code)
+          const index = classesOnHold.findIndex(item => item === cls)
+          if (index > -1) classesOnHold.splice(index, 1)
+          createDefault(cls, code)
         }
       }
 
-      if (propertiesOnHold.length === 0) break
+      if (classesOnHold.length === 0) break
     }
 
-    const mergedTypes = this.getMergedTypes()
+    const allClasses = this.getAllClasses()
 
-    for (const v in mergedTypes) {
-      createDefault(v, mergedTypes[v].code)
+    for (const cls in allClasses) {
+      createDefault(cls, allClasses[cls].code)
     }
-  }
-
-  getMergedTypes () {
-    return Object.assign(this.getMainTypes(), this.propertyTypes)
-  }
-
-  getMainTypes () {
-    return Object.assign({}, this.databaseTypes, this.staticTypes)
   }
 
   /**
-   * Adds a patch to the changes table
-   * @param {TypeName} type - Type of the data being changed
-   * @param {Row} row - Row for the data being changed
-   * @param {boolean} isStatic - True if the type is static
+   * Get object with all main, static and helper class definitions
+   * @returns {DefMap} Containing all classes
    */
-  async addChange (type, row, isStatic) {
+  getAllClasses () {
+    return Object.assign(this.getMainClasses(), this.helperClasses)
+  }
+
+  /**
+   * Get object with all main and static class definitions
+   * @returns {DefMap} Containing all main and static classes
+   */
+  getMainClasses () {
+    return Object.assign({}, this.mainClasses, this.staticClasses)
+  }
+
+  /**
+   * Add a patch to the changes table
+   * @param {ClassName} cls - Class of the data being changed
+   * @param {Row} row - Row for the data being changed
+   * @param {boolean} isStatic - True if the class is static
+   */
+  async addChange (cls, row, isStatic) {
     let oldRow
     if (isStatic) {
-      oldRow = await this.getStatic(type)
+      oldRow = await this.getStatic(cls)
     } else {
-      oldRow = await this.handler.selectId(type, row.id)
+      oldRow = await this.handler.selectId(cls, row.id)
     }
     if (!oldRow) {
       if (!isStatic) {
-        // to add id to row if creating new entry
-        row.id = (await this.handler.getBiggestSerial(type))
-        // this property is for the updating function
+        // to add id to row object if creating new entry
+        row.id = (await this.handler.getBiggestSerial(cls))
+        // this property is for the updating function only
         row.isNew = true
       }
-      oldRow = { data: this.defaults[type] }
+      oldRow = { data: this.defaults[cls] }
     }
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
     this.handler.insert(
       'changes',
-      'type, type_id, patch',
-      [type, isStatic ? 0 : row.id, JSON.stringify(delta)]
+      'class, item_id, patch',
+      [cls, isStatic ? 0 : row.id, JSON.stringify(delta)]
     )
   }
 
   /**
-   * Create and save an object that maps each `TypeName` in the database
+   * Create and save an object that maps each `ClassName` in the database
    * onto an array representing paths that lead to the search query properties
    *
    * This object is used to avoid repeating this operation each search query request
@@ -363,9 +368,9 @@ class WikiDatabase {
     const queryIndex = {}
     Object.assign(this, { queryIndex })
 
-    const mainTypes = this.getMainTypes()
-    for (const v in mainTypes) {
-      queryIndex[v] = []
+    const mainClasses = this.getMainClasses()
+    for (const cls in mainClasses) {
+      queryIndex[cls] = []
 
       const iterate = (code, path) => {
         this.iterateDeclarations(code, (property, type, params) => {
@@ -376,24 +381,24 @@ class WikiDatabase {
           }
           const arrayless = removeBrackets(type)
           if (params.includes('QUERY')) {
-            queryIndex[v].push(newPath)
+            queryIndex[cls].push(newPath)
           } else if (arrayless.includes('{')) {
             const braceless = removeBraces(arrayless)
-            iterate(this.propertyTypes[braceless].code, newPath)
+            iterate(this.helperClasses[braceless].code, newPath)
           }
         })
       }
-      iterate(mainTypes[v].code, [])
+      iterate(mainClasses[cls].code, [])
     }
   }
 
   /**
-   * Iterate through every property declared in a CPT code snippet and run a function while iterating
+   * Iterate through every property declaration in a CPT code snippet and run a function while iterating
    * @param {CPT} code - Code snippet with declarations
-   * @param {function(string, string) : void} callbackfn - Callback function for each iteration which takes as the first argument the name of the property in the declaration and as the second argument the type of the property being declared
+   * @param {function(string, string) : void} callbackfn - Callback function for each iteration which takes as the first argument the name of the property in the declaration, as the second argument the type of the property being declared and as the third argument the array of the other parameters used in the declaration
    */
   iterateDeclarations (code, callbackfn) {
-    const declarations = splitStatements(code)
+    const declarations = splitDeclarations(code)
     declarations.forEach(declr => {
       const property = declr.match(/\w+/)[0]
       const typePattern = /(?:{)?(\w|\(|\))+(?:})?(\[\])*/
@@ -412,15 +417,15 @@ class WikiDatabase {
   }
 
   /**
-   * Get the words that can be used in a search query to identify a data type
+   * Get the words that can be used in a search query to identify a class item
    * and return them in the query format stored in the database
-   * @param {TypeName} type - Type of the data
-   * @param {TypeData} data - Object for the data
+   * @param {ClassName} cls - Type of the data
+   * @param {ItemData} data - Object for the data
    * @returns {string} The useable expresions/words separated by "&&", the format stored in the database
    */
-  getQueryWords (type, data) {
+  getQueryWords (cls, data) {
     const results = []
-    const paths = this.queryIndex[type]
+    const paths = this.queryIndex[cls]
     const iterator = (value, path, current) => {
       const type = path[current]
       current++
@@ -443,13 +448,13 @@ class WikiDatabase {
   }
 
   /**
-   * Get all rows that match a searcy query result in a given type
-   * @param {TypeName} type - Type to search in
+   * Get all rows that match a searcy query result in a given class
+   * @param {ClassName} cls - Class to search in
    * @param {string} keyword - Word to match the search result
    * @returns {object} Object that maps ids into expressions/names for the rows
    */
-  async getByName (type, keyword) {
-    const response = await this.handler.selectLike(type, 'querywords', [keyword])
+  async getByName (cls, keyword) {
+    const response = await this.handler.selectLike(cls, 'querywords', [keyword])
     const results = {}
     response.forEach(row => {
       const { id, querywords } = row
@@ -466,8 +471,8 @@ class WikiDatabase {
   }
 
   /**
-   * Get the array dimension for a property type declaration in MWL
-   * @param {string} type - Property type declaration
+   * Get the array dimension for a property type declaration in CPT
+   * @param {string} type - Type in the declaration
    * @returns {number} Array dimension, 0 if not an array
    */
   getDimension (type) {
@@ -477,48 +482,57 @@ class WikiDatabase {
   }
 
   /**
-   * Get the first expression/word in the query words for a row based on the id of the row and type
-   * @param {TypeName} type - Type to search
+   * Get the first expression/word in the query words for a row based on the id of the row and class
+   * @param {ClassName} cls - Class to search
    * @param {number} id - Id of the row to get
    * @returns {string} First query word in the row
    */
-  getQueryNameById = async (type, id) => {
+  getQueryNameById = async (cls, id) => {
     try {
-      return (await this.handler.selectId(type, id, 'querywords')).querywords.split('&&')[0]
+      return (await this.handler.selectId(cls, id, 'querywords')).querywords.split('&&')[0]
     } catch (error) {
       return ''
     }
   }
 
+  /**
+   * Get the data used by the pre-editor frontend page
+   * @returns {object[]} Each object contains the class name, the pretty name and a boolean for being static, and the array contains every main and static class info
+   */
   getPreeditorData () {
     const data = []
-    const base = (typeObject, isStatic) => {
-      for (const v in typeObject) {
-        data.push({ type: v, name: typeObject[v].name, isStatic })
+    const base = (classDefs, isStatic) => {
+      for (const cls in classDefs) {
+        data.push({ cls, name: classDefs[cls].name, isStatic })
       }
     }
 
     [
-      ['database', false],
+      ['main', false],
       ['static', true]
     ].forEach(element => {
-      base(this[`${element[0]}Types`], element[1])
+      base(this[`${element[0]}Classes`], element[1])
     })
 
     return data
   }
 
+  /**
+   * Get the data for the editor frontend page
+   * @param {number} t - Parameter given by the editor page
+   * @returns {object} Object similar to `DefMap`, but containing only the code of the helper, and two extra properties, `cls` for the editing class name and `isStatic` if it is static
+   */
   getEditorData (t) {
     const data = {}
-    const { type, isStatic } = this.getPreeditorData()[t]
+    const { cls, isStatic } = this.getPreeditorData()[t]
 
-    const assign = name => { data.main = this[`${name}Types`][type].code }
+    const assign = name => { data.main = this[`${name}Classes`][cls].code }
     if (isStatic) assign('static')
-    else assign('database')
-    Object.assign(data, { type, isStatic })
+    else assign('main')
+    Object.assign(data, { cls, isStatic })
 
-    for (const v in this.propertyTypes) {
-      data[v] = this.propertyTypes[v].code
+    for (const cls in this.helperClasses) {
+      data[cls] = this.helperClasses[cls].code
     }
 
     return data
@@ -538,14 +552,23 @@ class SQLHandler {
       port: '5432'
     })
 
+    /** Columns for main class tables */
     this.columns = 'data, querywords'
   }
 
-  create = async query => { await this.pool.query(`CREATE TABLE IF NOT EXISTS ${query}`) }
+  /**
+   * Create a table if it doesn't exist
+   * @param {string} query - SQL code that looks like `table (...)` used to create a table
+   */
+  async create (query) { await this.pool.query(`CREATE TABLE IF NOT EXISTS ${query}`) }
 
-  createType = async type => {
+  /**
+   * Create the table for a main class
+   * @param {ClassName} cls - Main class name
+   */
+  async createClass (cls) {
     await this.create(`
-    ${type} (
+    ${cls} (
       id SERIAL PRIMARY KEY,
       data JSONB,
       querywords TEXT
@@ -555,130 +578,193 @@ class SQLHandler {
 
   /**
    * Select all rows from a table which a column is equal to a value
-   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} table - Name of the table
    * @param {string} column - Name of the column to look for
    * @param {string | number} value - Value for the column to match
-   * @param {string} selecting - The columns to to include, separated by commas, or leave blank for all columns
-   * @returns {Row[]} All the rows from the database
+   * @param {string} selecting - The columns to include, separated by commas, or leave blank for all columns
+   * @returns {object[]} All the rows that match
    */
-  select = async (type, column, value, selecting = '*') => {
-    return (await this.pool.query(`SELECT ${selecting} FROM ${type} WHERE ${column} = $1`, [value])).rows
+  async select (table, column, value, selecting = '*') {
+    return (await this.pool.query(`SELECT ${selecting} FROM ${table} WHERE ${column} = $1`, [value])).rows
   }
 
-  async selectChanges (type, id, column) {
-    return ((await this.pool.query(`SELECT ${column} FROM changes WHERE type = $1 AND type_id = $2 ORDER BY id ASC`, [type, id])).rows)
+  /**
+   * Select all the changes in chronological order tied to a class item and get one of its columns
+   * @param {ClassName} cls - Name of the class of the item
+   * @param {number} id - Id of item or 0 for static classes
+   * @param {string} column - Name of the column to get
+   * @returns {string[] | number[]} Array with all the column values
+   */
+  async selectChanges (cls, id, column) {
+    return ((await this.pool.query(`SELECT ${column} FROM changes WHERE class = $1 AND item_id = $2 ORDER BY id ASC`, [cls, id])).rows)
       .map(change => change[column])
   }
 
-  async selectPatches (type, id) {
-    return await this.selectChanges(type, id, 'patch')
+  /**
+   * Get all patches for a class item
+   * @param {ClassName} cls - Name of the class
+   * @param {number} id - Id of item or 0 for static classes
+   * @returns {jsondiffpatch.DiffPatcher[]} Array with all the patches
+   */
+  async selectPatches (cls, id) {
+    return await this.selectChanges(cls, id, 'patch')
   }
-
-  async selectPatchIds (type, id) {
-    return await this.selectChanges(type, id, 'id')
-  }
-
-  selectAll = async table => (await this.pool.query(`SELECt * FROM ${table}`)).rows
 
   /**
-   * Select the row matchin an id in a table
-   * @param {TypeName} type - Type of the data associated with the table
+   * Get all the patch ids for a class item
+   * @param {ClassName} cls - Name of the class
+   * @param {number} id - Id of item or 0 for static classes
+   * @returns {number[]} Array with all the ids
+   */
+  async selectPatchIds (cls, id) {
+    return await this.selectChanges(cls, id, 'id')
+  }
+
+  /**
+   * Select every row in a table
+   * @param {string} table - Name of the table
+   * @returns {object[]} All rows in the table
+   */
+  async selectAll (table) {
+    return (await this.pool.query(`SELECT * FROM ${table}`)).rows
+  }
+
+  /**
+   * Select the row matching an id in a table
+   * @param {string} table - Name of the table
    * @param {number} id - Id of the row
    * @param {string} selecting - Columns to select, separated by commas, or leave blank for all columns
-   * @returns {Row}
+   * @returns {object} Row data matched
    */
-  selectId = async (type, id, selecting = '*') => (await this.select(type, 'id', id, selecting))[0]
+  async selectId (table, id, selecting = '*') {
+    return (await this.select(table, 'id', id, selecting))[0]
+  }
 
   /**
    * Insert a row into a table
-   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} table - Name of the table
    * @param {string} columns - Name of all the columns to insert, comma separated
    * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
    */
-  insert = async (type, columns, values, condition = '') => {
+  async insert (table, columns, values, condition = '') {
     return await this.pool.query(
-      `INSERT INTO ${type} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
+      `INSERT INTO ${table} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
     )
   }
 
   /**
-   * Insert a static type if it doesn't exist yet
-   * @param {TypeName} type - Name of the type
+   * Insert a static class if it doesn't exist yet
+   * @param {ClassName} cls - Name of the class
    */
-  insertStatic = async (type, defaultData) => {
-    await this.insert('static', 'id, data', [type, defaultData], 'ON CONFLICT (id) DO NOTHING')
+  insertStatic = async (cls, defaultData) => {
+    await this.insert('static', 'id, data', [cls, defaultData], 'ON CONFLICT (id) DO NOTHING')
   }
 
   /**
-   * Insert a row into a table associated with a `TypeData`
-   * @param {TypeName} type - Name of the type associated with the table
-   * @param {TypeValues} values - Values for the type
+   * Insert a row into a table associated with a main class
+   * @param {ClassName} cls - Name of the class
+   * @param {ItemValues} values - Values for the type
    * @returns
    */
-  insertData = async (type, values) => {
-    (await this.insert(type, this.columns, values, ''))
+  insertData = async (cls, values) => {
+    await this.insert(cls, this.columns, values, '')
   }
 
   /**
    * Update a row inside a table which a column matches a value
-   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} table - Name of the table
    * @param {string} setting - Name of all the columns to update, comma separated
    * @param {string} column - Name of the column to match
    * @param {*[]} values - Array where the first element is the value to be matched, and the other values are the ones to update each column in the order the columns are written
    */
-  update = async (type, setting, column, values) => {
+  update = async (table, setting, column, values) => {
     await this.pool.query(
-    `UPDATE ${type} SET ${setting.split(',').map((setter, i) => `${setter.trim()} = $${i + 2}`).join(', ')} WHERE ${column} = $1`, values
+    `UPDATE ${table} SET ${setting.split(',').map((setter, i) => `${setter.trim()} = $${i + 2}`).join(', ')} WHERE ${column} = $1`, values
     )
   }
 
   /**
-   * Update a row inside a table associated with a `TypeData`
-   * @param {TypeName} type - Type of the data associated with the table
+   * Update a row inside a table associated with a main class
+   * @param {ClassName} cls - Name of the main class
    * @param {number} id - Id of the row to update
-   * @param {TypeValues} values - Values to update
+   * @param {ItemValues} values - Values to update
    */
-  async updateData (type, id, values) {
-    await this.update(type, this.columns, 'id', [id].concat(values))
+  async updateData (cls, id, values) {
+    await this.update(cls, this.columns, 'id', [id].concat(values))
   }
 
   /**
    * Select all rows in a table where a column matches a certain value
-   * @param {TypeName} type - Type of the data associated with the table
+   * @param {string} table - Name of the table
    * @param {string} column - Name of the column to match the value
    * @param {string} matching - String to be matched
    * @returns {Row[]}
    */
-  selectLike = async (type, column, matching) => {
-    return (await this.pool.query(`SELECT * FROM ${type} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
+  selectLike = async (table, column, matching) => {
+    return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
   }
 
+  /**
+   * Get the biggest ID used in a table
+   * @param {string} table - Name of the table
+   * @returns {number} The biggest ID
+   */
   async getBiggestSerial (table) {
     return Number((await this.pool.query(`SELECT last_value FROM ${table}_id_seq`)).rows[0].last_value)
   }
 }
 
+/**
+ * Remove all bracket characters from a string
+ * @param {string} str
+ * @returns {string}
+ */
 function removeBrackets (str) {
   return str.replace(/\[|\]/g, '')
 }
 
+/**
+ * Remove all curly brace characters from a string
+ * @param {string} str
+ * @returns {string}
+ */
 function removeBraces (str) {
   return str.replace(/{|}/g, '')
 }
 
+/**
+ * Check if a value is a JS object
+ * @param {any} value
+ * @returns {boolean}
+ */
 function isObject (value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/**
+ * Remove the argument of a property type declaration
+ * @param {string} type - Type declaration
+ * @returns {string} Declaration with no arguments
+ */
 function removeArgs (type) {
   return type.replace(/\(.*\)/, '')
 }
 
+/**
+ * Check if value is a string
+ * @param {any} value
+ * @returns {boolean}
+ */
 function isString (value) {
   return typeof value === 'string'
 }
 
-function splitStatements (code) {
+/**
+ * Split all declarations in a CPT code snippet
+ * @param {CPT} code - CPT code
+ * @returns {string[]} Array with declarations
+ */
+function splitDeclarations (code) {
   return code.split('\n').map(line => line.trim()).filter(line => line)
 }
 
