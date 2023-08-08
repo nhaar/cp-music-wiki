@@ -1,6 +1,6 @@
 import { createSearchQuery } from './query-options.js'
 import { types } from './type-info.js'
-import { selectElement, createElement, styleElement } from './utils.js'
+import { selectElement, createElement, styleElement, postAndGetJSON } from './utils.js'
 
 class View {
   /** Create page elements */
@@ -23,12 +23,15 @@ class Controller {
   }
 
   /** Gives control to the page */
-  setupPage () {
+  async setupPage () {
+    const preeditorData = await postAndGetJSON('/get-preeditor-data', {})
+
+    
     this.view.select.addEventListener('change', () => {
       const value = this.view.select.value
       if (value) {
         this.cls = Number(value)
-        const { type, isStatic } = types[this.cls]
+        const { cls, isStatic } = preeditorData[this.cls]
         Object.assign(this, { isStatic })
 
         if (isStatic) {
@@ -44,7 +47,7 @@ class Controller {
 
           createSearchQuery(
             input,
-            type
+            cls
           )
         }
       } else {

@@ -110,6 +110,17 @@ router.post('/get-name', async (req, res) => {
   }
 })
 
+router.post('/get-preeditor-data', async (req, res) => {
+  const data = db.getPreeditorData()
+  res.status(200).send(data)
+})
+
+router.post('/get-editor-data', async (req, res) => {
+  const { t } = req.body
+  const data = db.getEditorData(t)
+  res.status(200).send(data)
+})
+
 /**
  * Send a bad request response with JSON
  * @param {import('express').Response} res
