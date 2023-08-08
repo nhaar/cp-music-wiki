@@ -517,25 +517,47 @@ class WikiDatabase {
     return data
   }
 
+  createEditorModels () {
+    const base = (code, obj) => {
+      this.iterateDeclarations(code, (property, type, params) => {
+        let value
+        if (type.includes('{')) {
+          value = base(
+            this.helperClasses[type.match('(?<={).*(?=})')[0]].code,
+            {}
+          )
+        } else {
+          value = type.match(/\w+/)[0]
+        }
+        if (type.includes('[')) {
+          value = [value]
+        }
+        obj[property] = value
+      })
+
+      return obj
+    }
+
+    const mainClasses = this.getMainClasses()
+    this.modelObjects = {}
+    for (const cls in mainClasses) {
+      const modelObj = {}
+      const code = mainClasses[cls].code
+
+      base(code, modelObj)
+      this.modelObjects[cls] = modelObj
+    }
+  }
+
   /**
    * Get the data for the editor frontend page
    * @param {number} t - Parameter given by the editor page
    * @returns {object} Object similar to `DefMap`, but containing only the code of the helper, and two extra properties, `cls` for the editing class name and `isStatic` if it is static
    */
   getEditorData (t) {
-    const data = {}
-    const { cls, isStatic } = this.getPreeditorData()[t]
+    const { cls } = this.getPreeditorData()[t]
 
-    const assign = name => { data.main = this[`${name}Classes`][cls].code }
-    if (isStatic) assign('static')
-    else assign('main')
-    Object.assign(data, { cls, isStatic })
-
-    for (const cls in this.helperClasses) {
-      data[cls] = this.helperClasses[cls].code
-    }
-
-    return data
+    return this.modelObjects[cls]
   }
 }
 
@@ -769,5 +791,7 @@ function splitDeclarations (code) {
 }
 
 const db = new WikiDatabase(...def)
+
+db.createEditorModels()
 
 module.exports = db

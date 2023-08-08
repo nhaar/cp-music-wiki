@@ -26,7 +26,6 @@ class Controller {
   async setupPage () {
     const preeditorData = await postAndGetJSON('/get-preeditor-data', {})
 
-    
     this.view.select.addEventListener('change', () => {
       const value = this.view.select.value
       if (value) {
