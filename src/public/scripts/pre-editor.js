@@ -3,6 +3,7 @@ import { types } from './type-info.js'
 import { selectElement, createElement, styleElement } from './utils.js'
 
 class View {
+  /** Create page elements */
   constructor () {
     this.select = selectElement('type-select')
     types.forEach((info, i) => {
@@ -16,19 +17,18 @@ class View {
 }
 
 class Controller {
+  /** Create controller */
   constructor (view) {
     Object.assign(this, { view })
   }
 
-  /**
-   * Gives control to the page
-   */
+  /** Gives control to the page */
   setupPage () {
     this.view.select.addEventListener('change', () => {
       const value = this.view.select.value
       if (value) {
-        this.type = Number(value)
-        const { type, isStatic } = types[this.type]
+        this.cls = Number(value)
+        const { type, isStatic } = types[this.cls]
         Object.assign(this, { isStatic })
 
         if (isStatic) {
@@ -54,12 +54,12 @@ class Controller {
 
     // to create a new entry
     this.view.create.addEventListener('click', () => {
-      if (Number.isInteger(this.type)) window.location.href = this.getEditorParam()
+      if (Number.isInteger(this.cls)) window.location.href = this.getEditorParam()
     })
 
     // edit existing entry
     this.view.edit.addEventListener('click', () => {
-      const isInt = Number.isInteger(this.type)
+      const isInt = Number.isInteger(this.cls)
       if (this.isStatic) {
         if (isInt) window.location.href = this.getEditorParam()
       } else {
@@ -70,15 +70,15 @@ class Controller {
   }
 
   /**
-   * Get the path to the editor for a given type
+   * Get the path to the editor for a given class
    * @returns {string}
    */
   getEditorParam () {
-    return `editor?t=${this.type}`
+    return `editor?t=${this.cls}`
   }
 
   /**
-   * Get the path to the editor for a given type and id
+   * Get the path to the editor for a given class and id
    * @param {string} id
    * @returns {string}
    */

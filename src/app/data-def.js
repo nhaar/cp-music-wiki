@@ -1,10 +1,9 @@
 /**
- * Class that handles validating data within an object type
+ * Class that handles validating data for a class
  */
 class Validator {
   /**
-   *
-   * @param {function(TypeData) : boolean} f - Takes as argument an object that follows an object type's structure, and returns true if the object is following the rule assigned to this validator, else it returns false, indicating the data is not valid
+   * @param {function(TypeData) : boolean} f - Takes as argument an object that follows a class data's structure, and returns true if the object is following the rule assigned to this validator, else it returns false, indicating the data is not valid
    * @param {string} msg - Error message to display for the data if it is invalid
    */
   constructor (f, msg) {
@@ -12,30 +11,29 @@ class Validator {
   }
 }
 
-/**
- * General class for a database or property type
- */
-class ObjectType {
+/** Class for a database class definition */
+class ClassDef {
   /**
    * Assigns both values to the object
-   * @param {CPT} code - The code snippet which contains the declaration for all properties within this object type
-   * @param {Validator[]} validators - A list of all data validators for this object type
+   * @param {CPT} code - The code snippet which contains the declaration for all properties within the class
+   * @param {Validator[]} validators - A list of all data validators for the class data
    */
   constructor (code, validators = []) {
     Object.assign(this, { code, validators })
   }
 }
 
-class MainType {
+/** Class for a class definition that has a name (for main and static classes) */
+class NameDef {
   constructor (name, code, validators = []) {
     Object.assign(this, { name, code, validators })
   }
 }
 
+/** Array with the three `DefMap`s for main, helper and static classes */
 const def = [{
-  song: new MainType(
-    'Song',
-    `
+  song: new NameDef(
+    'Song', `
     names {NAME}[] "Names"
     authors {SONG_AUTHOR}[] "Authors"
     link TEXTSHORT "Link"
@@ -61,58 +59,58 @@ const def = [{
         'A song link must be a valid YouTube link'
       )
     ]),
-  author: new MainType(
+  author: new NameDef(
     'Author', `
     name TEXTSHORT QUERY "Name"
   `),
-  source: new MainType(
+  source: new NameDef(
     'Source', `
     name TEXTSHORT QUERY "Name"
   `),
-  wiki_reference: new MainType(
+  wiki_reference: new NameDef(
     'Wiki Reference', `
     name TEXTSHORT QUERY "Name"
     link TEXTSHORT "Link"
     description TEXTLONG "Description"
   `),
-  genre: new MainType(
+  genre: new NameDef(
     'Music Genre', `
     name TEXTSHORT QUERY "Name"
     link TEXTSHORT "Link"
   `),
-  instrument: new MainType(
+  instrument: new NameDef(
     'Musical Instrument', `
     name TEXTSHORT QUERY "Name"
     link TEXTSHORT "Link"
   `),
-  key_signature: new MainType(
+  key_signature: new NameDef(
     'Key Signature', `
     name TEXTSHORT QUERY "Name"
     link TEXTSHORT "Link"
   `),
-  page: new MainType(
+  page: new NameDef(
     'Page', `
     name TEXTSHORT QUERY "Name"
     content TEXTLONG "Content"
     categories ID(category)[] "Categories"
   `),
-  category: new MainType(
+  category: new NameDef(
     'Category', `
     name TEXTSHORT QUERY "Name"
   `),
-  flash_room: new MainType(
+  flash_room: new NameDef(
     'Club Penguin Room', `
     name TEXTSHORT QUERY "Name"
     open {TIME_RANGE} "Open"
     songUses {SONG_APPEARANCE}[] "Song Uses"
   `),
-  flash_party: new MainType(
+  flash_party: new NameDef(
     'Club Penguin Party', `
     name TEXTSHORT QUERY "Name"
     active {TIME_RANGE} "Active"
     partySongs {PARTY_SONG}[] "Songs"
   `),
-  music_catalogue: new MainType(
+  music_catalogue: new NameDef(
     'Music Catalogue', `
     name QUERY
     description TEXT
@@ -120,19 +118,19 @@ const def = [{
     songs CATALOGUE_ITEM[][]
     reference INT
   `),
-  stage_play: new MainType(
+  stage_play: new NameDef(
     'Stage Play', `
     name QUERY
     song INT
     appearances STAGE_APPEARANCE[]
   `),
-  flash_minigame: new MainType(
+  flash_minigame: new NameDef(
     'Club Penguin Minigame', `
     name QUERY
     available TIME_RANGE
     songs GAME_SONG[]
   `),
-  flash_misc: new MainType(
+  flash_misc: new NameDef(
     'Miscelaneous Club Penguin', `
     isUnused BOOLEAN
     name QUERY
@@ -140,38 +138,38 @@ const def = [{
     available TIME_RANGE
     song INT
   `),
-  penguin_chat_appearance: new MainType(
+  penguin_chat_appearance: new NameDef(
     'Miscelaneous Penguin Chat', `
     name QUERY
     description TEXT
     song INT
     available TIME_RANGE
   `),
-  exclusive_app_appearance: new MainType(
+  exclusive_app_appearance: new NameDef(
     'Miscelaneous Mobile App', `
     song INT
     name QUERY
     description TEXT
     available TIME_RANGE
   `),
-  youtube_video: new MainType(
+  youtube_video: new NameDef(
     'Youtube Video', `
     name QUERY
     publish_date DATE
     appearances VIDEO_APPEARANCE[]
   `),
-  tv_video: new MainType(
+  tv_video: new NameDef(
     'TV Video', `
     name QUERY
     earliest DATE_ESTIMATE
     appearance VIDEO_APPEARANCE[]
   `),
-  industry_release: new MainType(
+  industry_release: new NameDef(
     'Industry Release', `
     release DATE
     songs INT[]
   `),
-  screenhog_comission: new MainType(
+  screenhog_comission: new NameDef(
     'Screenhog Comission', `
     comissioner TEXT
     projectName TEXT
@@ -180,7 +178,7 @@ const def = [{
     available DATE_ESTIMATE
   `)
 }, {
-  NAME: new ObjectType(`
+  NAME: new ClassDef(`
     name TEXTSHORT QUERY "Name"
     reference ID(wiki_reference) "Reference"
     pt {LOCALIZATION_NAME} "Portuguese"
@@ -189,7 +187,7 @@ const def = [{
     de {LOCALIZATION_NAME} "German"
     ru {LOCALIZATION_NAME} "Russian"
   `),
-  LOCALIZATION_NAME: new ObjectType(`
+  LOCALIZATION_NAME: new ClassDef(`
     name TEXTSHORT "Name"
     reference ID(wiki_reference) "Reference"
     translationNotes TEXTLONG "Translation Notes"
@@ -199,77 +197,77 @@ const def = [{
       'Localization name contains reference or translation notes but contains no actual name'
     )
   ]),
-  UNOFFICIAL_NAME: new ObjectType(`
+  UNOFFICIAL_NAME: new ClassDef(`
     name TEXTSHORT QUERY "Name"
     description TEXTLONG "Description"
   `),
-  SONG_AUTHOR: new ObjectType(`
+  SONG_AUTHOR: new ClassDef(`
     author ID(author) "Author"
     reference ID(wiki_reference) "Reference"
   `),
-  VERSION: new ObjectType(`
+  VERSION: new ClassDef(`
     name TEXTSHORT "Name"
     description TEXTLONG "Description"
   `),
-  SONG_APPEARANCE: new ObjectType(`
+  SONG_APPEARANCE: new ClassDef(`
     isUnused BOOLEAN "Is Unused?"
     available {TIME_RANGE} "Available"
     song ID(song) "Song"
     reference ID(reference) "Reference"
   `),
-  PARTY_SONG: new ObjectType(`
+  PARTY_SONG: new ClassDef(`
     isUnused BOOLEAN "Is unused?"
     type INT "Type"
     usePartyDate BOOLEAN "Use date from the party?"
     available {TIME_RANGE} "Available"
     song ID(song) "Song"
   `),
-  CATALOGUE_ITEM: new ObjectType(`
+  CATALOGUE_ITEM: new ClassDef(`
     displayName TEXTSHORT "Display Name"
     song ID(song) "Song"
   `),
-  STAGE_APPEARANCE: new ObjectType(`
+  STAGE_APPEARANCE: new ClassDef(`
     isUnused BOOLEAN "Is unused?"
     appearance {TIME_RANGE} "Appearance"
     song ID(song) "Song"
     reference ID(reference) "Reference"
   `),
-  GAME_SONG: new ObjectType(`
+  GAME_SONG: new ClassDef(`
     isUnused BOOLEAN "Is unused"
     song ID(song) "Song"
     useMinigameDates BOOLEAN "Use Minigame Dates"
     available {TIME_RANGE} "Available"
   `),
-  VIDEO_APPEARANCE: new ObjectType(`
+  VIDEO_APPEARANCE: new ClassDef(`
     song ID(song) "Song"
     isEntireVideo BOOLEAN "Is Entire Video?"
     startTime INT "Start Time"
     endTime INT "End Time"
   `),
-  DATE_ESTIMATE: new ObjectType(`
+  DATE_ESTIMATE: new ClassDef(`
     date DATE "Date"
     isEstimate BOOLEAN "Is Estimate?"
   `),
-  TIME_RANGE: new ObjectType(`
+  TIME_RANGE: new ClassDef(`
     start {DATE_ESTIMATE} "Start"
     end {DATE_ESTIMATE} "End"
   `),
-  SONG_FILE: new ObjectType(`
+  SONG_FILE: new ClassDef(`
     source ID(source) "Source"
     link TEXTSHORT "Link"
     isHQ BOOLEAN "Is HQ?"
     file FILE(audio) "File"
   `)
 }, {
-  epf_ost: new MainType(
+  epf_ost: new NameDef(
     'Elite Penguin Force OST', `
     songs ID(song)[]
   `),
-  epfhr_ost: new MainType(
+  epfhr_ost: new NameDef(
     "Herbert's Revenge OST", `
     songs ID(song)[]
   `),
-  game_day_ost: new MainType(
+  game_day_ost: new NameDef(
     'Game Day OST', `
     songs ID(song)[]
   `)

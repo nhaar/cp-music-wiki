@@ -1,31 +1,42 @@
-import { createElement, deepcopy, postAndGetJSON, postJSON, selectElement } from './utils.js'
+import { GridModule, MoveableRowsModule } from './modules/array-modules.js'
+import {
+  CheckboxModule, DateInputModule, NumberInputModule, TextAreaModule,
+  TextInputModule, getFileUploadModule, getSearchQueryModule
+} from './modules/element-modules.js'
+import { EditorModule, TableChild, TableModule } from './modules/main-modules.js'
+import {
+  createElement, deepcopy, postAndGetJSON, postJSON,
+  selectElement
+} from './utils.js'
 
 class Page {
+  /** Link page to DOM */
   constructor () {
     this.editor = selectElement('js-editor')
   }
 
-  /**
-   * Renders the button for submitting the data at the end of the page
-   */
+  /** Renders the button for submitting the data at the end of the page */
   renderSubmitButton () {
     this.submitButton = createElement({ parent: document.body, tag: 'button', innerHTML: 'Submit' })
   }
 
   /**
-   * Add controls to the submit button
+   * Add control to the submit button
+   * @param {Editor} editorModule - Module for the editor
+   * @param {import('../../app/database.js').Row} row - Row object for the item
+   * @param {string} cls - Name of the class
    */
-  setupSubmitButton (editorModule, row, type) {
+  setupSubmitButton (editorModule, row, cls) {
     this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
       console.log(deepcopy(row))
-      postJSON('api/update', { type, row, isStatic: this.isStatic })
+      postJSON('api/update', { cls, row, isStatic: this.isStatic })
     })
   }
 
   /**
    * Initializes the editor by handling the options from the URL
-   * and initializing the editor for that type
+   * and initializing the editor for that class
    */
   async initialize () {
     // get URL params
@@ -35,20 +46,19 @@ class Page {
 
     const id = Number(params.id)
 
-    // const typeInfo = types[typeNumber]
-    const { isStatic, type } = editorData
+    const { isStatic, cls } = editorData
     Object.assign(this, { isStatic })
     let row
     let data
     if (isStatic) {
-      row = await postAndGetJSON('api/get-static', { type })
+      row = await postAndGetJSON('api/get-static', { cls })
       data = row.data
     } else {
       if (id) {
-        row = await postAndGetJSON('api/get', { type, id })
+        row = await postAndGetJSON('api/get', { cls, id })
         data = row.data
       } else {
-        data = await postAndGetJSON('api/default', { type })
+        data = await postAndGetJSON('api/default', { cls })
         row = { data }
       }
     }
@@ -61,7 +71,7 @@ class Page {
     editor.setup()
 
     this.renderSubmitButton()
-    this.setupSubmitButton(editor, row, type)
+    this.setupSubmitButton(editor, row, cls)
   }
 
   /**
@@ -80,18 +90,36 @@ class Page {
   }
 }
 
-
-function splitStatements (code) {
+/**
+ * Split all declarations in a CPT code snippet
+ * @param {import('../../app/database.js').CPT} code - CPT code
+ * @returns {string[]} Array with declarations
+ */
+function splitDeclarations (code) {
   return code.split('\n').map(line => line.trim()).filter(line => line)
 }
 
+/**
+ * Match for a pattern than enclosures everything inside two characters
+ * @param {string} str - String to match
+ * @param {string} lChar - Left character of the enclosure
+ * @param {string} rChar - Right character of the enclosure (leave blank for same as left)
+ * @returns {object | null} Match result
+ */
 function matchInside (str, lChar, rChar) {
   if (!rChar) rChar = lChar
   return str.match(`(?<=${lChar}).*(?=${rChar})`)
 }
 
+/**
+ * Construct the class for editting a class
+ * @param {import('../../app/database.js').CPT} code - Code that defines the class for the editor
+ * @param {object} data - Object representing data for the class
+ * @param {boolean} topModule - True if building editor for the top module in the page or not
+ * @returns {Editor} A module for editting data for a class
+ */
 function buildEditor (code, data, topModule) {
-  const lines = splitStatements(code)
+  const lines = splitDeclarations(code)
   const moduleList = []
 
   lines.forEach(line => {
@@ -170,18 +198,32 @@ function buildEditor (code, data, topModule) {
   return Editor
 }
 
+/**
+ * Create the editor module for the page
+ * @param {object} editorData - Editor data
+ * @returns {Editor} Editor module
+ */
 export function constructEditorModule (editorData) {
   return buildEditor(editorData.main, editorData, true)
 }
 
+/**
+ * Remove brackets from a string
+ * @param {string} str
+ * @returns {string}
+ */
 function removeBrackets (str) {
   return str.replace(/\[|\]/g, '')
 }
 
+/**
+ * Remove curly braces from a string
+ * @param {string} str
+ * @returns {string}
+ */
 function removeBraces (str) {
   return str.replace(/{|}/g, '')
 }
-
 
 const page = new Page()
 page.initialize()

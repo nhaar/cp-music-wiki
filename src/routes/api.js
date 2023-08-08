@@ -16,20 +16,20 @@ router.post('/editor-data', async (req, res) => {
 
 // get default data
 router.post('/default', async (req, res) => {
-  const { type } = req.body
+  const { cls } = req.body
 
-  if (checkType(res, type)) {
-    const row = await db.getDefault(type)
+  if (checkClass(res, cls)) {
+    const row = await db.getDefault(cls)
     res.status(200).send(row)
   }
 })
 
 // get a data row
 router.post('/get', async (req, res) => {
-  const { type, id } = req.body
+  const { cls, id } = req.body
 
-  if (checkType(res, type) && checkId(res, id)) {
-    const row = await db.getItemById(type, id)
+  if (checkClass(res, cls) && checkId(res, id)) {
+    const row = await db.getItemById(cls, id)
     if (!row) sendBadReq(res, 'Item not found in the database')
     else res.status(200).send(row)
   }
@@ -37,34 +37,34 @@ router.post('/get', async (req, res) => {
 
 // get static row
 router.post('/get-static', async (req, res) => {
-  const { type } = req.body
-  if (checkType(res, type, true)) {
-    const row = await db.getStatic(type)
+  const { cls } = req.body
+  if (checkClass(res, cls, true)) {
+    const row = await db.getStatic(cls)
     res.status(200).send(row)
   }
 })
 
 // update a data type
 router.post('/update', async (req, res) => {
-  const { type, row, isStatic } = req.body
+  const { cls, row, isStatic } = req.body
   const error = msg => sendBadReq(res, msg)
 
   // validate data
-  if (checkType(res, type, isStatic)) {
-    if (isStatic && type !== row.id) error('Invalid id')
+  if (checkClass(res, cls, isStatic)) {
+    if (isStatic && cls !== row.id) error('Invalid id')
     else if (typeof row !== 'object') error('Invalid row data')
     else {
       const { data } = row
       if (typeof data !== 'object') error('Invalid data')
       else {
-        const validationErrors = db.validate(type, data, isStatic)
+        const validationErrors = db.validate(cls, data, isStatic)
         if (validationErrors.length === 0) {
-          await db.addChange(type, row, isStatic)
+          await db.addChange(cls, row, isStatic)
           if (isStatic) {
             await db.updateStatic(row)
             res.sendStatus(200)
           } else {
-            await db.updateItem(type, row)
+            await db.updateItem(cls, row)
             res.sendStatus(200)
           }
         } else sendBadReqJSON(res, { errors: validationErrors })
@@ -91,11 +91,11 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
 
 // get filtering by a name
 router.post('/get-by-name', async (req, res) => {
-  const { keyword, type } = req.body
-  if (checkType(res, type)) {
+  const { keyword, cls } = req.body
+  if (checkClass(res, cls)) {
     if (typeof keyword !== 'string') sendBadReq(res, 'Invalid keyword')
     else {
-      const results = await db.getByName(type, keyword)
+      const results = await db.getByName(cls, keyword)
       res.status(200).send(results)
     }
   }
@@ -103,9 +103,9 @@ router.post('/get-by-name', async (req, res) => {
 
 // get name with id
 router.post('/get-name', async (req, res) => {
-  const { type, id } = req.body
-  if (checkType(res, type) && checkId(res, id)) {
-    const name = await db.getQueryNameById(type, id)
+  const { cls, id } = req.body
+  if (checkClass(res, cls) && checkId(res, id)) {
+    const name = await db.getQueryNameById(cls, id)
     res.status(200).send({ name })
   }
 })
@@ -142,17 +142,17 @@ function checkValid (res, callback, msg) {
 }
 
 /**
- * Check if a value is a valid type name and send a bad request if it is not
+ * Check if a value is a valid class name and send a bad request if it is not
  * @param {import('express').Response} res
- * @param {import('../app/database').TypeName} value - Value to check
+ * @param {any} value - Value to check
  * @returns {boolean} Whether the value is valid or not
  */
-function checkType (res, value, isStatic = false) {
+function checkClass (res, value, isStatic = false) {
   const msg = 'Invalid type provided'
   if (isStatic) {
-    return checkValid(res, () => db.isStaticType(value), msg)
+    return checkValid(res, () => db.isStaticClass(value), msg)
   } else {
-    return checkValid(res, () => db.isType(value), msg)
+    return checkValid(res, () => db.isMainClass(value), msg)
   }
 }
 
