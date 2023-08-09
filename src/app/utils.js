@@ -39,4 +39,13 @@ function matchGroup (str, flags, ...patterns) {
   return str.match(new RegExp(groupPatterns(...patterns), flags))
 }
 
-module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup }
+/**
+ * Remove all curly brace characters from a string
+ * @param {string} str
+ * @returns {string}
+ */
+function removeBraces (str) {
+  return str.replace(/{|}/g, '')
+}
+
+module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces }

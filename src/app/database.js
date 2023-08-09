@@ -2,7 +2,7 @@ const { Pool } = require('pg')
 const jsondiffpatch = require('jsondiffpatch')
 const def = require('./data-def')
 
-const { deepcopy, matchGroup } = require('./utils')
+const { deepcopy, matchGroup, removeBraces } = require('./utils')
 
 /**
  * Represents CPT code, used to define the properties of the database classes
@@ -758,15 +758,6 @@ class SQLHandler {
  */
 function removeBrackets (str) {
   return str.replace(/\[|\]/g, '')
-}
-
-/**
- * Remove all curly brace characters from a string
- * @param {string} str
- * @returns {string}
- */
-function removeBraces (str) {
-  return str.replace(/{|}/g, '')
 }
 
 /**

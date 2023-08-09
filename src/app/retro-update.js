@@ -4,7 +4,7 @@ every time a change to the database must be made, this must be accessed first
 */
 const db = require('./database')
 const jsondiffpatch = require('jsondiffpatch')
-const { deepcopy, matchGroup } = require('./utils')
+const { deepcopy, matchGroup, removeBraces } = require('./utils')
 
 // list of options:
 // * create a new path in a data variable (across all entries in a table)
@@ -26,20 +26,20 @@ const { deepcopy, matchGroup } = require('./utils')
  * @typedef {string} RUL
  */
 
-/**
- * Get all the versions of a row throughout all patches applied to it
- * @param {import('./database').TypeName} type - Name for the type
- * @param {number} id - Id of the row
- * @param {import('./database').TypeData} defaultData - Default object to be used as the "0th" version
- * @returns {VersionList} Fetched version list
- */
-async function getAllVersions (type, id, defaultData) {
-  // const isStatic = type === 'static'
-  // if (isStatic) type = id
-  // const table = isStatic ? 'static' : type
+// /**
+//  * Get all the versions of a row throughout all patches applied to it
+//  * @param {import('./database').TypeName} type - Name for the type
+//  * @param {number} id - Id of the row
+//  * @param {import('./database').TypeData} defaultData - Default object to be used as the "0th" version
+//  * @returns {VersionList} Fetched version list
+//  */
+async function getAllVersions (table, id, defaultData) {
+  const isStatic = table === 'static'
+  const cls = isStatic ? id : table
+  if (isStatic) id = 0
 
   const versions = [defaultData]
-  const patches = await db.handler.selectPatches(type, id)
+  const patches = await db.handler.selectPatches(cls, id)
   patches.forEach((patch, i) => {
     const nextVersion = jsondiffpatch.patch(deepcopy(versions[i]), patch)
     versions.push(nextVersion)
@@ -48,21 +48,23 @@ async function getAllVersions (type, id, defaultData) {
   return versions
 }
 
-/**
- * Takes a list of versions for a data row and converts into patches,
- * saving them in the database
- *
- * The version list length must be compatible with the existing patches in the database,
- * as it only overrides the existing patches as opposed to creating new ones
- * @param {import('./database').TypeName} type - Type to target
- * @param {number} id - Id of the row
- * @param {VersionList} versions - All the versions to save
- */
-async function overridePatches (type, id, versions) {
-  const patchIds = await db.handler.selectPatchIds(type, id)
+// /**
+//  * Takes a list of versions for a data row and converts into patches,
+//  * saving them in the database
+//  *
+//  * The version list length must be compatible with the existing patches in the database,
+//  * as it only overrides the existing patches as opposed to creating new ones
+//  * @param {import('./database').TypeName} type - Type to target
+//  * @param {number} id - Id of the row
+//  * @param {VersionList} versions - All the versions to save
+//  */
+async function overridePatches (table, id, versions) {
+  const patchIds = await db.handler.selectPatchIds(table, id)
   if (versions.length - 1 !== patchIds.length) throw new Error('Versions given cannot describe the patches to override')
+  // console.log(versions)
   patchIds.forEach((id, i) => {
     const patch = JSON.stringify(jsondiffpatch.diff(versions[i], versions[i + 1]))
+    console.log(patch)
     // db.handler.update('changes', 'patch', 'id', [id, patch])
   })
 }
@@ -79,7 +81,7 @@ class DatabaseManipulator {
     const datatypeMap = {}
     const originalDefaults = {}
 
-    const mergedTypes = this.getMergedTypes()
+    const mergedTypes = db.getAllClasses()
     for (const type in mergedTypes) {
       originalDefaults[type] = deepcopy(db.defaults[type])
     }
@@ -112,7 +114,7 @@ class DatabaseManipulator {
     )
     matches.set.forEach(base('SET', (datatype, property, type) => {
       this.setInObject(db.defaults[datatype], property, type)
-      db.databaseTypes[datatype].code += `\n${property} ${type}`
+      db.mainClasses[datatype].code += `\n${property} ${type}`
     })
     )
     matches.map.forEach(base()
@@ -193,7 +195,7 @@ class DatabaseManipulator {
     const words = code.match(/\w+/g)
     if (words.length === 2) {
       const type = words[1]
-      db.handler.createType(type)
+      db.handler.createClass(type)
     } else {
       const type = words[2]
       if (words[1] === 'static') {
@@ -211,10 +213,10 @@ class DatabaseManipulator {
   setInObject (object, property, type) {
     if (type.includes('[')) {
       object[property] = []
-    } else if (db.standardVariables.includes(type)) {
-      object[property] = null
+    } else if (type.includes('{')) {
+      object[property] = db.defaults[removeBraces(type)]
     } else {
-      object[property] = db.defaults[type]
+      object[property] = null
     }
   }
 
@@ -335,10 +337,6 @@ class DatabaseManipulator {
     assignIterator(object2, reading)
   }
 
-  getMergedTypes () {
-    return Object.assign({}, db.databaseTypes, db.staticTypes, db.propertyTypes)
-  }
-
   /**
    * Gets the property types in a path
    * @param {import('./database').TypeName} type - Type of the object the path relates to
@@ -350,7 +348,7 @@ class DatabaseManipulator {
     // unify the types that `type` might relate to
     // property types are added because the `type` variable
     // will be mutated onto the children types
-    const mergedTypes = this.getMergedTypes()
+    const mergedTypes = db.getAllClasses()
     steps.forEach(step => {
       // ignore if it is a number or it's just the *
       // because that represents an array element ie there is no type of interest
@@ -384,14 +382,23 @@ class DatabaseManipulator {
    * @param {import('./database').TypeData} defaultData - Default object for the type
    * @param {function(TypeData) : TypeData} callback - Function that takes as the argument a given version of an object and gives back a modifiedone. All the patches will then be based on the newly created versions and replace the previous ones
    */
-  async updatePatches (type, defaultData, callback) {
-    // find biggest ID to iterate through everything
-    const seq = await db.handler.getBiggestSerial(type)
-    // iterate every ID, presuming no deletion
-    for (let i = 1; i <= seq; i++) {
-      const versions = await getAllVersions(type, i, defaultData)
+  async updatePatches (cls, defaultData, callback) {
+    const versionBase = async (table, id) => {
+      const versions = await getAllVersions(table, id, defaultData)
       versions.forEach(version => callback(version))
-      overridePatches(type, i, versions)
+      overridePatches(table, id, versions)
+    }
+
+    const isStatic = db.isStaticClass(cls)
+    // find biggest ID to iterate through everything
+    if (isStatic) {
+      await versionBase('static', cls)
+    } else {
+      const seq = await db.handler.getBiggestSerial(cls)
+      // iterate every ID, presuming no deletion
+      for (let i = 1; i <= seq; i++) {
+        await versionBase(cls, i)
+      }
     }
   }
 }
