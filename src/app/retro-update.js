@@ -59,7 +59,12 @@ async function getAllVersions (table, id, defaultData) {
 //  * @param {VersionList} versions - All the versions to save
 //  */
 async function overridePatches (table, id, versions) {
-  const patchIds = await db.handler.selectPatchIds(table, id)
+  let patchIds
+  if (table === 'static') {
+    patchIds = await db.handler.selectPatchIds(id, 0)
+  } else {
+    patchIds = await db.handler.selectPatchIds(table, id)
+  }
   if (versions.length - 1 !== patchIds.length) throw new Error('Versions given cannot describe the patches to override')
   patchIds.forEach((id, i) => {
     const patch = JSON.stringify(jsondiffpatch.diff(versions[i], versions[i + 1]))
@@ -89,7 +94,7 @@ class DatabaseManipulator {
 
     const tableIn = /(?<=IN\s+)\w+/
     const propertyPattern = method => new RegExp(`(?<=${method}\\s+)\\w+`)
-    const typePattern = method => new RegExp(`(?<=${method}\\s+\\w+\\s+)\\w+(\\[\\])*`)
+    const typePattern = method => new RegExp(`(?<=${method}\\s+\\w+\\s+)(?:{)?\\w+(?:})?(\\[\\])*`)
 
     const base = (method, callback) => statement => {
       const cls = statement.match(tableIn)[0]
@@ -99,7 +104,7 @@ class DatabaseManipulator {
         property = statement.match(propertyPattern(method))[0]
         const typeMatch = statement.match(typePattern(method))
         // in particular, DROP does not have types
-        if (typeMatch) type = [0]
+        if (typeMatch) type = typeMatch[0]
       }
       if (callback) callback(cls, property, type)
       if (!classMap[cls]) classMap[cls] = []
@@ -115,8 +120,15 @@ class DatabaseManipulator {
     }))
 
     matches.set.forEach(base('SET', (cls, property, type) => {
+      const clsRef = db.getAnyClass(cls)
+
       this.setInObject(db.defaults[cls], property, type)
-      db.mainClasses[cls].code += `\n${property} ${type}`
+      console.log(clsRef.code.match(`${property}`))
+      if (clsRef.code.match(`${property}`)) {
+        clsRef.code = clsRef.code.replace(new RegExp(`(?<=${property}\\s+)(?:{)?\\w+\\(([^)]*)\\)(?:})?(\\[\\])*.*`), type)
+      } else {
+        clsRef.code += `${property} ${type}`
+      }
     }))
 
     matches.map.forEach(base())
@@ -145,7 +157,7 @@ class DatabaseManipulator {
     }
 
     // console.log(db.mainClasses)
-    // console.log(db.staticClasses)
+    console.log(db.staticClasses)
     // console.log(db.helperClasses)
     // console.log(db.defaults)
   }
@@ -419,6 +431,13 @@ class DatabaseManipulator {
 }
 
 const dbm = new DatabaseManipulator()
+
+dbm.eval(
+  `
+    IN epf_ost SET songs TEXTSHORT
+  `
+)
+
 /*
 
 ****** all commands

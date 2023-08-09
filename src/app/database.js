@@ -580,6 +580,11 @@ class WikiDatabase {
     else if (this.isMainClass) return 'main'
     else return 'helper'
   }
+
+  getAnyClass (cls) {
+    const cat = this.getClassCategory(cls)
+    return this[`${cat}Classes`][cls]
+  }
 }
 
 /**
