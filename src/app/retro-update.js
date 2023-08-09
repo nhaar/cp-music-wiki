@@ -61,10 +61,8 @@ async function getAllVersions (table, id, defaultData) {
 async function overridePatches (table, id, versions) {
   const patchIds = await db.handler.selectPatchIds(table, id)
   if (versions.length - 1 !== patchIds.length) throw new Error('Versions given cannot describe the patches to override')
-  // console.log(versions)
   patchIds.forEach((id, i) => {
     const patch = JSON.stringify(jsondiffpatch.diff(versions[i], versions[i + 1]))
-    console.log(patch)
     // db.handler.update('changes', 'patch', 'id', [id, patch])
   })
 }
@@ -110,8 +108,12 @@ class DatabaseManipulator {
 
     matches.drop.forEach(base('DROP', (cls, property) => {
       this.dropInObject(db.defaults[cls], property)
-    })
-    )
+      const category = db.getClassCategory()
+      const clsRef = db[`${category}Classes`][cls]
+      const { code } = clsRef
+      clsRef.code = code.replace(new RegExp(`.*${property}.*\\n`), '')
+    }))
+
     matches.set.forEach(base('SET', (cls, property, type) => {
       this.setInObject(db.defaults[cls], property, type)
       db.mainClasses[cls].code += `\n${property} ${type}`
@@ -135,12 +137,17 @@ class DatabaseManipulator {
             const pathPattern = this.patterns.path
             const path1 = matchGroup(statement, undefined, pathPattern, /(?=\s+->)/)[0]
             const path2 = matchGroup(statement, undefined, /(?<=->\s+)/, pathPattern)[0]
-            this.mapInObject(original, version, path1, path2, type)
+            this.mapInObject(original, version, path1, path2, cls)
           }
         })
         return version
       })
     }
+
+    // console.log(db.mainClasses)
+    // console.log(db.staticClasses)
+    // console.log(db.helperClasses)
+    // console.log(db.defaults)
   }
 
   patterns = {
@@ -210,8 +217,6 @@ class DatabaseManipulator {
       }
     }
     db.defaults[cls] = {}
-
-    console.log(db.mainClasses, db.staticClasses, db.helperClasses, db.defaults)
   }
 
   /**
@@ -414,7 +419,6 @@ class DatabaseManipulator {
 }
 
 const dbm = new DatabaseManipulator()
-
 /*
 
 ****** all commands

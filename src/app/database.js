@@ -574,6 +574,12 @@ class WikiDatabase {
 
     return { main: this.modelObjects[cls], cls, isStatic: this.isStaticClass(cls) }
   }
+
+  getClassCategory (cls) {
+    if (this.isStaticClass(cls)) return 'static'
+    else if (this.isMainClass) return 'main'
+    else return 'helper'
+  }
 }
 
 /**
@@ -684,7 +690,6 @@ class SQLHandler {
    * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
    */
   async insert (table, columns, values, condition = '') {
-    console.log(table, columns, values, condition)
     return await this.pool.query(
       `INSERT INTO ${table} (${columns}) VALUES (${values.map((v, i) => `$${i + 1}`)}) ${condition}`, values
     )
