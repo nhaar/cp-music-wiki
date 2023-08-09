@@ -1,12 +1,11 @@
 import { createSearchQuery } from './query-options.js'
-import { types } from './type-info.js'
 import { selectElement, createElement, styleElement, postAndGetJSON } from './utils.js'
 
 class View {
   /** Create page elements */
   constructor () {
     this.select = selectElement('type-select')
-    types.forEach((info, i) => {
+    preeditorData.forEach((info, i) => {
       createElement({ parent: this.select, tag: 'option', value: i + '', innerHTML: info.name })
     })
 
@@ -24,8 +23,6 @@ class Controller {
 
   /** Gives control to the page */
   async setupPage () {
-    const preeditorData = await postAndGetJSON('/get-preeditor-data', {})
-
     this.view.select.addEventListener('change', () => {
       const value = this.view.select.value
       if (value) {
@@ -44,6 +41,7 @@ class Controller {
 
           this.view.create.classList.remove('hidden')
 
+          console.log(cls)
           createSearchQuery(
             input,
             cls
@@ -89,6 +87,13 @@ class Controller {
   }
 }
 
-const view = new View()
-const controller = new Controller(view)
-controller.setupPage()
+let preeditorData
+
+postAndGetJSON('api/get-preeditor-data', {}).then(res => {
+  preeditorData = res
+  console.log(preeditorData)
+
+  const view = new View()
+  const controller = new Controller(view)
+  controller.setupPage()
+})

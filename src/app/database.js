@@ -520,6 +520,20 @@ class WikiDatabase {
   createEditorModels () {
     const base = (code, obj) => {
       this.iterateDeclarations(code, (property, type, params) => {
+        let header = 'PLACEHOLDER'
+        params.forEach(param => {
+          if (param.includes('"')) {
+            header = param.match(/(?<=").*(?=")/)[0]
+          }
+        })
+
+        let arg = matchInside(type, '\\(', '\\)')
+
+        if (arg) {
+          arg = arg[0]
+          type = type.replace(/\(.*\)/, '')
+        }
+
         let value
         if (type.includes('{')) {
           value = base(
@@ -530,9 +544,10 @@ class WikiDatabase {
           value = type.match(/\w+/)[0]
         }
         if (type.includes('[')) {
-          value = [value]
+          const dim = this.getDimension(type)
+          value = [value, dim]
         }
-        obj[property] = value
+        obj[property] = [value, header, arg]
       })
 
       return obj
@@ -557,7 +572,7 @@ class WikiDatabase {
   getEditorData (t) {
     const { cls } = this.getPreeditorData()[t]
 
-    return this.modelObjects[cls]
+    return { main: this.modelObjects[cls], cls, isStatic: this.isStaticClass(cls) }
   }
 }
 
@@ -788,6 +803,18 @@ function isString (value) {
  */
 function splitDeclarations (code) {
   return code.split('\n').map(line => line.trim()).filter(line => line)
+}
+
+/**
+ * Match for a pattern than enclosures everything inside two characters
+ * @param {string} str - String to match
+ * @param {string} lChar - Left character of the enclosure
+ * @param {string} rChar - Right character of the enclosure (leave blank for same as left)
+ * @returns {object | null} Match result
+ */
+function matchInside (str, lChar, rChar) {
+  if (!rChar) rChar = lChar
+  return str.match(`(?<=${lChar}).*(?=${rChar})`)
 }
 
 const db = new WikiDatabase(...def)

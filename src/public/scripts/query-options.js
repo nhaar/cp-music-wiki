@@ -21,12 +21,12 @@ import { createElement, postAndGetJSON } from './utils.js'
  * Function that gets taken info relative to the input element(s)
  * @param {import("./submit-block").Blocker} blocker - If the query is associated with a button to block, the blocker object of the button
  */
-export async function createSearchQuery (input, type) {
+export async function createSearchQuery (input, cls) {
   // for when taken function and blockers are useless
 
   const { id } = input.dataset
   if (id) {
-    const name = await postAndGetJSON('api/get-name', { type, id: Number(id) })
+    const name = await postAndGetJSON('api/get-name', { cls, id: Number(id) })
     input.value = name.name
   }
 
@@ -49,7 +49,7 @@ export async function createSearchQuery (input, type) {
   const updateQuery = () => {
     setPosition()
 
-    postAndGetJSON('api/get-by-name', { type, keyword: input.value }).then(data => {
+    postAndGetJSON('api/get-by-name', { cls, keyword: input.value }).then(data => {
       queryOptions.innerHTML = ''
       for (const id in data) {
         const optionElement = createElement({ parent: queryOptions, innerHTML: data[id] })
