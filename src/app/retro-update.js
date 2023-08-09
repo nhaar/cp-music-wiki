@@ -78,12 +78,12 @@ class DatabaseManipulator {
     const matches = this.collectCommands(code)
 
     // map for datatype -> associated statements
-    const datatypeMap = {}
+    const classMap = {}
     const originalDefaults = {}
 
-    const mergedTypes = db.getAllClasses()
-    for (const type in mergedTypes) {
-      originalDefaults[type] = deepcopy(db.defaults[type])
+    const allClasses = db.getAllClasses()
+    for (const cls in allClasses) {
+      originalDefaults[cls] = deepcopy(db.defaults[cls])
     }
 
     // add all tables
@@ -94,7 +94,7 @@ class DatabaseManipulator {
     const typePattern = method => new RegExp(`(?<=${method}\\s+\\w+\\s+)\\w+(\\[\\])*`)
 
     const base = (method, callback) => statement => {
-      const datatype = statement.match(tableIn)[0]
+      const cls = statement.match(tableIn)[0]
       let property
       let type
       if (method) {
@@ -103,26 +103,25 @@ class DatabaseManipulator {
         // in particular, DROP does not have types
         if (typeMatch) type = [0]
       }
-      if (callback) callback(datatype, property, type)
-      if (!datatypeMap[datatype]) datatypeMap[datatype] = []
-      datatypeMap[datatype].push(statement)
+      if (callback) callback(cls, property, type)
+      if (!classMap[cls]) classMap[cls] = []
+      classMap[cls].push(statement)
     }
 
-    matches.drop.forEach(base('DROP', (datatype, property) => {
-      this.dropInObject(db.defaults[datatype], property)
+    matches.drop.forEach(base('DROP', (cls, property) => {
+      this.dropInObject(db.defaults[cls], property)
     })
     )
-    matches.set.forEach(base('SET', (datatype, property, type) => {
-      this.setInObject(db.defaults[datatype], property, type)
-      db.mainClasses[datatype].code += `\n${property} ${type}`
-    })
-    )
-    matches.map.forEach(base()
-    )
+    matches.set.forEach(base('SET', (cls, property, type) => {
+      this.setInObject(db.defaults[cls], property, type)
+      db.mainClasses[cls].code += `\n${property} ${type}`
+    }))
 
-    for (const type in datatypeMap) {
-      const statements = datatypeMap[type]
-      this.updatePatches(type, originalDefaults[type], version => {
+    matches.map.forEach(base())
+
+    for (const cls in classMap) {
+      const statements = classMap[cls]
+      this.updatePatches(cls, originalDefaults[cls], version => {
         const original = deepcopy(version)
         statements.forEach(statement => {
           if (statement.includes('DROP')) {
@@ -179,7 +178,6 @@ class DatabaseManipulator {
       transfer: [/TRANSFER\s+/, table, /\s+\[(\*|\d+(?:\s*(,|...)\s*\d+)*)\]\s+/, table, /\s+\w+/]
     }
 
-    // prevent error in non matching cases
     for (const key in matches) {
       matches[key] = matchfn(...matches[key]) || []
     }
@@ -194,12 +192,12 @@ class DatabaseManipulator {
   evaluateAdd (code) {
     const words = code.match(/\w+/g)
     if (words.length === 2) {
-      const type = words[1]
-      db.handler.createClass(type)
+      const cls = words[1]
+      db.handler.createClass(cls)
     } else {
-      const type = words[2]
+      const cls = words[2]
       if (words[1] === 'static') {
-        db.handler.insertStatic(type, {})
+        db.handler.insertStatic(cls, {})
       }
     }
   }
