@@ -171,7 +171,7 @@ class DatabaseManipulator {
     }
 
     const matches = {
-      add: [/ADD\s+/, table],
+      add: [/ADD\s+\w+\s+\w+/],
       drop: inPatterns(/\s+DROP\s+\w+/),
       set: inWord('SET', /\w+\s+/, type),
       map: inWord('MAP', path, /\s+->\s+/, path),
@@ -191,15 +191,27 @@ class DatabaseManipulator {
    */
   evaluateAdd (code) {
     const words = code.match(/\w+/g)
-    if (words.length === 2) {
-      const cls = words[1]
-      db.handler.createClass(cls)
-    } else {
-      const cls = words[2]
-      if (words[1] === 'static') {
+    const category = words[1]
+    const cls = words[2]
+    switch (category) {
+      case 'main': {
+        db.handler.createClass(cls)
+        db.mainClasses[cls] = {}
+        break
+      }
+      case 'static': {
         db.handler.insertStatic(cls, {})
+        db.staticClasses[cls] = {}
+        break
+      }
+      case 'helper': {
+        db.helperClasses[cls] = {}
+        break
       }
     }
+    db.defaults[cls] = {}
+
+    console.log(db.mainClasses, db.staticClasses, db.helperClasses, db.defaults)
   }
 
   /**
@@ -404,6 +416,20 @@ class DatabaseManipulator {
 const dbm = new DatabaseManipulator()
 
 /*
+
+****** all commands
+ADD main cls
+ADD static cls
+ADD helper cls
+
+IN cls SET
+IN cls DROP
+IN cls MAP
+
+TRANSFER cls TO cls
+
+DELETE cls
+
 examples
 ADD/DROP song
 ADD static song
