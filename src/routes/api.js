@@ -7,6 +7,7 @@ const path = require('path')
 
 const db = require('../app/database')
 const gen = require('../app/lists')
+const { checkCredentials } = require('../app/login')
 
 router.post('/editor-data', async (req, res) => {
   const { t } = req.body
@@ -116,6 +117,16 @@ router.post('/get-editor-data', async (req, res) => {
   const { t } = req.body
   const data = db.getEditorData(t)
   res.status(200).send(data)
+})
+
+router.post('/login', async (req, res) => {
+  const { user, password } = req.body
+  const token = await checkCredentials(user, password)
+  if (token) {
+    res.status(200).send({ token })
+  } else {
+    res.status(400).send({ error: 'errou' })
+  }
 })
 
 /**

@@ -84,10 +84,21 @@ class WikiDatabase {
         class TEXT,
         item_id INT,
         patch JSONB,
-        user INT,
+        wiki_user INT,
         approver INT,
         timestamp INT,
         minor_edit INT
+      )
+    `)
+
+    // user table
+    this.handler.create(`
+      wiki_users (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        user_password TEXT,
+        display_name TEXT,
+        session_token TEXT
       )
     `)
   }

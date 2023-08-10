@@ -28,6 +28,10 @@ router.get('/series-list', (req, res) => {
   res.status(200).sendFile(path.join(__dirname, '../views/generated/series-list.html'))
 })
 
+router.get('/user-page', (req, res) => {
+  res.status(200).render('user-page.html')
+})
+
 // api
 router.use('/api', apiRouter)
 
