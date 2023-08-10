@@ -11,8 +11,10 @@ function getHash (value) {
   return crypto.pbkdf2Sync(value, SALT, ITERATIONS, KEYLEN, DIGEST).toString('hex')
 }
 
+
 function generateToken () {
-  return 'PLACEHOLDER'
+  const token = crypto.randomBytes(256)
+  return token.toString('hex')
 }
 
 async function checkCredentials (user, password) {
