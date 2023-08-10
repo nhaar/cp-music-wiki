@@ -4,12 +4,7 @@ every time a change to the database must be made, this must be accessed first
 */
 const db = require('./database')
 const jsondiffpatch = require('jsondiffpatch')
-const { deepcopy, matchGroup, removeBraces } = require('./utils')
-
-// list of options:
-// * create a new path in a data variable (across all entries in a table)
-// * remove a path in a data variable (across all entries in a table)
-// * transfer (from one path to another, path includes the table as well) (across all entries in a table)
+const { deepcopy, removeBraces } = require('./utils')
 
 /**
  * An array which represents all versions of a specific type data throught time,
@@ -22,22 +17,18 @@ const { deepcopy, matchGroup, removeBraces } = require('./utils')
  */
 
 /**
- * Represents code for the query language used by the interpreter
+ * Represents code for the query language for retro-updates
  * @typedef {string} RUL
  */
 
-// /**
-//  * Get all the versions of a row throughout all patches applied to it
-//  * @param {import('./database').TypeName} type - Name for the type
-//  * @param {number} id - Id of the row
-//  * @param {import('./database').TypeData} defaultData - Default object to be used as the "0th" version
-//  * @returns {VersionList} Fetched version list
-//  */
-async function getAllVersions (table, id, defaultData) {
-  const isStatic = table === 'static'
-  const cls = isStatic ? id : table
-  if (isStatic) id = 0
-
+/**
+ * Get all the versions of a row throughout all patches applied to it
+ * @param {import('./database').ClassName} table - Name of the class the row belongs to
+ * @param {number} id - Id of the row
+ * @param {import('./database').ItemData} defaultData - Default object to be used as the "0th" version
+ * @returns {VersionList} Fetched version list
+ */
+async function getAllVersions (cls, id, defaultData) {
   const versions = [defaultData]
   const patches = await db.handler.selectPatches(cls, id)
   patches.forEach((patch, i) => {
@@ -48,28 +39,31 @@ async function getAllVersions (table, id, defaultData) {
   return versions
 }
 
-// /**
-//  * Takes a list of versions for a data row and converts into patches,
-//  * saving them in the database
-//  *
-//  * The version list length must be compatible with the existing patches in the database,
-//  * as it only overrides the existing patches as opposed to creating new ones
-//  * @param {import('./database').TypeName} type - Type to target
-//  * @param {number} id - Id of the row
-//  * @param {VersionList} versions - All the versions to save
-//  */
-async function overridePatches (table, id, versions) {
-  let patchIds
-  if (table === 'static') {
-    patchIds = await db.handler.selectPatchIds(id, 0)
-  } else {
-    patchIds = await db.handler.selectPatchIds(table, id)
-  }
+/**
+ * Takes a list of versions for a data row and converts into patches,
+ * saving them in the database
+ *
+ * The version list length must be compatible with the existing patches in the database,
+ * as it only overrides the existing patches as opposed to creating new ones
+ * @param {import('./database').ClassName} type - Class of the row
+ * @param {number} id - Id for the row
+ * @param {VersionList} versions - All the versions to save
+ */
+async function overridePatches (cls, id, versions) {
+  const patchIds = await db.handler.selectPatchIds(cls, id)
   if (versions.length - 1 !== patchIds.length) throw new Error('Versions given cannot describe the patches to override')
   patchIds.forEach((id, i) => {
     const patch = JSON.stringify(jsondiffpatch.diff(versions[i], versions[i + 1]))
-    // db.handler.update('changes', 'patch', 'id', [id, patch])
+    db.handler.update('changes', 'patch', 'id', [id, patch])
   })
+}
+
+const patterns = {
+  table: /\w+/,
+  inDeclr: /IN\s+/,
+  word: word => new RegExp(`\\s+${word}\\s+`),
+  path: /(\.\w+|\[[^\]]*\])*/,
+  typePattern: /(?:{)?\w+\(([^)]*)\)(?:})?(\[\])*/
 }
 
 class DatabaseManipulator {
@@ -80,8 +74,10 @@ class DatabaseManipulator {
   async eval (code) {
     const matches = this.collectCommands(code)
 
-    // map for datatype -> associated statements
+    /** Map for class -> associated statements */
     const classMap = {}
+
+    /** The original default class data before being updated */
     const originalDefaults = {}
 
     const allClasses = db.getAllClasses()
@@ -89,43 +85,44 @@ class DatabaseManipulator {
       originalDefaults[cls] = deepcopy(db.defaults[cls])
     }
 
-    // add all tables
+    // run all add commands
     matches.add.forEach(statement => this.evaluateAdd(statement))
 
-    const tableIn = /(?<=IN\s+)\w+/
-    const propertyPattern = method => new RegExp(`(?<=${method}\\s+)\\w+`)
-    const typePattern = method => new RegExp(`(?<=${method}\\s+\\w+\\s+)(?:{)?\\w+(?:})?(\\[\\])*`)
+    const inCls = /(?<=IN\s+)\w+/
+    const { typePattern } = patterns
+    const matchProperty = (str, method) => str.match(`(?<=${method}\\s+)\\w+`)[0]
+    const matchType = (str, method) => matchGroup(str, undefined, `(?<=${method}\\s+\\w+\\s+)`, typePattern)[0]
 
-    const base = (method, callback) => statement => {
-      const cls = statement.match(tableIn)[0]
+    const base = (method, callback, codeCallback) => statement => {
+      const cls = statement.match(inCls)[0]
       let property
       let type
       if (method) {
-        property = statement.match(propertyPattern(method))[0]
-        const typeMatch = statement.match(typePattern(method))
+        property = matchProperty(statement, method)
+        const typeMatch = matchType(statement, method)
         // in particular, DROP does not have types
         if (typeMatch) type = typeMatch[0]
       }
       if (callback) callback(cls, property, type)
+      if (codeCallback) {
+        const clsRef = db.getAnyClass(cls)
+        codeCallback(clsRef, property, type)
+      }
       if (!classMap[cls]) classMap[cls] = []
       classMap[cls].push(statement)
     }
 
     matches.drop.forEach(base('DROP', (cls, property) => {
       this.dropInObject(db.defaults[cls], property)
-      const category = db.getClassCategory()
-      const clsRef = db[`${category}Classes`][cls]
-      const { code } = clsRef
-      clsRef.code = code.replace(new RegExp(`.*${property}.*\\n`), '')
+    }, (clsRef, property) => {
+      clsRef.code = clsRef.code.replace(new RegExp(`.*${property}.*\\n`), '')
     }))
 
     matches.set.forEach(base('SET', (cls, property, type) => {
-      const clsRef = db.getAnyClass(cls)
-
       this.setInObject(db.defaults[cls], property, type)
-      console.log(clsRef.code.match(`${property}`))
+    }, (clsRef, property, type) => {
       if (clsRef.code.match(`${property}`)) {
-        clsRef.code = clsRef.code.replace(new RegExp(`(?<=${property}\\s+)(?:{)?\\w+\\(([^)]*)\\)(?:})?(\\[\\])*.*`), type)
+        clsRef.code = clsRef.code.replace(groupPatterns(`(?<=${property}\\s+)`, typePattern, /.*/), type)
       } else {
         clsRef.code += `${property} ${type}`
       }
@@ -139,35 +136,28 @@ class DatabaseManipulator {
         const original = deepcopy(version)
         statements.forEach(statement => {
           if (statement.includes('DROP')) {
-            const property = statement.match(propertyPattern('DROP'))[0]
+            const property = matchProperty(statement, 'DROP')
             this.dropInObject(version, property)
           } else if (statement.includes('SET')) {
-            const property = statement.match(propertyPattern('SET'))[0]
-            const type = statement.match(typePattern('SET'))[0]
+            const property = matchProperty(statement, 'SET')
+            const type = matchType(statement, 'SET')
             this.setInObject(version, property, type)
           } else {
-            const pathPattern = this.patterns.path
-            const path1 = matchGroup(statement, undefined, pathPattern, /(?=\s+->)/)[0]
-            const path2 = matchGroup(statement, undefined, /(?<=->\s+)/, pathPattern)[0]
-            this.mapInObject(original, version, path1, path2, cls)
+            const pathPattern = patterns.path
+            const args = [statement, undefined]
+            const ptrns = [pathPattern, /(?=\s+->)/]
+            const paths = [0, 1].map(i => {
+              const patternArgs = [ptrns[i % 2], ptrns[(i + 1) % 2]]
+              return matchGroup(...args.concat(patternArgs))[0]
+            })
+            this.mapInObject(original, version, paths[0], paths[1], cls)
           }
         })
         return version
       })
     }
 
-    // console.log(db.mainClasses)
-    console.log(db.staticClasses)
-    // console.log(db.helperClasses)
-    // console.log(db.defaults)
-  }
-
-  patterns = {
-    table: /(?:static\s+|property\s+)?\w+/,
-    inDeclr: /IN\s+/,
-    type: /\w+(\[\])*/,
-    word: word => new RegExp(`\\s+${word}\\s+`),
-    path: /(\.\w+|\[[^\]]*\])*/
+    console.log(db.helperClasses, db.defaults)
   }
 
   /**
@@ -176,13 +166,13 @@ class DatabaseManipulator {
    * @returns {object} Object with the keys `add`, `drop`, `set`, `map`, `transfer`, each containing a list of statements
    */
   collectCommands (code) {
-    const { inDeclr, table, type, word, path } = this.patterns
+    const { inDeclr, typePattern, word, path } = patterns
 
     const matchfn = (...expressions) => {
       return matchGroup(code, 'g', ...expressions)
     }
     const inPatterns = (...expressions) => {
-      return [inDeclr, table, ...expressions]
+      return [inDeclr, /\w+/, ...expressions]
     }
 
     const inWord = (w, ...expressions) => {
@@ -192,9 +182,9 @@ class DatabaseManipulator {
     const matches = {
       add: [/ADD\s+\w+\s+\w+/],
       drop: inPatterns(/\s+DROP\s+\w+/),
-      set: inWord('SET', /\w+\s+/, type),
+      set: inWord('SET', /\w+\s+/, typePattern),
       map: inWord('MAP', path, /\s+->\s+/, path),
-      transfer: [/TRANSFER\s+/, table, /\s+\[(\*|\d+(?:\s*(,|...)\s*\d+)*)\]\s+/, table, /\s+\w+/]
+      transfer: [/TRANSFER\s+/, /\w+/, /\s+\[(\*|\d+(?:\s*(,|...)\s*\d+)*)\]\s+/, /\w+/, /\s+\w+/]
     }
 
     for (const key in matches) {
@@ -212,22 +202,18 @@ class DatabaseManipulator {
     const words = code.match(/\w+/g)
     const category = words[1]
     const cls = words[2]
+    console.log(category)
     switch (category) {
       case 'main': {
         db.handler.createClass(cls)
-        db.mainClasses[cls] = {}
         break
       }
       case 'static': {
         db.handler.insertStatic(cls, {})
-        db.staticClasses[cls] = {}
-        break
-      }
-      case 'helper': {
-        db.helperClasses[cls] = {}
         break
       }
     }
+    db[`${category}Classes`][cls] = {}
     db.defaults[cls] = {}
   }
 
@@ -262,12 +248,12 @@ class DatabaseManipulator {
    * @param {object} object2 - Target to map to
    * @param {string} path1 - Path in original object
    * @param {string} path2 - Path in new object
-   * @param {string} type - Type of the object being handled
+   * @param {string} cls - Class of the object being handled
    */
-  mapInObject (object1, object2, path1, path2, type) {
+  mapInObject (object1, object2, path1, path2, cls) {
     const paths = [path1, path2]
     const steps = paths.map(path => path.match(/(?<=\.)\w+|(?<=\[).(?=\])/g))
-    const tpath = this.getTypePath(type, steps[1].slice(0, steps.length - 1))
+    const tpath = this.getTypePath(cls, steps[1].slice(0, steps.length - 1))
 
     /**
      * This function will recursively go through each step and determine the values
@@ -320,18 +306,21 @@ class DatabaseManipulator {
       const step = steps[1][i]
       const curType = tpath[i]
 
+      const getNewValue = () => {
+        if (curType === '[]') return []
+        else return deepcopy(db.defaults[curType])
+      }
+
       // the last step we will assign, while in these others
       // we will just access the references
       if (i < steps[1].length - 1) {
-        // if reached a start, assume that currentReading is an array
+        // if reached a star, assume that currentReading is an array
         // and iterate through all of them
         if (step === '*') {
           currentReading.forEach(nextReading => {
-            let next
-            // since object2 is a standard one,
-            // need to add the value to the array
-            if (curType === '[]') next = []
-            else next = deepcopy(db.defaults[curType])
+            // since object2 is a default one,
+            // need to add the values to the array
+            const next = getNewValue()
             assigning.push(next)
             assignIterator(next, nextReading, i + 1)
           })
@@ -340,8 +329,7 @@ class DatabaseManipulator {
           const next = assigning[step]
           if (!next) {
             // in case next step doesn't exist
-            if (curType === '[]') assigning[step] = []
-            else assigning[step] = deepcopy(db.defaults[curType])
+            assigning[step] = getNewValue()
           }
 
           assignIterator(assigning[step], currentReading, i + 1)
@@ -366,29 +354,30 @@ class DatabaseManipulator {
 
   /**
    * Gets the property types in a path
-   * @param {import('./database').TypeName} type - Type of the object the path relates to
-   * @param {string[]} steps - An array with the steps in the path, ie either digit or * for arrays or a property name
+   * @param {import('./database').ClassName} cls - Class of the object the path relates to
+   * @param {string[]} steps - An array with the steps in the path, consisting of either digit and * for arrays or a property name
    * @returns {string[]} - List of the types
    */
-  getTypePath (type, steps) {
+  getTypePath (cls, steps) {
     const tpath = []
-    // unify the types that `type` might relate to
-    // property types are added because the `type` variable
-    // will be mutated onto the children types
-    const mergedTypes = db.getAllClasses()
+    let type = cls
+    // unify all classes because the cls will be first
+    // assigned the given class and it can then point to helper classes
+    const allClasses = db.getAllClasses()
     steps.forEach(step => {
       // ignore if it is a number or it's just the *
       // because that represents an array element ie there is no type of interest
       if (isNaN(step) && step !== '*') {
-        const code = mergedTypes[type].code
+        // if here, assume the type is a class
+        const code = allClasses[type].code
 
         // type is found through the CPT for the property
-        const typeMatch = code.match(new RegExp(`(?<=${step}\\s+)\\w+(\\[\\])*`))[0]
+        const typeMatch = matchGroup(code, '', `(?<=${step}\\s+)`, patterns.typePattern)[0]
 
         // remove any possible brackets by matching whole word
         type = typeMatch.match(/\w+/)[0]
         let dim = 0
-        if (typeMatch.includes('[')) dim = type.match(/\[\]/g).length
+        if (typeMatch.includes('[')) dim = typeMatch.match(/\[\]/g).length
         // add [] equal to the number of the dimension
         // because that means the next `dim` elements
         // are just array entries
@@ -405,22 +394,21 @@ class DatabaseManipulator {
 
   /**
    * Updates all the patches for all rows under a type
-   * @param {import('./database').TypeName} type - Type to change
-   * @param {import('./database').TypeData} defaultData - Default object for the type
-   * @param {function(TypeData) : TypeData} callback - Function that takes as the argument a given version of an object and gives back a modifiedone. All the patches will then be based on the newly created versions and replace the previous ones
+   * @param {import('./database').ClassName} cls - Class to change
+   * @param {import('./database').ItemData} defaultData - Default object for the class
+   * @param {function(ItemData) : ItemData} callback - Function that takes as the argument a given version of an object and gives back a modified one. All the patches will then be based on the newly created versions and replace the previous ones
    */
   async updatePatches (cls, defaultData, callback) {
-    const versionBase = async (table, id) => {
-      const versions = await getAllVersions(table, id, defaultData)
+    const versionBase = async (cls, id) => {
+      const versions = await getAllVersions(cls, id, defaultData)
       versions.forEach(version => callback(version))
-      overridePatches(table, id, versions)
+      overridePatches(cls, id, versions)
     }
 
-    const isStatic = db.isStaticClass(cls)
-    // find biggest ID to iterate through everything
-    if (isStatic) {
-      await versionBase('static', cls)
+    if (db.isStaticClass(cls)) {
+      await versionBase(cls, 0)
     } else {
+      // find biggest ID to iterate through everything
       const seq = await db.handler.getBiggestSerial(cls)
       // iterate every ID, presuming no deletion
       for (let i = 1; i <= seq; i++) {
@@ -430,13 +418,23 @@ class DatabaseManipulator {
   }
 }
 
-const dbm = new DatabaseManipulator()
+function groupPatterns (...patterns) {
+  const sources = (patterns.map(pattern => {
+    if (pattern instanceof RegExp) {
+      return pattern.source
+    } else return pattern
+  }))
+  const combined = sources.reduce((accumulator, cur) => {
+    return accumulator + cur
+  }, '')
+  return new RegExp(combined)
+}
 
-dbm.eval(
-  `
-    IN epf_ost SET songs TEXTSHORT
-  `
-)
+function matchGroup (str, flags, ...patterns) {
+  return str.match(new RegExp(groupPatterns(...patterns), flags))
+}
+
+const dbm = new DatabaseManipulator()
 
 /*
 
