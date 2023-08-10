@@ -30,7 +30,9 @@ class Page {
     this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
       console.log(deepcopy(row))
-      postJSON('api/update', { cls, row })
+      let session = document.cookie.match(/(?<=session=)[\d\w]+(?=($|;))/)
+      if (session) session = session[0]
+      postJSON('api/update', { cls, row, session })
     })
   }
 

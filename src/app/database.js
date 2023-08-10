@@ -601,6 +601,12 @@ class WikiDatabase {
     const cat = this.getClassCategory(cls)
     return this[`${cat}Classes`][cls]
   }
+
+  async isAdmin (session) {
+    // currently every user is admin so just check for existence of account
+    const account = (await this.handler.select('wiki_users', 'session_token', session))[0]
+    return Boolean(account)
+  }
 }
 
 /**

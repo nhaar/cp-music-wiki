@@ -12,5 +12,4 @@ button.addEventListener('click', async () => {
   if (token) {
     document.cookie = `session=${token}`
   }
-
 })

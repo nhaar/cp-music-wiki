@@ -43,31 +43,36 @@ router.post('/get', async (req, res) => {
 
 // update a data type
 router.post('/update', async (req, res) => {
-  const { cls, row } = req.body
-  const error = msg => sendBadReq(res, msg)
+  const { cls, row, session } = req.body
+  const isAdmin = await db.isAdmin(session)
+  if (isAdmin) {
+    const error = msg => sendBadReq(res, msg)
 
-  // validate data
-  if (checkClass(res, cls)) {
-    const isStatic = db.isStaticClass(cls)
-    if (isStatic && row.id !== 0) error('Invalid id')
-    else if (typeof row !== 'object') error('Invalid row data')
-    else {
-      const { data } = row
-      if (typeof data !== 'object') error('Invalid data')
+    // validate data
+    if (checkClass(res, cls)) {
+      const isStatic = db.isStaticClass(cls)
+      if (isStatic && row.id !== 0) error('Invalid id')
+      else if (typeof row !== 'object') error('Invalid row data')
       else {
-        const validationErrors = db.validate(cls, data)
-        if (validationErrors.length === 0) {
-          await db.addChange(cls, row)
-          if (isStatic) {
-            await db.updateStatic(cls, row)
-            res.sendStatus(200)
-          } else {
-            await db.updateItem(cls, row)
-            res.sendStatus(200)
-          }
-        } else sendBadReqJSON(res, { errors: validationErrors })
+        const { data } = row
+        if (typeof data !== 'object') error('Invalid data')
+        else {
+          const validationErrors = db.validate(cls, data)
+          if (validationErrors.length === 0) {
+            await db.addChange(cls, row)
+            if (isStatic) {
+              await db.updateStatic(cls, row)
+              res.sendStatus(200)
+            } else {
+              await db.updateItem(cls, row)
+              res.sendStatus(200)
+            }
+          } else sendBadReqJSON(res, { errors: validationErrors })
+        }
       }
     }
+  } else {
+    res.status(403).send('No permitions')
   }
 })
 
