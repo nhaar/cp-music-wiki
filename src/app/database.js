@@ -68,7 +68,7 @@ class WikiDatabase {
     // create static class table
     this.handler.create(`
       static (
-        id TEXT PRIMARY KEY,
+        class TEXT PRIMARY KEY,
         data JSONB
       )`
     ).then(() => {
@@ -124,7 +124,7 @@ class WikiDatabase {
    * @param {ItemData} data - Data object to validate
    * @returns {string[]} Array where each element is a string describing an error
    */
-  validate (cls, data, isStatic) {
+  validate (cls, data) {
     const errors = []
 
     // iterate through each property and each validation statement in the definition to validate it
@@ -209,7 +209,7 @@ class WikiDatabase {
       })
     }
 
-    const classDefinition = isStatic
+    const classDefinition = db.isStaticClass(cls)
       ? this.staticClasses[cls]
       : this.mainClasses[cls]
 
@@ -242,14 +242,14 @@ class WikiDatabase {
    * @param {ClassName} cls - Clas to get
    * @returns {Row} Fetched row
    */
-  getStatic = async cls => (await this.handler.select('static', 'id', cls))[0]
+  getStatic = async cls => (await this.handler.select('static', 'class', cls))[0]
 
   /**
    * Update the row for a static clas
    * @param {Row} row - Row to update with
    */
-  async updateStatic (row) {
-    await this.handler.update('static', 'data', 'id', [row.id, JSON.stringify(row.data)])
+  async updateStatic (cls, row) {
+    await this.handler.update('static', 'data', 'class', [cls, JSON.stringify(row.data)])
   }
 
   /**
@@ -334,8 +334,9 @@ class WikiDatabase {
    * @param {Row} row - Row for the data being changed
    * @param {boolean} isStatic - True if the class is static
    */
-  async addChange (cls, row, isStatic) {
+  async addChange (cls, row) {
     let oldRow
+    const isStatic = this.isStaticClass(cls)
     if (isStatic) {
       oldRow = await this.getStatic(cls)
     } else {
@@ -354,7 +355,7 @@ class WikiDatabase {
     this.handler.insert(
       'changes',
       'class, item_id, patch',
-      [cls, isStatic ? 0 : row.id, JSON.stringify(delta)]
+      [cls, row.id, JSON.stringify(delta)]
     )
   }
 
@@ -577,7 +578,7 @@ class WikiDatabase {
 
   getClassCategory (cls) {
     if (this.isStaticClass(cls)) return 'static'
-    else if (this.isMainClass) return 'main'
+    else if (this.isMainClass(cls)) return 'main'
     else return 'helper'
   }
 
@@ -705,7 +706,7 @@ class SQLHandler {
    * @param {ClassName} cls - Name of the class
    */
   insertStatic = async (cls, defaultData) => {
-    await this.insert('static', 'id, data', [cls, defaultData], 'ON CONFLICT (id) DO NOTHING')
+    await this.insert('static', 'class, data', [cls, defaultData], 'ON CONFLICT (class) DO NOTHING')
   }
 
   /**

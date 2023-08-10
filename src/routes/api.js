@@ -29,39 +29,36 @@ router.post('/get', async (req, res) => {
   const { cls, id } = req.body
 
   if (checkClass(res, cls) && checkId(res, id)) {
-    const row = await db.getItemById(cls, id)
-    if (!row) sendBadReq(res, 'Item not found in the database')
-    else res.status(200).send(row)
-  }
-})
-
-// get static row
-router.post('/get-static', async (req, res) => {
-  const { cls } = req.body
-  if (checkClass(res, cls, true)) {
-    const row = await db.getStatic(cls)
-    res.status(200).send(row)
+    if (db.isStaticClass(cls)) {
+      const row = await db.getStatic(cls)
+      res.status(200).send(row)
+    } else {
+      const row = await db.getItemById(cls, id)
+      if (!row) sendBadReq(res, 'Item not found in the database')
+      else res.status(200).send(row)
+    }
   }
 })
 
 // update a data type
 router.post('/update', async (req, res) => {
-  const { cls, row, isStatic } = req.body
+  const { cls, row } = req.body
   const error = msg => sendBadReq(res, msg)
 
   // validate data
-  if (checkClass(res, cls, isStatic)) {
-    if (isStatic && cls !== row.id) error('Invalid id')
+  if (checkClass(res, cls)) {
+    const isStatic = db.isStaticClass(cls)
+    if (isStatic && row.id !== 0) error('Invalid id')
     else if (typeof row !== 'object') error('Invalid row data')
     else {
       const { data } = row
       if (typeof data !== 'object') error('Invalid data')
       else {
-        const validationErrors = db.validate(cls, data, isStatic)
+        const validationErrors = db.validate(cls, data)
         if (validationErrors.length === 0) {
-          await db.addChange(cls, row, isStatic)
+          await db.addChange(cls, row)
           if (isStatic) {
-            await db.updateStatic(row)
+            await db.updateStatic(cls, row)
             res.sendStatus(200)
           } else {
             await db.updateItem(cls, row)
@@ -158,13 +155,9 @@ function checkValid (res, callback, msg) {
  * @param {any} value - Value to check
  * @returns {boolean} Whether the value is valid or not
  */
-function checkClass (res, value, isStatic = false) {
+function checkClass (res, value) {
   const msg = 'Invalid type provided'
-  if (isStatic) {
-    return checkValid(res, () => db.isStaticClass(value), msg)
-  } else {
-    return checkValid(res, () => db.isMainClass(value), msg)
-  }
+  return checkValid(res, () => db.isStaticClass(value) || db.isMainClass(value), msg)
 }
 
 /**

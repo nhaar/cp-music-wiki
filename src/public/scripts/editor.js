@@ -30,7 +30,7 @@ class Page {
     this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
       console.log(deepcopy(row))
-      postJSON('api/update', { cls, row, isStatic: this.isStatic })
+      postJSON('api/update', { cls, row })
     })
   }
 
@@ -43,25 +43,21 @@ class Page {
     const urlParams = new URLSearchParams(window.location.search)
     const params = this.paramsToObject(urlParams)
     const editorData = await postAndGetJSON('api/editor-data', { t: Number(params.t) })
-
-    const id = Number(params.id)
-
     const { isStatic, cls, main } = editorData
+
+    const id = isStatic ? 0 : Number(params.id)
+
     Object.assign(this, { isStatic })
     let row
     let data
-    if (isStatic) {
-      row = await postAndGetJSON('api/get-static', { cls })
-      data = row.data
+    if (isNaN(id)) {
+      data = await postAndGetJSON('api/default', { cls })
+      row = { data }
     } else {
-      if (id) {
-        row = await postAndGetJSON('api/get', { cls, id })
-        data = row.data
-      } else {
-        data = await postAndGetJSON('api/default', { cls })
-        row = { data }
-      }
+      row = await postAndGetJSON('api/get', { cls, id })
+      data = row.data
     }
+
     console.log(deepcopy(row))
     const Editor = constructEditorModule(main)
     const editor = new Editor(data, this.editor)

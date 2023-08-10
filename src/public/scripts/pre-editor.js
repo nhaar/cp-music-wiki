@@ -61,7 +61,7 @@ class Controller {
     this.view.edit.addEventListener('click', () => {
       const isInt = Number.isInteger(this.cls)
       if (this.isStatic) {
-        if (isInt) window.location.href = this.getEditorParam()
+        if (isInt) window.location.href = this.getIdParam('0')
       } else {
         const input = this.view.input.querySelector('input')
         if (isInt && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
