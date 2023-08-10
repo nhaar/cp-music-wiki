@@ -54,7 +54,7 @@ async function overridePatches (cls, id, versions) {
   if (versions.length - 1 !== patchIds.length) throw new Error('Versions given cannot describe the patches to override')
   patchIds.forEach((id, i) => {
     const patch = JSON.stringify(jsondiffpatch.diff(versions[i], versions[i + 1]))
-    db.handler.update('changes', 'patch', 'id', [id, patch])
+    db.handler.update('revisions', 'patch', 'id', [id, patch])
   })
 }
 

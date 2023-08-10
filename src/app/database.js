@@ -79,11 +79,15 @@ class WikiDatabase {
 
     // create table for patches
     this.handler.create(`
-      changes (
+      revisions (
         id SERIAL PRIMARY KEY,
         class TEXT,
         item_id INT,
-        patch JSONB
+        patch JSONB,
+        user INT,
+        approver INT,
+        timestamp INT,
+        minor_edit INT
       )
     `)
   }
@@ -329,7 +333,7 @@ class WikiDatabase {
   }
 
   /**
-   * Add a patch to the changes table
+   * Add a patch to the revisions table
    * @param {ClassName} cls - Class of the data being changed
    * @param {Row} row - Row for the data being changed
    * @param {boolean} isStatic - True if the class is static
@@ -353,7 +357,7 @@ class WikiDatabase {
     }
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
     this.handler.insert(
-      'changes',
+      'revisions',
       'class, item_id, patch',
       [cls, row.id, JSON.stringify(delta)]
     )
@@ -638,14 +642,14 @@ class SQLHandler {
   }
 
   /**
-   * Select all the changes in chronological order tied to a class item and get one of its columns
+   * Select all the revisions in chronological order tied to a class item and get one of its columns
    * @param {ClassName} cls - Name of the class of the item
    * @param {number} id - Id of item or 0 for static classes
    * @param {string} column - Name of the column to get
    * @returns {string[] | number[]} Array with all the column values
    */
-  async selectChanges (cls, id, column) {
-    return ((await this.pool.query(`SELECT ${column} FROM changes WHERE class = $1 AND item_id = $2 ORDER BY id ASC`, [cls, id])).rows)
+  async selectRevisions (cls, id, column) {
+    return ((await this.pool.query(`SELECT ${column} FROM revisions WHERE class = $1 AND item_id = $2 ORDER BY id ASC`, [cls, id])).rows)
       .map(change => change[column])
   }
 
@@ -656,7 +660,7 @@ class SQLHandler {
    * @returns {jsondiffpatch.DiffPatcher[]} Array with all the patches
    */
   async selectPatches (cls, id) {
-    return await this.selectChanges(cls, id, 'patch')
+    return await this.selectRevisions(cls, id, 'patch')
   }
 
   /**
@@ -666,7 +670,7 @@ class SQLHandler {
    * @returns {number[]} Array with all the ids
    */
   async selectPatchIds (cls, id) {
-    return await this.selectChanges(cls, id, 'id')
+    return await this.selectRevisions(cls, id, 'id')
   }
 
   /**
