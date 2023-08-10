@@ -19,7 +19,6 @@ async function checkCredentials (user, password) {
   const internalData = (await db.handler.select('wiki_users', 'name', user))[0]
   const hash = getHash(password)
 
-  console.log('dosakodsa')
 
   if  (internalData.user_password === hash) {
     const sessionToken = generateToken()
