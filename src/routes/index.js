@@ -25,7 +25,7 @@ router.get('/lists', (req, res) => {
 })
 
 router.get('/series-list', (req, res) => {
-  res.status(200).sendFile(path.join(__dirname, '../views/generated/series-list.html'))
+  res.status(200).sendFile(path.join(__dirname, '../views/generated/series-ost.html'))
 })
 
 router.get('/user-page', (req, res) => {
