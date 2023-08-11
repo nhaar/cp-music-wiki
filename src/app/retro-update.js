@@ -224,7 +224,7 @@ class DatabaseManipulator {
    * @param {string} type - Second argumment of method
    */
   setInObject (object, property, type) {
-    if (type.includes('[')) {
+    if (db.isArrayType(type)) {
       object[property] = []
     } else if (type.includes('{')) {
       object[property] = db.defaults[removeBraces(type)]
@@ -431,6 +431,7 @@ function groupPatterns (...patterns) {
 }
 
 function matchGroup (str, flags, ...patterns) {
+  console.log(new RegExp(groupPatterns(...patterns), flags))
   return str.match(new RegExp(groupPatterns(...patterns), flags))
 }
 

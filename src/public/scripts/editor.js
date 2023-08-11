@@ -1,7 +1,7 @@
 import { GridModule, MoveableRowsModule } from './modules/array-modules.js'
 import {
   CheckboxModule, DateInputModule, NumberInputModule, TextAreaModule,
-  TextInputModule, getFileUploadModule, getSearchQueryModule
+  TextInputModule, getFileUploadModule, getOptionSelectModule, getSearchQueryModule
 } from './modules/element-modules.js'
 import { EditorModule, TableChild, TableModule } from './modules/main-modules.js'
 import {
@@ -111,7 +111,7 @@ function buildEditor (data, topModule) {
   for (const property in data) {
     let value = data[property][0]
     const headerName = data[property][1]
-    const arg = data[property][2]
+    const args = data[property][2]
 
     let arrayModule
     const isArray = Array.isArray(value)
@@ -132,11 +132,12 @@ function buildEditor (data, topModule) {
       moduleType = {
         TEXTSHORT: TextInputModule,
         TEXTLONG: TextAreaModule,
-        ID: getSearchQueryModule(arg),
+        ID: getSearchQueryModule(args),
         DATE: DateInputModule,
         BOOLEAN: CheckboxModule,
-        FILE: getFileUploadModule(arg),
-        INT: NumberInputModule
+        FILE: getFileUploadModule(args),
+        INT: NumberInputModule,
+        SELECT: getOptionSelectModule(args)
       }[value]
     }
 

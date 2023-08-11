@@ -181,7 +181,11 @@ const def = [{
   `),
   PARTY_SONG: new ClassDef(`
     isUnused BOOLEAN "Is unused?";
-    type INT "Type";
+    type SELECT(
+      [room "Room"],
+      [minigame "Minigame"],
+      [misc "Miscellaneous"]
+    ) "Type";
     usePartyDate BOOLEAN "Use date from the party?";
     available {TIME_RANGE} "Available";
     song ID(song) "Song";

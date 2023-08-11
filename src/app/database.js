@@ -133,6 +133,10 @@ class WikiDatabase {
    */
   getItemById = async (cls, id) => await this.handler.selectId(cls, id)
 
+  isArrayType (type) {
+    return type.includes('[]')
+  }
+
   /**
    * Check if the object for a database class follows the rules defined for it and returns a list of all the errors found
    * @param {ClassName} cls - Class of the data to validate
@@ -155,7 +159,7 @@ class WikiDatabase {
       this.iterateDeclarations(code, (property, type, params) => {
         // check if the type of a property is the same as it was defined
         const checkType = (value, type, path) => {
-          if (type.includes('[')) {
+          if (this.isArrayType(type)) {
             const dimension = this.getDimension(type)
             const realType = removeBrackets(type)
 
@@ -278,7 +282,7 @@ class WikiDatabase {
     const createDefault = (cls, code) => {
       const defaultObject = {}
       this.iterateDeclarations(code, (property, type) => {
-        if (type.includes('[')) {
+        if (this.isArrayType(type)) {
           defaultObject[property] = []
         } else if (type.includes('{')) {
           defaultObject[property] = this.getDefault(removeBraces(type))
@@ -426,8 +430,8 @@ class WikiDatabase {
     const declarations = splitDeclarations(code)
     declarations.forEach(declr => {
       const property = declr.match(/\w+/)[0]
-      const typePattern = /(?:{)?(\w|\(|\))+(?:})?(\[\])*/
-      const type = matchGroup(declr, undefined, /(?<=\w+\s+)/, typePattern)[0]
+      const typePattern = /(?:{)?\w+(?:\(.*\))?(?:})?(\[\])*/
+      const type = matchGroup(declr, undefined, '(?<=\\w+\\s+)', typePattern)[0]
       const rest = declr.match(`(?<=\\w+\\s+${typePattern.source}\\s+).*`)
       let params = []
       if (rest) {
@@ -455,7 +459,7 @@ class WikiDatabase {
       const type = path[current]
       current++
       if (current === path.length + 1) results.push(value)
-      else if (type.includes('[')) {
+      else if (this.isArrayType(type)) {
         value.forEach(element => {
           iterator(element, path, current)
         })
@@ -552,10 +556,11 @@ class WikiDatabase {
           }
         })
 
-        let arg = matchInside(type, '\\(', '\\)')
+        let args = matchInside(type, '\\(', '\\)')
 
-        if (arg) {
-          arg = arg[0]
+        if (args) {
+          args = args[0].split(',')
+          if (args.length === 1) args = args[0]
           type = type.replace(/\(.*\)/, '')
         }
 
@@ -568,11 +573,11 @@ class WikiDatabase {
         } else {
           value = type.match(/\w+/)[0]
         }
-        if (type.includes('[')) {
+        if (this.isArrayType(type)) {
           const dim = this.getDimension(type)
           value = [value, dim]
         }
-        obj[property] = [value, header, arg]
+        obj[property] = [value, header, args]
       })
 
       return obj
@@ -843,7 +848,7 @@ function splitDeclarations (code) {
   const allDeclrs = trimAll(code.split(';'))
   const cleanedDeclrs = []
   allDeclrs.forEach(declr => {
-    cleaned = trimAll(declr.split('\n')).join(' ')
+    const cleaned = trimAll(declr.split('\n')).join(' ')
     cleanedDeclrs.push(cleaned)
   })
   return cleanedDeclrs

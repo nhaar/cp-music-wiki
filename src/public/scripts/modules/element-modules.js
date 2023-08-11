@@ -88,44 +88,6 @@ export class NumberInputModule extends SimpleTextModule {
 }
 
 /**
- * Module containing a select HTML element with options
- */
-export class OptionSelectModule extends ElementModule {
-  /**
-   *
-   * @param {BaseModule} parent
-   * @param {Pointer} out
-   * @param {HTMLElement} element
-   * @param {object} options - Object where each key represents an option HTML element where the key is the innerHTML and the value is the element value
-   */
-  constructor (parent, out, element, options) {
-    super(parent, out, element)
-
-    Object.assign(this, { options })
-  }
-
-  /**
-   * Render select element
-   */
-  prebuild () {
-    this.selectElement = createElement({ parent: this.e, tag: 'select' })
-    createElement({ parent: this.selectElement, tag: 'option', value: '' })
-    for (const option in this.options) {
-      const value = this.options[option]
-      createElement({ parent: this.selectElement, tag: 'option', value, innerHTML: option })
-    }
-    this.int = new Pointer(this.selectElement, 'value')
-  }
-
-  /**
-   * Expect the value output to be a number
-   * @param {*} output
-   * @returns {number} - Converted output
-   */
-  convertoutput (output) { return Number(output) }
-}
-
-/**
  * Get a search query module constructor for a specific database type
  * @param {import('../../app/database.js').TypeName} type - Name of the type
  * @returns {SearchQueryModule} Module for the type
@@ -153,6 +115,44 @@ export function getSearchQueryModule (type) {
   }
 
   return SearchQueryModule
+}
+
+export function getOptionSelectModule (args) {
+  const options = {}
+  if (Array.isArray(args)) {
+    args.forEach(arg => {
+      const value = arg.match(/(?<=\[\s*)\w+/)[0]
+      const key = arg.match(/(?<=").*(?=")/)[0]
+      options[key] = value
+    })
+  }
+
+  /**
+ * Module containing a select HTML element with options
+ */
+  class OptionSelectModule extends ElementModule {
+    /**
+   * Render select element
+   */
+    prebuild () {
+      this.selectElement = createElement({ parent: this.e, tag: 'select' })
+      createElement({ parent: this.selectElement, tag: 'option', value: '' })
+      for (const option in options) {
+        const value = options[option]
+        createElement({ parent: this.selectElement, tag: 'option', value, innerHTML: option })
+      }
+      this.int = new Pointer(this.selectElement, 'value')
+    }
+
+    /**
+   * Expect the value output to be a number
+   * @param {*} output
+   * @returns {number} - Converted output
+   */
+    convertoutput (output) { return output }
+  }
+
+  return OptionSelectModule
 }
 
 /**
