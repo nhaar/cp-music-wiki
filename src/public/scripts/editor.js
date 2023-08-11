@@ -9,6 +9,8 @@ import {
   selectElement
 } from './utils.js'
 
+/* global alert */
+
 class Page {
   /** Link page to DOM */
   constructor () {
@@ -32,7 +34,17 @@ class Page {
       console.log(deepcopy(row))
       let session = document.cookie.match(/(?<=session=)[\d\w]+(?=($|;))/)
       if (session) session = session[0]
-      postJSON('api/update', { cls, row, session })
+      const response = await postJSON('api/update', { cls, row, session })
+      if (response.status === 200) {
+        alert('Change submitted with success')
+        if (isNaN(row.id)) window.location.href = 'pre-editor'
+      } else if (response.status === 400) {
+        const resData = await response.json()
+        const errorStr = resData.errors.join('\n * ')
+        alert(`Improper submission:\n * ${errorStr}`)
+      } else if (response.status === 403) {
+        alert("You don't have permission to submit")
+      }
     })
   }
 

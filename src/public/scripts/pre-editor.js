@@ -30,7 +30,6 @@ class Controller {
     this.view.select.addEventListener('change', () => {
       const value = this.view.select.value
       if (value !== '-1') {
-        
         this.view.bottom.classList.remove('hidden')
         this.cls = Number(value)
         const { cls, isStatic } = preeditorData[this.cls]
