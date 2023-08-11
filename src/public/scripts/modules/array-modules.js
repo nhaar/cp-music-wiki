@@ -33,7 +33,7 @@ export class MoveableRowsModule extends ArrayModule {
    * Build basic elements for handling the rows
    */
   prebuild () {
-    this.div = createElement({ parent: this.e, className: this.divClass })
+    this.div = createElement({ parent: this.e, classes: [this.divClass, 'moveable-row-div'] })
     if (this.options.useAdd) {
       this.addButton = createElement({ parent: this.div, tag: 'button', innerHTML: 'ADD' })
     }

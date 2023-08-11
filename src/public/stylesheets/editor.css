@@ -251,6 +251,12 @@ button:hover {
   margin-bottom: 20px;
 }
 
+.moveable-row-div {
+  display: flex;
+  flex-direction: column;
+  gap:20px;
+}
+
 .hidden {
   display: none;
   height: 0;
