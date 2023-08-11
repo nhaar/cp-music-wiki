@@ -207,7 +207,7 @@ class Generator {
             name,
             authorsList.join(', '),
             order,
-            songData.link,
+            `<a href="${songData.link}"> Link <a>`,
             instance.name,
             altNames.join(', '),
             hqSources.join(' + '),
@@ -298,11 +298,12 @@ class Generator {
       <!DOCTYPE html>
 
       <head>
-
+        <title> Club Penguin Music Wiki</title>
+        <link rel="stylesheet" href="stylesheets/list.css">
       </head>
 
       <body>
-        <table>
+        <table class="list-table">
           <tr>
             <th> Name </th>
             <th> Artist(s) </th>

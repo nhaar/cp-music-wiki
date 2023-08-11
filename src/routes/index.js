@@ -29,7 +29,13 @@ router.get('/editor', (req, res) => {
 })
 
 router.get('/lists', (req, res) => {
-  res.status(200).render('lists.html')
+  const content = `
+  <a href="series-list"> Series OST </a>
+  `
+  res.status(200).render('page.html', {
+    header: 'OST Lists',
+    content
+  })
 })
 
 router.get('/series-list', (req, res) => {
