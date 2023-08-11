@@ -40,11 +40,6 @@ const def = [{
     files {SONG_FILE}[] "Files"
     unofficialNames {UNOFFICIAL_NAME}[] "Unofficial Names"
     swfMusicNumbers INT[] "SWF Numbers"
-    firstParagraph TEXTLONG "First Paragraph"
-    page TEXTLONG "Page"
-    keySignatures ID(key_signature)[] "Key Signatures"
-    genres ID(genre)[] "Genres"
-    categories ID(category)[] "Categories"
     versions {VERSION}[] "Versions"
     composedDate {DATE_ESTIMATE} "Composed Date"
     externalReleaseDate DATE "External Release Date"
@@ -67,37 +62,6 @@ const def = [{
     'Source', `
     name TEXTSHORT QUERY "Name"
   `),
-  wiki_reference: new NameDef(
-    'Wiki Reference', `
-    name TEXTSHORT QUERY "Name"
-    link TEXTSHORT "Link"
-    description TEXTLONG "Description"
-  `),
-  genre: new NameDef(
-    'Music Genre', `
-    name TEXTSHORT QUERY "Name"
-    link TEXTSHORT "Link"
-  `),
-  instrument: new NameDef(
-    'Musical Instrument', `
-    name TEXTSHORT QUERY "Name"
-    link TEXTSHORT "Link"
-  `),
-  key_signature: new NameDef(
-    'Key Signature', `
-    name TEXTSHORT QUERY "Name"
-    link TEXTSHORT "Link"
-  `),
-  page: new NameDef(
-    'Page', `
-    name TEXTSHORT QUERY "Name"
-    content TEXTLONG "Content"
-    categories ID(category)[] "Categories"
-  `),
-  category: new NameDef(
-    'Category', `
-    name TEXTSHORT QUERY "Name"
-  `),
   flash_room: new NameDef(
     'Club Penguin Room', `
     name TEXTSHORT QUERY "Name"
@@ -116,7 +80,6 @@ const def = [{
     description TEXT
     launch DATE_ESTIMATE
     songs CATALOGUE_ITEM[][]
-    reference INT
   `),
   stage_play: new NameDef(
     'Stage Play', `
@@ -138,12 +101,17 @@ const def = [{
     available TIME_RANGE
     song INT
   `),
-  penguin_chat_appearance: new NameDef(
+  penguin_chat_misc: new NameDef(
     'Miscelaneous Penguin Chat', `
     name QUERY
     description TEXT
     song INT
     available TIME_RANGE
+  `),
+  penguin_chat_three_room: new NameDef(
+    'Penguin Chat 3 Room', `
+    name QUERY "Name"
+    open {TIME_RANGE} "Open"
   `),
   exclusive_app_appearance: new NameDef(
     'Miscelaneous Mobile App', `
@@ -180,7 +148,6 @@ const def = [{
 }, {
   NAME: new ClassDef(`
     name TEXTSHORT QUERY "Name"
-    reference ID(wiki_reference) "Reference"
     pt {LOCALIZATION_NAME} "Portuguese"
     fr {LOCALIZATION_NAME} "French"
     es {LOCALIZATION_NAME} "Spanish"
@@ -189,7 +156,6 @@ const def = [{
   `),
   LOCALIZATION_NAME: new ClassDef(`
     name TEXTSHORT "Name"
-    reference ID(wiki_reference) "Reference"
     translationNotes TEXTLONG "Translation Notes"
   `, [
     new Validator(
@@ -203,7 +169,6 @@ const def = [{
   `),
   SONG_AUTHOR: new ClassDef(`
     author ID(author) "Author"
-    reference ID(wiki_reference) "Reference"
   `),
   VERSION: new ClassDef(`
     name TEXTSHORT "Name"
@@ -213,7 +178,6 @@ const def = [{
     isUnused BOOLEAN "Is Unused?"
     available {TIME_RANGE} "Available"
     song ID(song) "Song"
-    reference ID(reference) "Reference"
   `),
   PARTY_SONG: new ClassDef(`
     isUnused BOOLEAN "Is unused?"
@@ -230,7 +194,6 @@ const def = [{
     isUnused BOOLEAN "Is unused?"
     appearance {TIME_RANGE} "Appearance"
     song ID(song) "Song"
-    reference ID(reference) "Reference"
   `),
   GAME_SONG: new ClassDef(`
     isUnused BOOLEAN "Is unused"
