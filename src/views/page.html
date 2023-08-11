@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title> Club Penguin Music Wiki</title>
+    <link rel="stylesheet" href="../stylesheets/page.css">
+  </head>
+
+  <body>
+      <div class="logo">
+        <div> Club Penguin Music Wiki</div>
+      </div>
+      <div class="header-container">
+        <div class="header">
+          <div class="searchbar">
+            <input type="input" placeholder="Search Club Penguin Music">
+            <button>Search</button>
+          </div>
+          <div class="empty"></div>
+          <div class="account">
+            <a href="/user-page"> Login </a>
+          </div>
+        </div>
+      </div>
+    <div class="sidebar">
+      <a href="/">Main Page</a>
+    </div>
+    <section class="content">
+      
+      <h1>
+        {{ header }}
+      </h1>
+      <hr>
+      {{ content | safe }}
+    </section>
+
+    <script src="../scripts/index.js" type="module"></script>
+  </body>
+</html>

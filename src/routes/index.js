@@ -7,7 +7,15 @@ const apiRouter = require('./api')
 
 // homepage
 router.get('/', (req, res) => {
-  res.status(200).render('index.html')
+  const content = `
+    <a href="lists"> Open lists </a>
+    <br>
+    <a href="pre-editor"> Go to the editor </a>
+  `
+  res.status(200).render('page.html', {
+    header: 'Main Page',
+    content
+  })
 })
 
 // editor selector
