@@ -839,7 +839,14 @@ function isString (value) {
  * @returns {string[]} Array with declarations
  */
 function splitDeclarations (code) {
-  return code.split('\n').map(line => line.trim()).filter(line => line)
+  const trimAll = array => array.map(str => str.trim()).filter(str => str)
+  const allDeclrs = trimAll(code.split(';'))
+  const cleanedDeclrs = []
+  allDeclrs.forEach(declr => {
+    cleaned = trimAll(declr.split('\n')).join(' ')
+    cleanedDeclrs.push(cleaned)
+  })
+  return cleanedDeclrs
 }
 
 /**

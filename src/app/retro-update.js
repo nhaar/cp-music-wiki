@@ -115,7 +115,7 @@ class DatabaseManipulator {
     matches.drop.forEach(base('DROP', (cls, property) => {
       this.dropInObject(db.defaults[cls], property)
     }, (clsRef, property) => {
-      clsRef.code = clsRef.code.replace(new RegExp(`.*${property}.*\\n`), '')
+      clsRef.code = clsRef.code.replace(new RegExp(`.*${property}[^;]*;`), '')
     }))
 
     matches.set.forEach(base('SET', (cls, property, type) => {
