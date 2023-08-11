@@ -1,5 +1,5 @@
 import { createSearchQuery } from './query-options.js'
-import { selectElement, createElement, styleElement, postAndGetJSON } from './utils.js'
+import { selectElement, createElement, styleElement, postAndGetJSON, postJSON } from './utils.js'
 
 class View {
   /** Create page elements */
@@ -16,6 +16,7 @@ class View {
     this.input = selectElement('id-input')
     this.edit = selectElement('edit-button')
     this.create = selectElement('create-button')
+    this.delete = selectElement('delete-button')
   }
 }
 
@@ -71,6 +72,20 @@ class Controller {
       } else {
         const input = this.view.input.querySelector('input')
         if (isInt && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
+      }
+    })
+
+    this.view.delete.addEventListener('click', async () => {
+      console.log(preeditorData)
+      const clsData = preeditorData[this.view.select.value]
+      const input = this.view.input.querySelector('input')
+      const text = `Are you sure you want to delete "${clsData.name} - ${input.value}"`
+      const confirm = window.confirm(text)
+      if (confirm) {
+        const doubleCheck = window.confirm('REALLY ERASE?')
+        if (doubleCheck) {
+          await postJSON('api/delete-item', { cls: clsData.cls, id: Number(input.dataset.id) })
+        }
       }
     })
   }

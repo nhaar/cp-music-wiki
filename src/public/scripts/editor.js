@@ -32,9 +32,7 @@ class Page {
     this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
       console.log(deepcopy(row))
-      let session = document.cookie.match(/(?<=session=)[\d\w]+(?=($|;))/)
-      if (session) session = session[0]
-      const response = await postJSON('api/update', { cls, row, session })
+      const response = await postJSON('api/update', { cls, row })
       if (response.status === 200) {
         alert('Change submitted with success')
         if (isNaN(row.id)) window.location.href = 'pre-editor'

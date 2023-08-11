@@ -42,45 +42,53 @@ router.post('/get', async (req, res) => {
 })
 
 // update a data type
-router.post('/update', async (req, res) => {
-  const { cls, row, session } = req.body
-  const isAdmin = await db.isAdmin(session)
-  if (isAdmin) {
-    const error = msg => sendBadReq(res, msg)
+router.post('/update', checkAdmin, async (req, res) => {
+  const { cls, row } = req.body
+  const error = msg => sendBadReq(res, msg)
 
-    // validate data
-    if (checkClass(res, cls)) {
-      const isStatic = db.isStaticClass(cls)
-      if (isStatic && row.id !== 0) error('Invalid id')
-      else if (typeof row !== 'object') error('Invalid row data')
+  // validate data
+  if (checkClass(res, cls)) {
+    const isStatic = db.isStaticClass(cls)
+    if (isStatic && row.id !== 0) error('Invalid id')
+    else if (typeof row !== 'object') error('Invalid row data')
+    else {
+      const { data } = row
+      if (typeof data !== 'object') error('Invalid data')
       else {
-        const { data } = row
-        if (typeof data !== 'object') error('Invalid data')
-        else {
-          const validationErrors = db.validate(cls, data)
-          if (validationErrors.length === 0) {
-            await db.addChange(cls, row)
-            if (isStatic) {
-              await db.updateStatic(cls, row)
-              res.sendStatus(200)
-            } else {
-              await db.updateItem(cls, row)
-              res.sendStatus(200)
-            }
-          } else sendBadReqJSON(res, { errors: validationErrors })
-        }
+        const validationErrors = db.validate(cls, data)
+        if (validationErrors.length === 0) {
+          await db.addChange(cls, row)
+          if (isStatic) {
+            await db.updateStatic(cls, row)
+            res.sendStatus(200)
+          } else {
+            await db.updateItem(cls, row)
+            res.sendStatus(200)
+          }
+        } else sendBadReqJSON(res, { errors: validationErrors })
       }
     }
-  } else {
-    res.status(403).send('No permitions')
   }
 })
 
 // middleware for receiving the music file
 const upload = multer({ dest: path.join(__dirname, '../public/music/') })
 
+async function checkAdmin (req, res, next) {
+  const cookie = req.headers.cookie
+  let session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
+  console.log(session)
+  if (session) session = session[0]
+  const isAdmin = await db.isAdmin(session)
+  if (isAdmin) {
+    next()
+  } else {
+    res.status(403).send({})
+  }
+}
+
 // receive music files
-router.post('/submit-file', upload.single('file'), async (req, res) => {
+router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) => {
   const error = msg => sendBadReq(res, msg)
   const { file } = req
   if (!file) error('No file found')
@@ -89,6 +97,16 @@ router.post('/submit-file', upload.single('file'), async (req, res) => {
     if (!filename) error('Could not get file path')
     else if (!originalname) error('Could not get file name')
     else res.status(200).send({ originalname, filename })
+  }
+})
+
+router.post('/delete-item', checkAdmin, async (req, res) => {
+  const { cls, id } = req.body
+
+  if (db.isMainClass(cls)) {
+    if (!isNaN(id) && typeof id === 'number') {
+      db.deleteItem(cls, id)
+    }
   }
 })
 

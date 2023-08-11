@@ -173,3 +173,8 @@ export function getCookies () {
 
   return cookies
 }
+
+export function getCookie (name) {
+  const match = document.cookie.match(`(?<=${name}=)[\\d\\w]+(?=($|;))`)
+  if (match) return match[0]
+}

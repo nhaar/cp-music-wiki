@@ -343,6 +343,15 @@ class WikiDatabase {
     return Object.assign({}, this.mainClasses, this.staticClasses)
   }
 
+  async deleteItem (cls, id) {
+    this.handler.delete(cls, 'id', id)
+    this.handler.insert(
+      'revisions',
+      'class, item_id, patch',
+      [cls, id, null]
+    )
+  }
+
   /**
    * Add a patch to the revisions table
    * @param {ClassName} cls - Class of the data being changed
@@ -781,6 +790,10 @@ class SQLHandler {
    */
   async getBiggestSerial (table) {
     return Number((await this.pool.query(`SELECT last_value FROM ${table}_id_seq`)).rows[0].last_value)
+  }
+
+  async delete (table, column, value) {
+    await this.pool.query(`DELETE FROM ${table} WHERE ${column} = $1`, [value])
   }
 }
 
