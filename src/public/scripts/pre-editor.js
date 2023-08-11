@@ -5,10 +5,14 @@ class View {
   /** Create page elements */
   constructor () {
     this.select = selectElement('type-select')
+    const defaultOption = createElement({ parent: this.select, tag: 'option', value: '-1', innerHTML: '[CHOOSE WHAT TO EDIT]' })
+    defaultOption.setAttribute('selected', '')
     preeditorData.forEach((info, i) => {
       createElement({ parent: this.select, tag: 'option', value: i + '', innerHTML: info.name })
     })
+    this.select.removeChild(this.select.children[0])
 
+    this.bottom = selectElement('input-row')
     this.input = selectElement('id-input')
     this.edit = selectElement('edit-button')
     this.create = selectElement('create-button')
@@ -25,7 +29,9 @@ class Controller {
   async setupPage () {
     this.view.select.addEventListener('change', () => {
       const value = this.view.select.value
-      if (value) {
+      if (value !== '-1') {
+        
+        this.view.bottom.classList.remove('hidden')
         this.cls = Number(value)
         const { cls, isStatic } = preeditorData[this.cls]
         Object.assign(this, { isStatic })
@@ -49,6 +55,7 @@ class Controller {
         }
       } else {
         this.view.input.innerHTML = ' '
+        this.view.bottom.classList.add('hidden')
       }
     })
 

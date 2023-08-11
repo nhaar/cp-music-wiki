@@ -31,7 +31,7 @@
   -webkit-text-fill-color: white;
 }
 
-input, textarea {
+input, textarea, select {
   font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   color: black;
   -webkit-text-stroke: 0;
@@ -233,6 +233,22 @@ button:hover {
   font-size: 12px;
   width: 50px;
   text-align: center;
+}
+
+
+
+.input-row {
+  display: flex;
+  gap: 5px;
+}
+
+.input-row input,button {
+  height: 22px;
+  box-sizing: content-box;
+}
+
+.type-select {
+  margin-bottom: 20px;
 }
 
 .hidden {
