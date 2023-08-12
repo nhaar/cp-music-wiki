@@ -101,6 +101,9 @@ class WikiDatabase {
         session_token TEXT
       )
     `)
+
+    // save number of classes for preeditor data
+    this.classNumber = Object.keys(this.mainClasses).concat(Object.keys(this.staticClasses)).length
   }
 
   /**

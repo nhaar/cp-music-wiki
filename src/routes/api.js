@@ -15,10 +15,14 @@ const checkClass = checkValid(body => db.isStaticClass(body.cls) || db.isMainCla
 
 const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an integer')
 
+// send data for a given editor class
 router.post('/editor-data', async (req, res) => {
   const { t } = req.body
-
-  res.status(200).send(db.getEditorData(t))
+  if (typeof t !== 'number' || t < 0 || t >= db.classNumber) {
+    sendBadReq(res, 'Invalid class number provided')
+  } else {
+    res.status(200).send(db.getEditorData(t))
+  }
 })
 
 // get default data
@@ -38,7 +42,7 @@ router.post('/get', checkClass, checkId, async (req, res) => {
     res.status(200).send(row)
   } else {
     const row = await db.getItemById(cls, id)
-    if (!row) sendBadReq(res, 'Item not found in the database')
+    if (!row) sendNotFound(res, 'Item not found in the database')
     else res.status(200).send(row)
   }
 })
@@ -49,12 +53,11 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
   const error = msg => sendBadReq(res, msg)
 
   // validate data
-  const isStatic = db.isStaticClass(cls)
-  if (isStatic && row.id !== 0) error('Invalid id')
-  else if (typeof row !== 'object') error('Invalid row data')
+  if (db.isStaticClass(cls) && row.id !== 0) error('Invalid id for static class')
+  else if (typeof row !== 'object') error('Invalid row object')
   else {
     const { data } = row
-    if (typeof data !== 'object') error('Invalid data')
+    if (typeof data !== 'object') error('Invalid data object')
     else {
       const validationErrors = db.validate(cls, data)
       if (validationErrors.length === 0) {
@@ -99,15 +102,16 @@ router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) 
   }
 })
 
-router.post('/delete-item', checkAdmin, async (req, res) => {
+router.post('/delete-item', checkAdmin, checkClass, checkId, async (req, res) => {
   const { cls, id } = req.body
 
   if (db.isMainClass(cls)) {
-    if (!isNaN(id) && typeof id === 'number') {
+    const row = await db.getItemById(cls, id)
+    if (row) {
       await db.deleteItem(cls, id)
       gen.updateLists()
-    }
-  }
+    } else sendNotFound(res, 'Item not found in the database')
+  } else sendBadReq(res, 'Can only delete item from main class')
 
   res.sendStatus(200)
 })
@@ -134,21 +138,17 @@ router.post('/get-preeditor-data', async (req, res) => {
   res.status(200).send(data)
 })
 
-router.post('/get-editor-data', async (req, res) => {
-  const { t } = req.body
-  const data = db.getEditorData(t)
-  res.status(200).send(data)
-})
-
 router.post('/login', async (req, res) => {
   const { user, password } = req.body
+  if (typeof user !== 'string' || typeof password !== 'string') sendBadReq(res, 'Invalid data')
   const token = await checkCredentials(user, password)
-  if (token) {
-    res.status(200).send({ token })
-  } else {
-    res.status(400).send({ error: 'errou' })
-  }
+
+  res.status(200).send({ token })
 })
+
+function sendStatusJSON (res, status, obj) {
+  res.status(status).send(obj)
+}
 
 /**
  * Send a bad request response with JSON
@@ -156,7 +156,7 @@ router.post('/login', async (req, res) => {
  * @param {object} obj - Object to send as JSON
  */
 function sendBadReqJSON (res, obj) {
-  res.status(400).send(obj)
+  sendStatusJSON(res, 400, obj)
 }
 
 /**
@@ -166,6 +166,10 @@ function sendBadReqJSON (res, obj) {
  */
 function sendBadReq (res, msg) {
   sendBadReqJSON(res, { error: msg })
+}
+
+function sendNotFound (res, msg) {
+  sendStatusJSON(res, 404, { error: msg })
 }
 
 /**
