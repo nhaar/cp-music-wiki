@@ -110,7 +110,8 @@ function buildEditor (data, topModule) {
   for (const property in data) {
     let value = data[property][0]
     const headerName = data[property][1]
-    const args = data[property][2]
+    const desc = data[property][2]
+    const args = data[property][3]
 
     let arrayModule
     const isArray = Array.isArray(value)
@@ -141,7 +142,7 @@ function buildEditor (data, topModule) {
     }
 
     const pushfn = (main, arg) => {
-      moduleList.push(new TableChild(headerName, main, property, arg))
+      moduleList.push(new TableChild(headerName, desc, main, property, arg))
     }
 
     if (isArray) {

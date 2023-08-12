@@ -522,11 +522,11 @@ class WikiDatabase {
       const rest = declr.match(`(?<=\\w+\\s+${typePattern.source}\\s+).*`)
       let params = []
       if (rest) {
-        const quotePattern = /".*"/
+        const quotePattern = /".*"|'.*'/g
         const restString = rest[0]
-        const quoted = restString.match(quotePattern)
+        const quoted = restString.match(quotePattern) || []
         params = restString.replace(quotePattern, '').match(/\S+/g) || []
-        if (quoted) params.push(quoted[0])
+        params = params.concat(quoted)
       }
       callbackfn(property, type, params)
     })
@@ -639,10 +639,15 @@ class WikiDatabase {
       this.iterateDeclarations(code, (property, type, params) => {
         // create automatic generated header
         let header = camelToPhrase(property)
-        params.forEach(param => {
-          if (param.includes('"')) {
-            header = param.match(/(?<=").*(?=")/)[0]
+        let description = ''
+        const applySandwich = (param, char, callback) => {
+          if (param.includes(char)) {
+            callback(param.match(`(?<=${char}).*(?=${char})`)[0])
           }
+        }
+        params.forEach(param => {
+          applySandwich(param, '"', res => { header = res })
+          applySandwich(param, "'", res => { description = res })
         })
 
         let args = matchInside(type, '\\(', '\\)')
@@ -666,7 +671,7 @@ class WikiDatabase {
           const dim = this.getDimension(type)
           value = [value, dim]
         }
-        obj[property] = [value, header, args]
+        obj[property] = [value, header, description, args]
       })
 
       return obj

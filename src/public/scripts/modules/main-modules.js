@@ -301,8 +301,8 @@ export class TableChild {
    * @param {string} property - Property in the pointer to access
    * @param  {...any} args - Arbitrary arguments for the constructor
    */
-  constructor (header, Class, property, ...args) {
-    Object.assign(this, { header, Class, property, args })
+  constructor (header, description, Class, property, ...args) {
+    Object.assign(this, { header, description, Class, property, args })
   }
 }
 
@@ -314,7 +314,7 @@ export class TableModule extends ObjectModule {
   style () { return ['header-row', 'grid'] }
 
   constructModule (o) {
-    const TableClass = getEditorRowModule(o.header, o.Class, true, ...o.args)
+    const TableClass = getEditorRowModule(o.header, o.description, o.Class, true, ...o.args)
     return new TableClass(this, o.childOut)
   }
 }
@@ -338,7 +338,7 @@ export class ObjectChild {
  */
 export class EditorModule extends ReceptorModule {
   constructModule (o) {
-    const RowModule = getEditorRowModule(o.header, o.Class, true, ...o.args)
+    const RowModule = getEditorRowModule(o.header, o.description, o.Class, true, ...o.args)
     return new RowModule(this, o.childOut)
   }
 }
@@ -351,13 +351,20 @@ export class EditorModule extends ReceptorModule {
  * @param  {...any} args - Arbitrary arguments for the constructor
  * @returns {EditorModule} - Constructor for the editor's row
  */
-function getEditorRowModule (header, ChildClass, useExpand, ...args) {
+function getEditorRowModule (header, description, ChildClass, useExpand, ...args) {
   class EditorRowModule extends ConnectionModule {
     /**
      * Render the HTML elements
      */
     prebuild () {
-      createElement({ parent: this.parent.e, innerHTML: header })
+      const headerContainer = createElement({ parent: this.parent.e, className: 'editor-row-header' })
+
+      createElement({ parent: headerContainer, innerHTML: header })
+      if (description) {
+        const questionMark = createElement({ parent: headerContainer, tag: 'img' })
+        questionMark.src = 'images/question-mark.webp'
+        questionMark.setAttribute('title', description)
+      }
       const row = createElement({ parent: this.parent.e })
       if (useExpand) {
         this.expandButton = createElement({ parent: row, tag: 'button', innerHTML: 'expand' })

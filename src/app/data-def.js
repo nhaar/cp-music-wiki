@@ -34,7 +34,8 @@ class NameDef {
 const def = [{
   song: new NameDef(
     'Song', `
-    names {NAME}[];
+    names {NAME}[]
+    'The name of the song';
     authors {SONG_AUTHOR}[];
     link TEXTSHORT;
     files {SONG_FILE}[];

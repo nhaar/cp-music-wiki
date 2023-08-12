@@ -257,6 +257,21 @@ button:hover {
   gap:20px;
 }
 
+.editor-row-header {
+  display: flex;
+}
+
+.editor-row-header > div {
+  flex-grow: 1;
+}
+
+.editor-row-header img {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  justify-content: flex-end;
+}
+
 .hidden {
   display: none;
   height: 0;
