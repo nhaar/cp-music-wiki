@@ -86,7 +86,7 @@ class WikiDatabase {
         patch JSONB,
         wiki_user INT,
         approver INT,
-        timestamp INT,
+        timestamp NUMERIC,
         minor_edit INT
       )
     `)
@@ -370,7 +370,7 @@ class WikiDatabase {
    * @param {Row} row - Row for the data being changed
    * @param {boolean} isStatic - True if the class is static
    */
-  async addChange (cls, row) {
+  async addChange (cls, row, token) {
     let oldRow
     const isStatic = this.isStaticClass(cls)
     if (isStatic) {
@@ -387,11 +387,13 @@ class WikiDatabase {
       }
       oldRow = { data: this.defaults[cls] }
     }
+    const userId = (await this.handler.select('wiki_users', 'session_token', token, 'id'))[0].id
+
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
     this.handler.insert(
       'revisions',
-      'class, item_id, patch',
-      [cls, row.id, JSON.stringify(delta)]
+      'class, item_id, patch, wiki_user, timestamp',
+      [cls, row.id, JSON.stringify(delta), userId, Date.now()]
     )
   }
 
@@ -488,8 +490,8 @@ class WikiDatabase {
     }
   }
 
-  async update (cls, row) {
-    await db.addChange(cls, row)
+  async update (cls, row, token) {
+    await db.addChange(cls, row, token)
     if (this.isStaticClass(cls)) {
       await db.updateStatic(cls, row)
     } else {

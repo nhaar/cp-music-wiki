@@ -52,6 +52,9 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
   const { cls, row } = req.body
   const error = msg => sendBadReq(res, msg)
 
+  const { cookie } = req.headers
+  const token = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)[0]
+
   // validate data
   if (db.isStaticClass(cls) && row.id !== 0) error('Invalid id for static class')
   else if (typeof row !== 'object') error('Invalid row object')
@@ -61,7 +64,7 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
     else {
       const validationErrors = db.validate(cls, data)
       if (validationErrors.length === 0) {
-        await db.update(cls, row)
+        await db.update(cls, row, token)
         gen.updateLists()
         res.sendStatus(200)
       } else sendBadReqJSON(res, { errors: validationErrors })
