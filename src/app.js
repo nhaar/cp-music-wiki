@@ -2,12 +2,14 @@ const nunjucks = require('nunjucks')
 const express = require('express')
 const app = express()
 
+const config = require('../config')
+
+const SERVER_PORT = config.port
+
 const indexRouter = require('./routes/index')
 
 // const db = require('./app/database')
 // db.initializeDatabase()
-
-const SERVER_PORT = 5000
 
 nunjucks.configure('src/views', {
   autoescape: true,

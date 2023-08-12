@@ -3,6 +3,7 @@ const jsondiffpatch = require('jsondiffpatch')
 const def = require('./data-def')
 
 const { deepcopy, matchGroup, removeBraces, compareObjects, capitalize } = require('./utils')
+const config = require('../../config')
 
 /**
  * Represents CPT code, used to define the properties of the database classes
@@ -738,10 +739,10 @@ class WikiDatabase {
 class SQLHandler {
   constructor () {
     this.pool = new Pool({
-      user: 'postgres',
-      password: 'password',
+      user: config.user,
+      password: config.password,
       database: 'musicwiki',
-      port: '5432'
+      port: config.pgport
     })
 
     /** Columns for main class tables */
