@@ -356,11 +356,6 @@ class WikiDatabase {
 
   async deleteItem (cls, id) {
     await this.handler.delete(cls, 'id', id)
-    await this.handler.insert(
-      'revisions',
-      'class, item_id, patch',
-      [cls, id, null]
-    )
     await this.deleteReferences(cls, id)
   }
 
@@ -387,13 +382,26 @@ class WikiDatabase {
       }
       oldRow = { data: this.defaults[cls] }
     }
-    const userId = (await this.handler.select('wiki_users', 'session_token', token, 'id'))[0].id
+    const userId = await this.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
     this.handler.insert(
       'revisions',
       'class, item_id, patch, wiki_user, timestamp',
       [cls, row.id, JSON.stringify(delta), userId, Date.now()]
+    )
+  }
+
+  async getUserId (token) {
+    return (await this.handler.select('wiki_users', 'session_token', token, 'id'))[0].id
+  }
+
+  async addDeletion (cls, id, token) {
+    const userId = await this.getUserId(token)
+    this.handler.insert(
+      'revisions',
+      'class, item_id, wiki_user, timestamp',
+      [cls, id, userId, Date.now()]
     )
   }
 

@@ -47,13 +47,17 @@ router.post('/get', checkClass, checkId, async (req, res) => {
   }
 })
 
+function getToken (req) {
+  const { cookie } = req.headers
+  return cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)[0]
+}
+
 // update a data type
 router.post('/update', checkAdmin, checkClass, async (req, res) => {
   const { cls, row } = req.body
   const error = msg => sendBadReq(res, msg)
 
-  const { cookie } = req.headers
-  const token = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)[0]
+  const token = getToken(req)
 
   // validate data
   if (db.isStaticClass(cls) && row.id !== 0) error('Invalid id for static class')
@@ -108,10 +112,13 @@ router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) 
 router.post('/delete-item', checkAdmin, checkClass, checkId, async (req, res) => {
   const { cls, id } = req.body
 
+  const token = getToken(req)
+
   if (db.isMainClass(cls)) {
     const row = await db.getItemById(cls, id)
     if (row) {
       await db.deleteItem(cls, id)
+      db.addDeletion(cls, id, token)
       gen.updateLists()
     } else sendNotFound(res, 'Item not found in the database')
   } else sendBadReq(res, 'Can only delete item from main class')
