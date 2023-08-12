@@ -75,12 +75,12 @@ async function checkAdmin (req, res, next) {
   let isAdmin = false
   const cookie = req.headers.cookie
   if (cookie) {
-    let session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
+    const session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
     if (session) {
       isAdmin = await db.isAdmin(session[0])
     }
   }
-  
+
   if (isAdmin) {
     next()
   } else {

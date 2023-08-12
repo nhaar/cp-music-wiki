@@ -6,7 +6,7 @@ const path = require('path')
  */
 class SongInstance {
   /**
-   * 
+   *
    * @param {string} name - Name of whatever the song was used in
    * @param {object} dateEst - Object with data for the date
    * @param {string} dateEst.date - String representing the date
@@ -19,15 +19,14 @@ class SongInstance {
   }
 }
 
-
 /**
- * Object to hold information for how the media are generated 
+ * Object to hold information for how the media are generated
  */
 class MediaInfo {
   /**
-   * 
+   *
    * @param {string} name - The identifier name for the media
-   * @param {function() : void} updateMethod - A function that updates the song instances 
+   * @param {function() : void} updateMethod - A function that updates the song instances
    * @param {string} dest - The name of the HTML file this will be created in
    * @param  {...string} tables - The name of all the tables that contain relevant data for the media
    */
@@ -38,15 +37,15 @@ class MediaInfo {
 
 class Generator {
   /**
-   * @param {WikiDatabase} db - Database to use 
+   * @param {WikiDatabase} db - Database to use
    */
   constructor (db) {
     this.db = db
   }
 
   /**
-   * 
-   * @param  {...string} mediaList 
+   *
+   * @param  {...string} mediaList
    */
   async OSTListGenerator (...mediaList) {
     const songs = await this.db.handler.selectAll('song')
@@ -110,7 +109,6 @@ class Generator {
       })
     }
 
-
     // iterate through every row of a table
     // and process its use checking for unused
     // calling a callback after
@@ -147,7 +145,6 @@ class Generator {
         })
       })
     }
-
 
     const medias = {
       flash: new MediaInfo(
@@ -247,10 +244,10 @@ class Generator {
           if (!Object.keys(addedSongs).includes(song + '')) {
             // add row if the song wasn't added yet
             order++
-            const songRow =  findId(songs, song)
+            const songRow = findId(songs, song)
             addedSongs[song] = order
             const songData = songRow.data
-  
+
             const authorsList = songData.authors.map(author => {
               // author might not have ID if it was deleted
               const searchRes = findId(authors, author.author)
@@ -258,27 +255,27 @@ class Generator {
               else return ''
             })
             authorsList.filter(name => name)
-  
+
             const altNames = (songData.names.slice(1)).map(name => name.name)
-  
+
             const hqSources = []
             songData.files.forEach(file => {
               if (file.isHQ) {
                 const sourceName = findId(sources, file.source).data.name
-  
+
                 hqSources.push(sourceName)
               }
             })
-  
+
             const date = instance.estimate
               ? '?'
               : instance.date
-  
+
             const isOfficial = Boolean(songData.names[0])
             const name = isOfficial
               ? `<span style="color: blue;">${songData.names[0].name}</span>`
               : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
-  
+
             const link = songData.link
               ? `<a href="${songData.link}"> Link <a>`
               : ''
@@ -293,13 +290,13 @@ class Generator {
               hqSources.join(' + '),
               date
             ]
-  
+
             if (isSeries) {
               const temp = newLine[4]
               newLine[4] = newLine[6]
               newLine[6] = temp
             }
-  
+
             list.push(newLine)
           } else {
             const relatedIndex = isSeries ? 6 : 4
@@ -344,7 +341,7 @@ class Generator {
               mediaAddedSongs[song].date,
               instance.date
             ].map(date => Date.parse(date))
-  
+
             if (dates[0] > dates[1]) {
               mediaAddedSongs[song] = dateInfo
             }
@@ -422,7 +419,7 @@ class Generator {
  * In an array of objects, find which object has the property `id` matching a value
  * @param {object[]} array - Array with the objects
  * @param {number} id - Value the `id` property needs to match
- * @returns {object | undefined} The matched object if it exists 
+ * @returns {object | undefined} The matched object if it exists
  */
 function findId (array, id) {
   for (let i = 0; i < array.length; i++) {
