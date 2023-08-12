@@ -6,7 +6,9 @@ const multer = require('multer')
 const path = require('path')
 
 const db = require('../app/database')
-const gen = require('../app/lists')
+const Gen = require('../app/lists')
+const gen = new Gen(db)
+
 const { checkCredentials } = require('../app/login')
 
 router.post('/editor-data', async (req, res) => {
@@ -58,6 +60,7 @@ router.post('/update', checkAdmin, async (req, res) => {
         const validationErrors = db.validate(cls, data)
         if (validationErrors.length === 0) {
           await db.update(cls, row)
+          gen.updateLists()
           res.sendStatus(200)
         } else sendBadReqJSON(res, { errors: validationErrors })
       }
@@ -98,7 +101,8 @@ router.post('/delete-item', checkAdmin, async (req, res) => {
 
   if (db.isMainClass(cls)) {
     if (!isNaN(id) && typeof id === 'number') {
-      db.deleteItem(cls, id)
+      await db.deleteItem(cls, id)
+      gen.updateLists()
     }
   }
 

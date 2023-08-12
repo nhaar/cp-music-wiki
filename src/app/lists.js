@@ -1,8 +1,6 @@
 const fs = require('fs')
 const path = require('path')
 
-const db = require('./database')
-
 class SongInstance {
   constructor (name, dateEst, song) {
     const properSong = typeof song === 'object' ? song.song : Number(song)
@@ -20,9 +18,9 @@ class Generator {
   }
 
   async OSTListGenerator (...mediaList) {
-    const songs = await db.handler.selectAll('song')
-    const authors = await db.handler.selectAll('author')
-    const sources = await db.handler.selectAll('source')
+    const songs = await this.db.handler.selectAll('song')
+    const authors = await this.db.handler.selectAll('author')
+    const sources = await this.db.handler.selectAll('source')
 
     const songPriority = {}
     songs.forEach(song => {
@@ -147,7 +145,7 @@ class Generator {
     const getTables = async media => {
       tables = medias[media].tables
       for (let i = 0; i < tables.length; i++) {
-        tables[i] = await db.handler.selectAll(tables[i])
+        tables[i] = await this.db.handler.selectAll(tables[i])
       }
     }
 
@@ -173,57 +171,62 @@ class Generator {
       let order = 0
       instances.forEach(instance => {
         const { song } = instance
-        if (!Object.keys(addedSongs).includes(song + '')) {
-          order++
-          const songRow = findByKey(songs, 'id', song)
-          addedSongs[song] = order
-          const songData = songRow.data
-
-          const authorsList = songData.authors.map(author => {
-            return findByKey(authors, 'id', author.author).data.name
-          })
-
-          const altNames = (songData.names.slice(1)).map(name => name.name)
-
-          const hqSources = []
-          songData.files.forEach(file => {
-            if (file.isHQ) {
-              const sourceName = findByKey(sources, 'id', file.source).data.name
-
-              hqSources.push(sourceName)
+        if (song) {
+          if (!Object.keys(addedSongs).includes(song + '')) {
+            order++
+            const songRow = findByKey(songs, 'id', song)
+            addedSongs[song] = order
+            const songData = songRow.data
+  
+            const authorsList = songData.authors.map(author => {
+              const searchRes = findByKey(authors, 'id', author.author)
+              if (searchRes) return searchRes.data.name
+              else return ''
+            })
+            authorsList.filter(name => name)
+  
+            const altNames = (songData.names.slice(1)).map(name => name.name)
+  
+            const hqSources = []
+            songData.files.forEach(file => {
+              if (file.isHQ) {
+                const sourceName = findByKey(sources, 'id', file.source).data.name
+  
+                hqSources.push(sourceName)
+              }
+            })
+  
+            const date = instance.estimate
+              ? '?'
+              : instance.date
+  
+            const isOfficial = Boolean(songData.names[0])
+            const name = isOfficial
+              ? `<span style="color: blue;">${songData.names[0].name}</span>`
+              : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
+  
+            const newLine = [
+              name,
+              authorsList.join(', '),
+              order,
+              `<a href="${songData.link}"> Link <a>`,
+              instance.name,
+              altNames.join(', '),
+              hqSources.join(' + '),
+              date
+            ]
+  
+            if (isSeries) {
+              const temp = newLine[4]
+              newLine[4] = newLine[6]
+              newLine[6] = temp
             }
-          })
-
-          const date = instance.estimate
-            ? '?'
-            : instance.date
-
-          const isOfficial = Boolean(songData.names[0])
-          const name = isOfficial
-            ? `<span style="color: blue;">${songData.names[0].name}</span>`
-            : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
-
-          const newLine = [
-            name,
-            authorsList.join(', '),
-            order,
-            `<a href="${songData.link}"> Link <a>`,
-            instance.name,
-            altNames.join(', '),
-            hqSources.join(' + '),
-            date
-          ]
-
-          if (isSeries) {
-            const temp = newLine[4]
-            newLine[4] = newLine[6]
-            newLine[6] = temp
+  
+            list.push(newLine)
+          } else {
+            const relatedIndex = isSeries ? 6 : 4
+            list[addedSongs[song] - 1][relatedIndex] += `, ${instance.name}`
           }
-
-          list.push(newLine)
-        } else {
-          const relatedIndex = isSeries ? 6 : 4
-          list[addedSongs[song] - 1][relatedIndex] += `, ${instance.name}`
         }
       })
 
@@ -324,9 +327,10 @@ class Generator {
    * Update the list files
    */
   async updateLists () {
-    // const list = await this.generateLists([0, 1])
-    // const seriesHTML = await this.generateHTML(list[0])
-    // fs.writeFileSync(path.join(__dirname, '../views/generated/series-list.html'), seriesHTML)
+    this.OSTListGenerator(
+      'flash',
+      'pc'
+    )
   }
 }
 
@@ -336,11 +340,4 @@ function findByKey (array, key, value) {
   }
 }
 
-const gen = new Generator(db)
-
-// gen.OSTListGenerator(
-//   'flash',
-//   'pc'
-// )
-
-module.exports = gen
+module.exports = Generator

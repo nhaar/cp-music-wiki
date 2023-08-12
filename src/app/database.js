@@ -348,13 +348,13 @@ class WikiDatabase {
   }
 
   async deleteItem (cls, id) {
-    this.handler.delete(cls, 'id', id)
-    this.handler.insert(
+    await this.handler.delete(cls, 'id', id)
+    await this.handler.insert(
       'revisions',
       'class, item_id, patch',
       [cls, id, null]
     )
-    this.deleteReferences(cls, id)
+    await this.deleteReferences(cls, id)
   }
 
   /**
@@ -467,16 +467,17 @@ class WikiDatabase {
       } else {
         items = await this.handler.selectAll(cls)
       }
-      items.forEach(item => {
+      for (let j = 0; j < items.length; j++) {
+        const item = items[j]
         const { data } = item
 
         for (let i = 0; i < paths.length; i++) {
           const removed = this.removeFromPath(data, paths[i], id)
           if (removed) {
-            this.update(cls, item)
+            await this.update(cls, item)
           }
         }
-      })
+      }
     }
   }
 
@@ -952,5 +953,7 @@ function matchInside (str, lChar, rChar) {
 const db = new WikiDatabase(...def)
 
 db.createEditorModels()
+
+console.log(db.findIdPaths('author'))
 
 module.exports = db
