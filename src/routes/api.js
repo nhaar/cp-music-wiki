@@ -11,6 +11,10 @@ const gen = new Gen(db)
 
 const { checkCredentials } = require('../app/login')
 
+const checkClass = checkValid(body => db.isStaticClass(body.cls) || db.isMainClass(body.cls), 'Invalid type provided')
+
+const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an integer')
+
 router.post('/editor-data', async (req, res) => {
   const { t } = req.body
 
@@ -18,52 +22,46 @@ router.post('/editor-data', async (req, res) => {
 })
 
 // get default data
-router.post('/default', async (req, res) => {
+router.post('/default', checkClass, async (req, res) => {
   const { cls } = req.body
 
-  if (checkClass(res, cls)) {
-    const row = await db.getDefault(cls)
-    res.status(200).send(row)
-  }
+  const row = await db.getDefault(cls)
+  res.status(200).send(row)
 })
 
 // get a data row
-router.post('/get', async (req, res) => {
+router.post('/get', checkClass, checkId, async (req, res) => {
   const { cls, id } = req.body
 
-  if (checkClass(res, cls) && checkId(res, id)) {
-    if (db.isStaticClass(cls)) {
-      const row = await db.getStatic(cls)
-      res.status(200).send(row)
-    } else {
-      const row = await db.getItemById(cls, id)
-      if (!row) sendBadReq(res, 'Item not found in the database')
-      else res.status(200).send(row)
-    }
+  if (db.isStaticClass(cls)) {
+    const row = await db.getStatic(cls)
+    res.status(200).send(row)
+  } else {
+    const row = await db.getItemById(cls, id)
+    if (!row) sendBadReq(res, 'Item not found in the database')
+    else res.status(200).send(row)
   }
 })
 
 // update a data type
-router.post('/update', checkAdmin, async (req, res) => {
+router.post('/update', checkAdmin, checkClass, async (req, res) => {
   const { cls, row } = req.body
   const error = msg => sendBadReq(res, msg)
 
   // validate data
-  if (checkClass(res, cls)) {
-    const isStatic = db.isStaticClass(cls)
-    if (isStatic && row.id !== 0) error('Invalid id')
-    else if (typeof row !== 'object') error('Invalid row data')
+  const isStatic = db.isStaticClass(cls)
+  if (isStatic && row.id !== 0) error('Invalid id')
+  else if (typeof row !== 'object') error('Invalid row data')
+  else {
+    const { data } = row
+    if (typeof data !== 'object') error('Invalid data')
     else {
-      const { data } = row
-      if (typeof data !== 'object') error('Invalid data')
-      else {
-        const validationErrors = db.validate(cls, data)
-        if (validationErrors.length === 0) {
-          await db.update(cls, row)
-          gen.updateLists()
-          res.sendStatus(200)
-        } else sendBadReqJSON(res, { errors: validationErrors })
-      }
+      const validationErrors = db.validate(cls, data)
+      if (validationErrors.length === 0) {
+        await db.update(cls, row)
+        gen.updateLists()
+        res.sendStatus(200)
+      } else sendBadReqJSON(res, { errors: validationErrors })
     }
   }
 })
@@ -115,24 +113,20 @@ router.post('/delete-item', checkAdmin, async (req, res) => {
 })
 
 // get filtering by a name
-router.post('/get-by-name', async (req, res) => {
+router.post('/get-by-name', checkClass, async (req, res) => {
   const { keyword, cls } = req.body
-  if (checkClass(res, cls)) {
-    if (typeof keyword !== 'string') sendBadReq(res, 'Invalid keyword')
-    else {
-      const results = await db.getByName(cls, keyword)
-      res.status(200).send(results)
-    }
+  if (typeof keyword !== 'string') sendBadReq(res, 'Invalid keyword')
+  else {
+    const results = await db.getByName(cls, keyword)
+    res.status(200).send(results)
   }
 })
 
 // get name with id
-router.post('/get-name', async (req, res) => {
+router.post('/get-name', checkClass, checkId, async (req, res) => {
   const { cls, id } = req.body
-  if (checkClass(res, cls) && checkId(res, id)) {
-    const name = await db.getQueryNameById(cls, id)
-    res.status(200).send({ name })
-  }
+  const name = await db.getQueryNameById(cls, id)
+  res.status(200).send({ name })
 })
 
 router.post('/get-preeditor-data', async (req, res) => {
@@ -175,37 +169,19 @@ function sendBadReq (res, msg) {
 }
 
 /**
- * Check if a condition is valid and send a bad request if it is not
- * @param {import('express').Response} res
- * @param {function() : boolean} callback - Callback function that returns the boolean value of the condition
- * @param {string} msg - Error message
- * @returns {boolean} Boolean for the condition checked
+ *
+ * @param {*} callback
+ * @param {*} msg
+ * @returns {function()}
  */
-function checkValid (res, callback, msg) {
-  const valid = callback()
-  if (!valid) sendBadReq(res, msg)
-  return valid
-}
-
-/**
- * Check if a value is a valid class name and send a bad request if it is not
- * @param {import('express').Response} res
- * @param {any} value - Value to check
- * @returns {boolean} Whether the value is valid or not
- */
-function checkClass (res, value) {
-  const msg = 'Invalid type provided'
-  return checkValid(res, () => db.isStaticClass(value) || db.isMainClass(value), msg)
-}
-
-/**
- * Check if a value is a valid id and send a bad request if it is not
- * @param {import('express').Response} res
- * @param {number} value - Value to check
- * @returns {boolean} Whether the value is valid or not
- */
-function checkId (res, value) {
-  return checkValid(res, () => Number.isInteger(value), 'Id is not an integer')
+function checkValid (callback, msg) {
+  return (req, res, next) => {
+    if (callback(req.body)) {
+      next()
+    } else {
+      sendBadReq(res, msg)
+    }
+  }
 }
 
 module.exports = router
