@@ -166,10 +166,12 @@ export function deepcopy (obj) { return JSON.parse(JSON.stringify(obj)) }
 export function getCookies () {
   const matches = document.cookie.match(/\w+=\w+(?=($|;))/g)
   const cookies = {}
-  matches.forEach(match => {
-    const words = match.match(/\w+/g)
-    cookies[words[0]] = words[1]
-  })
+  if (matches) {
+    matches.forEach(match => {
+      const words = match.match(/\w+/g)
+      cookies[words[0]] = words[1]
+    })
+  }
 
   return cookies
 }
