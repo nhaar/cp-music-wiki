@@ -434,6 +434,7 @@ function matchGroup (str, flags, ...patterns) {
 }
 
 const dbm = new DatabaseManipulator()
+console.log(dbm)
 
 /*
 
