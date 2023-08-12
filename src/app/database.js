@@ -290,7 +290,11 @@ class WikiDatabase {
         } else if (type.includes('{')) {
           defaultObject[property] = this.getDefault(removeBraces(type))
         } else {
-          defaultObject[property] = null
+          let value = {
+            BOOLEAN: false
+          }[removeArgs(type)]
+          if (value === undefined) value = null
+          defaultObject[property] = value
         }
       })
       this.defaults[cls] = defaultObject

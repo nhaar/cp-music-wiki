@@ -41,7 +41,9 @@ class SimpleTextModule extends ElementModule {
    * @param {*} input Input value
    * @returns {string} Converted value
    */
-  convertinput (input) { return input || '' }
+  convertinput (input) { return input || null }
+
+  convertoutput (output) { return output || null }
 }
 
 /**
@@ -84,7 +86,13 @@ export class NumberInputModule extends SimpleTextModule {
    * @param {*} output
    * @returns {number} Converted value
    */
-  convertoutput (output) { return Number(output) }
+  convertoutput (output) {
+    if (output.match(/^\d+$/)) {
+      return Number(output)
+    } else {
+      return null
+    }
+  }
 }
 
 /**

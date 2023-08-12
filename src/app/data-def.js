@@ -51,7 +51,7 @@ const def = [{
         'A song must have at least one name or one unofficial name'
       ),
       new Validator(
-        o => o.link === '' || o.link.includes('youtube.com/watch?v=') || o.link.includes('youtu.be/'),
+        o => o.link === null || o.link.includes('youtube.com/watch?v=') || o.link.includes('youtu.be/'),
         'A song link must be a valid YouTube link'
       )
     ]),

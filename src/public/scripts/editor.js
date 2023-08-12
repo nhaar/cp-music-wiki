@@ -35,7 +35,7 @@ class Page {
       const response = await postJSON('api/update', { cls, row })
       if (response.status === 200) {
         alert('Change submitted with success')
-        if (isNaN(row.id)) window.location.href = 'pre-editor'
+        // if (isNaN(row.id)) window.location.href = 'pre-editor'
       } else if (response.status === 400) {
         const resData = await response.json()
         const errorStr = resData.errors.join('\n * ')
