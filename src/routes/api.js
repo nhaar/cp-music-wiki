@@ -72,10 +72,15 @@ router.post('/update', checkAdmin, async (req, res) => {
 const upload = multer({ dest: path.join(__dirname, '../public/music/') })
 
 async function checkAdmin (req, res, next) {
+  let isAdmin = false
   const cookie = req.headers.cookie
-  let session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
-  if (session) session = session[0]
-  const isAdmin = await db.isAdmin(session)
+  if (cookie) {
+    let session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
+    if (session) {
+      isAdmin = await db.isAdmin(session[0])
+    }
+  }
+  
   if (isAdmin) {
     next()
   } else {
