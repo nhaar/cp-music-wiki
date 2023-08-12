@@ -202,7 +202,6 @@ class DatabaseManipulator {
     const words = code.match(/\w+/g)
     const category = words[1]
     const cls = words[2]
-    console.log(category)
     switch (category) {
       case 'main': {
         db.handler.createClass(cls)
@@ -431,7 +430,6 @@ function groupPatterns (...patterns) {
 }
 
 function matchGroup (str, flags, ...patterns) {
-  console.log(new RegExp(groupPatterns(...patterns), flags))
   return str.match(new RegExp(groupPatterns(...patterns), flags))
 }
 

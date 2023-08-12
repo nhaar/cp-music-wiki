@@ -57,14 +57,8 @@ router.post('/update', checkAdmin, async (req, res) => {
       else {
         const validationErrors = db.validate(cls, data)
         if (validationErrors.length === 0) {
-          await db.addChange(cls, row)
-          if (isStatic) {
-            await db.updateStatic(cls, row)
-            res.sendStatus(200)
-          } else {
-            await db.updateItem(cls, row)
-            res.sendStatus(200)
-          }
+          await db.update(cls, row)
+          res.sendStatus(200)
         } else sendBadReqJSON(res, { errors: validationErrors })
       }
     }
@@ -77,7 +71,6 @@ const upload = multer({ dest: path.join(__dirname, '../public/music/') })
 async function checkAdmin (req, res, next) {
   const cookie = req.headers.cookie
   let session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
-  console.log(session)
   if (session) session = session[0]
   const isAdmin = await db.isAdmin(session)
   if (isAdmin) {
@@ -108,6 +101,8 @@ router.post('/delete-item', checkAdmin, async (req, res) => {
       db.deleteItem(cls, id)
     }
   }
+
+  res.sendStatus(200)
 })
 
 // get filtering by a name

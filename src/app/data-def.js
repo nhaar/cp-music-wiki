@@ -79,71 +79,72 @@ const def = [{
     name QUERY;
     description TEXT;
     launch DATE_ESTIMATE;
-    songs CATALOGUE_ITEM[][];
+    songs {CATALOGUE_ITEM}[][];
   `),
   stage_play: new NameDef(
     'Stage Play', `
     name QUERY;
-    song INT;
-    appearances STAGE_APPEARANCE[];
+    song ID(song);
+    appearances {STAGE_APPEARANCE}[];
   `),
   flash_minigame: new NameDef(
     'Club Penguin Minigame', `
     name QUERY;
-    available TIME_RANGE;
-    songs GAME_SONG[];
+    available {TIME_RANGE};
+    songs {GAME_SONG}[];
   `),
   flash_misc: new NameDef(
     'Miscelaneous Club Penguin', `
     isUnused BOOLEAN;
     name QUERY;
     description TEXT;
-    available TIME_RANGE;
-    song INT;
+    available {TIME_RANGE};
+    song ID(song);
   `),
   penguin_chat_misc: new NameDef(
     'Miscelaneous Penguin Chat', `
     name QUERY;
     description TEXT;
-    song INT;
-    available TIME_RANGE;
+    song ID(song);
+    available {TIME_RANGE};
   `),
   penguin_chat_three_room: new NameDef(
     'Penguin Chat 3 Room', `
     name QUERY "Name";
     open {TIME_RANGE} "Open";
+    song ID(song) "Song";
   `),
   exclusive_app_appearance: new NameDef(
     'Miscelaneous Mobile App', `
-    song INT;
+    song ID(song);
     name QUERY;
     description TEXT;
-    available TIME_RANGE;
+    available {TIME_RANGE};
   `),
   youtube_video: new NameDef(
     'Youtube Video', `
     name QUERY;
     publish_date DATE;
-    appearances VIDEO_APPEARANCE[];
+    appearances {VIDEO_APPEARANCE}[];
   `),
   tv_video: new NameDef(
     'TV Video', `
     name QUERY;
-    earliest DATE_ESTIMATE;
-    appearance VIDEO_APPEARANCE[];
+    earliest {DATE_ESTIMATE};
+    appearance {VIDEO_APPEARANCE}[];
   `),
   industry_release: new NameDef(
     'Industry Release', `
     release DATE;
-    songs INT[];
+    songs ID(song)[];
   `),
   screenhog_comission: new NameDef(
     'Screenhog Comission', `
     comissioner TEXT;
     projectName TEXT;
     projectDescription TEXT;
-    songs INT[];
-    available DATE_ESTIMATE;
+    songs ID(song)[];
+    available {DATE_ESTIMATE};
   `)
 }, {
   NAME: new ClassDef(`

@@ -338,9 +338,9 @@ function findByKey (array, key, value) {
 
 const gen = new Generator(db)
 
-gen.OSTListGenerator(
-  'flash',
-  'pc'
-)
+// gen.OSTListGenerator(
+//   'flash',
+//   'pc'
+// )
 
 module.exports = gen

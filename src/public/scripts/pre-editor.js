@@ -1,6 +1,8 @@
 import { createSearchQuery } from './query-options.js'
 import { selectElement, createElement, styleElement, postAndGetJSON, postJSON } from './utils.js'
 
+/* global location, alert */
+
 class View {
   /** Create page elements */
   constructor () {
@@ -47,7 +49,6 @@ class Controller {
 
           this.view.create.classList.remove('hidden')
 
-          console.log(cls)
           createSearchQuery(
             input,
             cls
@@ -76,7 +77,6 @@ class Controller {
     })
 
     this.view.delete.addEventListener('click', async () => {
-      console.log(preeditorData)
       const clsData = preeditorData[this.view.select.value]
       const input = this.view.input.querySelector('input')
       const text = `Are you sure you want to delete "${clsData.name} - ${input.value}"`
@@ -85,6 +85,8 @@ class Controller {
         const doubleCheck = window.confirm('REALLY ERASE?')
         if (doubleCheck) {
           await postJSON('api/delete-item', { cls: clsData.cls, id: Number(input.dataset.id) })
+          alert('Deleted')
+          location.reload()
         }
       }
     })
@@ -112,7 +114,6 @@ let preeditorData
 
 postAndGetJSON('api/get-preeditor-data', {}).then(res => {
   preeditorData = res
-  console.log(preeditorData)
 
   const view = new View()
   const controller = new Controller(view)

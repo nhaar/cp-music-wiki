@@ -2,7 +2,7 @@ const { Pool } = require('pg')
 const jsondiffpatch = require('jsondiffpatch')
 const def = require('./data-def')
 
-const { deepcopy, matchGroup, removeBraces } = require('./utils')
+const { deepcopy, matchGroup, removeBraces, compareObjects } = require('./utils')
 
 /**
  * Represents CPT code, used to define the properties of the database classes
@@ -354,6 +354,7 @@ class WikiDatabase {
       'class, item_id, patch',
       [cls, id, null]
     )
+    this.deleteReferences(cls, id)
   }
 
   /**
@@ -387,6 +388,107 @@ class WikiDatabase {
     )
   }
 
+  findPaths (variable, condition) {
+    const mainClasses = this.getMainClasses()
+    for (const cls in mainClasses) {
+      variable[cls] = []
+
+      const iterate = (code, path) => {
+        this.iterateDeclarations(code, (property, type, params) => {
+          const newPath = deepcopy(path).concat([property])
+          const dimension = this.getDimension(type)
+          for (let i = 0; i < dimension; i++) {
+            newPath.push('[]')
+          }
+          const arrayless = removeBrackets(type)
+          if (condition(type, params)) {
+            variable[cls].push(newPath)
+          } else if (arrayless.includes('{')) {
+            const braceless = removeBraces(arrayless)
+            iterate(this.helperClasses[braceless].code, newPath)
+          }
+        })
+      }
+      iterate(mainClasses[cls].code, [])
+    }
+  }
+
+  findIdPaths (cls) {
+    const referencers = {}
+    this.findPaths(referencers, type => {
+      return type.includes(`ID(${cls})`)
+    })
+    return referencers
+  }
+
+  removeFromPath (data, path, value) {
+    const original = deepcopy(data)
+    const iterate = (obj, i) => {
+      const step = path[i]
+      i++
+      if (i < path.length) {
+        if (step === '[]') {
+          obj.forEach(element => {
+            iterate(element, i)
+          })
+        } else {
+          iterate(obj[step], i)
+        }
+      } else {
+        if (step === '[]') {
+          obj.forEach((element, j) => {
+            if (element === value) {
+              obj.splice(j, 1)
+            }
+          })
+        } else {
+          if (obj[step] === value) {
+            obj[step] = null
+          }
+        }
+      }
+    }
+
+    iterate(data, 0)
+    if (!compareObjects(data, original)) {
+      return data
+    } else {
+      return null
+    }
+  }
+
+  async deleteReferences (cls, id) {
+    const map = this.findIdPaths(cls)
+    for (const cls in map) {
+      const paths = map[cls]
+      let items
+      if (this.isStaticClass(cls)) {
+        items = [await this.getStatic(cls)]
+      } else {
+        items = await this.handler.selectAll(cls)
+      }
+      items.forEach(item => {
+        const { data } = item
+
+        for (let i = 0; i < paths.length; i++) {
+          const removed = this.removeFromPath(data, paths[i], id)
+          if (removed) {
+            this.update(cls, item)
+          }
+        }
+      })
+    }
+  }
+
+  async update (cls, row) {
+    await db.addChange(cls, row)
+    if (this.isStaticClass(cls)) {
+      await db.updateStatic(cls, row)
+    } else {
+      await db.updateItem(cls, row)
+    }
+  }
+
   /**
    * Create and save an object that maps each `ClassName` in the database
    * onto an array representing paths that lead to the search query properties
@@ -397,28 +499,9 @@ class WikiDatabase {
     const queryIndex = {}
     Object.assign(this, { queryIndex })
 
-    const mainClasses = this.getMainClasses()
-    for (const cls in mainClasses) {
-      queryIndex[cls] = []
-
-      const iterate = (code, path) => {
-        this.iterateDeclarations(code, (property, type, params) => {
-          const newPath = deepcopy(path).concat([property])
-          const dimension = this.getDimension(type)
-          for (let i = 0; i < dimension; i++) {
-            newPath.push('[]')
-          }
-          const arrayless = removeBrackets(type)
-          if (params.includes('QUERY')) {
-            queryIndex[cls].push(newPath)
-          } else if (arrayless.includes('{')) {
-            const braceless = removeBraces(arrayless)
-            iterate(this.helperClasses[braceless].code, newPath)
-          }
-        })
-      }
-      iterate(mainClasses[cls].code, [])
-    }
+    this.findPaths(queryIndex, (type, params) => {
+      return params.includes('QUERY')
+    })
   }
 
   /**
