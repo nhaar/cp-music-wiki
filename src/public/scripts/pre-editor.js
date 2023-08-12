@@ -1,5 +1,5 @@
 import { createSearchQuery } from './query-options.js'
-import { selectElement, createElement, styleElement, postAndGetJSON, postJSON } from './utils.js'
+import { selectElement, createElement, styleElement, postJSON } from './utils.js'
 
 /* global location, alert */
 
@@ -42,6 +42,7 @@ class Controller {
           // leave only editor button available
           this.view.input.innerHTML = ''
           styleElement(this.view.create, 'hidden')
+          styleElement(this.view.delete, 'hidden')
         } else {
           // reset query
           this.view.input.innerHTML = ''
@@ -72,22 +73,32 @@ class Controller {
         if (isInt) window.location.href = this.getIdParam('0')
       } else {
         const input = this.view.input.querySelector('input')
-        if (isInt && input.dataset.id) window.location.href = this.getIdParam(input.dataset.id)
+        if (isInt && input.dataset.id) {
+          window.location.href = this.getIdParam(input.dataset.id)
+        } else {
+          alert('Nothing to edit!')
+        }
       }
     })
 
     this.view.delete.addEventListener('click', async () => {
-      const clsData = preeditorData[this.view.select.value]
+      const t = Number(this.view.select.value)
       const input = this.view.input.querySelector('input')
-      const text = `Are you sure you want to delete "${clsData.name} - ${input.value}"`
-      const confirm = window.confirm(text)
-      if (confirm) {
-        const doubleCheck = window.confirm('REALLY ERASE?')
-        if (doubleCheck) {
-          await postJSON('api/delete-item', { cls: clsData.cls, id: Number(input.dataset.id) })
-          alert('Deleted')
-          location.reload()
+      const id = Number(input.dataset.id)
+      if (!isNaN(t) && !isNaN(id)) {
+        const clsData = preeditorData[this.view.select.value]
+        const text = `Are you sure you want to delete "${clsData.name} - ${input.value}"`
+        const confirm = window.confirm(text)
+        if (confirm) {
+          const doubleCheck = window.confirm('REALLY ERASE?')
+          if (doubleCheck) {
+            await postJSON('api/delete-item', { cls: clsData.cls, id: Number(input.dataset.id) })
+            alert('Deleted')
+            location.reload()
+          }
         }
+      } else {
+        alert('Nothing to delete!')
       }
     })
   }
