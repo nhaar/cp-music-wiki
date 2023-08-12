@@ -34,16 +34,16 @@ class NameDef {
 const def = [{
   song: new NameDef(
     'Song', `
-    names {NAME}[] "Names";
-    authors {SONG_AUTHOR}[] "Authors";
-    link TEXTSHORT "Link";
-    files {SONG_FILE}[] "Files";
-    unofficialNames {UNOFFICIAL_NAME}[] "Unofficial Names";
+    names {NAME}[];
+    authors {SONG_AUTHOR}[];
+    link TEXTSHORT;
+    files {SONG_FILE}[];
+    unofficialNames {UNOFFICIAL_NAME}[];
     swfMusicNumbers INT[] "SWF Numbers";
-    versions {VERSION}[] "Versions";
-    composedDate {DATE_ESTIMATE} "Composed Date";
-    externalReleaseDate DATE "External Release Date";
-    priority INT "Priority";
+    versions {VERSION}[];
+    composedDate {DATE_ESTIMATE};
+    externalReleaseDate DATE;
+    priority INT;
   `, [
       new Validator(
         o => o.names.length > 0 || o.unofficialNames.length > 0,
@@ -56,22 +56,22 @@ const def = [{
     ]),
   author: new NameDef(
     'Author', `
-    name TEXTSHORT QUERY "Name";
+    name TEXTSHORT QUERY;
   `),
   source: new NameDef(
     'Source', `
-    name TEXTSHORT QUERY "Name";
+    name TEXTSHORT QUERY;
   `),
   flash_room: new NameDef(
     'Club Penguin Room', `
-    name TEXTSHORT QUERY "Name";
-    open {TIME_RANGE} "Open";
-    songUses {SONG_APPEARANCE}[] "Song Uses";
+    name TEXTSHORT QUERY;
+    open {TIME_RANGE};
+    songUses {SONG_APPEARANCE}[];
   `),
   flash_party: new NameDef(
     'Club Penguin Party', `
-    name TEXTSHORT QUERY "Name";
-    active {TIME_RANGE} "Active";
+    name TEXTSHORT QUERY;
+    active {TIME_RANGE};
     partySongs {PARTY_SONG}[] "Songs";
   `),
   music_catalogue: new NameDef(
@@ -110,9 +110,9 @@ const def = [{
   `),
   penguin_chat_three_room: new NameDef(
     'Penguin Chat 3 Room', `
-    name QUERY "Name";
-    open {TIME_RANGE} "Open";
-    song ID(song) "Song";
+    name QUERY;
+    open {TIME_RANGE};
+    song ID(song);
   `),
   exclusive_app_appearance: new NameDef(
     'Miscelaneous Mobile App', `
@@ -148,7 +148,7 @@ const def = [{
   `)
 }, {
   NAME: new ClassDef(`
-    name TEXTSHORT QUERY "Name";
+    name TEXTSHORT QUERY;
     pt {LOCALIZATION_NAME} "Portuguese";
     fr {LOCALIZATION_NAME} "French";
     es {LOCALIZATION_NAME} "Spanish";
@@ -156,8 +156,8 @@ const def = [{
     ru {LOCALIZATION_NAME} "Russian";
   `),
   LOCALIZATION_NAME: new ClassDef(`
-    name TEXTSHORT "Name";
-    translationNotes TEXTLONG "Translation Notes";
+    name TEXTSHORT;
+    translationNotes TEXTLONG;
   `, [
     new Validator(
       o => ((!o.reference && !o.translationNotes) || o.name),
@@ -165,20 +165,20 @@ const def = [{
     )
   ]),
   UNOFFICIAL_NAME: new ClassDef(`
-    name TEXTSHORT QUERY "Name";
-    description TEXTLONG "Description";
+    name TEXTSHORT QUERY;
+    description TEXTLONG;
   `),
   SONG_AUTHOR: new ClassDef(`
-    author ID(author) "Author";
+    author ID(author);
   `),
   VERSION: new ClassDef(`
-    name TEXTSHORT "Name";
-    description TEXTLONG "Description";
+    name TEXTSHORT;
+    description TEXTLONG;
   `),
   SONG_APPEARANCE: new ClassDef(`
     isUnused BOOLEAN "Is Unused?";
-    available {TIME_RANGE} "Available";
-    song ID(song) "Song";
+    available {TIME_RANGE};
+    song ID(song);
   `),
   PARTY_SONG: new ClassDef(`
     isUnused BOOLEAN "Is unused?";
@@ -186,45 +186,45 @@ const def = [{
       [room "Room"],
       [minigame "Minigame"],
       [misc "Miscellaneous"]
-    ) "Type";
+    );
     usePartyDate BOOLEAN "Use date from the party?";
-    available {TIME_RANGE} "Available";
-    song ID(song) "Song";
+    available {TIME_RANGE};
+    song ID(song);
   `),
   CATALOGUE_ITEM: new ClassDef(`
-    displayName TEXTSHORT "Display Name";
-    song ID(song) "Song";
+    displayName TEXTSHORT;
+    song ID(song);
   `),
   STAGE_APPEARANCE: new ClassDef(`
     isUnused BOOLEAN "Is unused?";
-    appearance {TIME_RANGE} "Appearance";
-    song ID(song) "Song";
+    appearance {TIME_RANGE};
+    song ID(song);
   `),
   GAME_SONG: new ClassDef(`
-    isUnused BOOLEAN "Is unused";
-    song ID(song) "Song";
-    useMinigameDates BOOLEAN "Use Minigame Dates";
-    available {TIME_RANGE} "Available";
+    isUnused BOOLEAN "Is Unused?";
+    song ID(song);
+    useMinigameDates BOOLEAN;
+    available {TIME_RANGE};
   `),
   VIDEO_APPEARANCE: new ClassDef(`
-    song ID(song) "Song";
+    song ID(song);
     isEntireVideo BOOLEAN "Is Entire Video?";
-    startTime INT "Start Time";
-    endTime INT "End Time";
+    startTime INT;
+    endTime INT;
   `),
   DATE_ESTIMATE: new ClassDef(`
-    date DATE "Date";
+    date DATE;
     isEstimate BOOLEAN "Is Estimate?";
   `),
   TIME_RANGE: new ClassDef(`
-    start {DATE_ESTIMATE} "Start";
-    end {DATE_ESTIMATE} "End";
+    start {DATE_ESTIMATE};
+    end {DATE_ESTIMATE};
   `),
   SONG_FILE: new ClassDef(`
-    source ID(source) "Source"
-    link TEXTSHORT "Link";
+    source ID(source)
+    link TEXTSHORT;
     isHQ BOOLEAN "Is HQ?";
-    file FILE(audio) "File";
+    file FILE(audio);
   `)
 }, {
   epf_ost: new NameDef(
