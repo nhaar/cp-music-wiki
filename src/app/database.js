@@ -2,7 +2,7 @@ const { Pool } = require('pg')
 const jsondiffpatch = require('jsondiffpatch')
 const def = require('./data-def')
 
-const { deepcopy, matchGroup, removeBraces, compareObjects } = require('./utils')
+const { deepcopy, matchGroup, removeBraces, compareObjects, capitalize } = require('./utils')
 
 /**
  * Represents CPT code, used to define the properties of the database classes
@@ -637,7 +637,8 @@ class WikiDatabase {
   createEditorModels () {
     const base = (code, obj) => {
       this.iterateDeclarations(code, (property, type, params) => {
-        let header = 'PLACEHOLDER'
+        // create automatic generated header
+        let header = camelToPhrase(property)
         params.forEach(param => {
           if (param.includes('"')) {
             header = param.match(/(?<=").*(?=")/)[0]
@@ -952,6 +953,12 @@ function splitDeclarations (code) {
 function matchInside (str, lChar, rChar) {
   if (!rChar) rChar = lChar
   return str.match(`(?<=${lChar}).*(?=${rChar})`)
+}
+
+function camelToPhrase (str) {
+  const firstWord = str.match(/[a-z]+((?=[A-Z])|$)/)[0]
+  const otherWords = str.match(/[A-Z][a-z]*/g)
+  return [capitalize(firstWord)].concat(otherWords).join(' ')
 }
 
 const db = new WikiDatabase(...def)

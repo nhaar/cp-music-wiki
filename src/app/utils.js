@@ -40,4 +40,13 @@ function removeBraces (str) {
   return str.replace(/{|}/g, '')
 }
 
-module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces }
+/**
+ * Makes the first letter of a string uppercase
+ * @param {string} str - String to modify
+ * @returns Modified string
+ */
+function capitalize (str) {
+  return `${str[0].toUpperCase()}${str.slice(1)}`
+}
+
+module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces, capitalize }
