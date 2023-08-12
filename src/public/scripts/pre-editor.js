@@ -112,8 +112,8 @@ class Controller {
 
 let preeditorData
 
-postAndGetJSON('api/get-preeditor-data', {}).then(res => {
-  preeditorData = res
+fetch('api/get-preeditor-data').then(res => res.json()).then(data => {
+  preeditorData = data
 
   const view = new View()
   const controller = new Controller(view)

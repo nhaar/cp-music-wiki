@@ -133,7 +133,7 @@ router.post('/get-name', checkClass, checkId, async (req, res) => {
   res.status(200).send({ name })
 })
 
-router.post('/get-preeditor-data', async (req, res) => {
+router.get('/get-preeditor-data', async (req, res) => {
   const data = db.getPreeditorData()
   res.status(200).send(data)
 })
