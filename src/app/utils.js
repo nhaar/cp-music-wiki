@@ -1,3 +1,5 @@
+const fs = require('fs')
+
 /**
  * Checks if two objects are the exact same (down to the order of things)
  * @param {object} obj1
@@ -49,4 +51,11 @@ function capitalize (str) {
   return `${str[0].toUpperCase()}${str.slice(1)}`
 }
 
-module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces, capitalize }
+function createDirectoryIfNotExists(directoryPath) {
+  if (!fs.existsSync(directoryPath)) {
+    fs.mkdirSync(directoryPath);
+  } else {
+  }
+}
+
+module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces, capitalize, createDirectoryIfNotExists }
