@@ -954,6 +954,4 @@ const db = new WikiDatabase(...def)
 
 db.createEditorModels()
 
-console.log(db.findIdPaths('author'))
-
 module.exports = db
