@@ -17,6 +17,8 @@ function generateToken () {
 
 async function checkCredentials (user, password) {
   const internalData = (await db.handler.select('wiki_users', 'name', user))[0]
+  if (!internalData) return
+
   const hash = getHash(password)
 
   if (internalData.user_password === hash) {

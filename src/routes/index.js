@@ -31,11 +31,15 @@ router.get('/series-list', (req, res) => {
 })
 
 router.get('/user-page', renderPage('Login', `
+  Write your credentials to sign in
+  <br>
   <input class="name" placeholder="Name">
-  <input class="password" placeholder="Pass">
+  <br>
+  <input type="password" class="password" placeholder="Password">
+  <br>
   <button class="send">SEND</button>
 
-  <script src="../scripts/user-page.js" type="module"></script>
+  <script src="scripts/user-page.js" type="module"></script>
 `))
 
 // api

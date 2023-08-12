@@ -142,8 +142,11 @@ router.post('/login', async (req, res) => {
   const { user, password } = req.body
   if (typeof user !== 'string' || typeof password !== 'string') sendBadReq(res, 'Invalid data')
   const token = await checkCredentials(user, password)
-
-  res.status(200).send({ token })
+  if (token) {
+    res.status(200).send({ token })
+  } else {
+    res.status(401).send({ error: 'Password or user was incorrect' })
+  }
 })
 
 function sendStatusJSON (res, status, obj) {

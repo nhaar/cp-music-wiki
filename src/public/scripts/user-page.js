@@ -1,5 +1,7 @@
 import { selectElement, postAndGetJSON } from './utils.js'
 
+/* global alert */
+
 const button = selectElement('send')
 const name = selectElement('name')
 const pass = selectElement('password')
@@ -14,5 +16,9 @@ button.addEventListener('click', async () => {
     date.setTime(date.getTime() + 24 * 60 * 60 * 1000)
     document.cookie = `session=${token}`
     document.cookie = `username=${user}`
+    alert('Login successful')
+    window.location.href = '/'
+  } else {
+    alert('Invalid user or password')
   }
 })
