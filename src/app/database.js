@@ -571,6 +571,7 @@ class WikiDatabase {
    */
   async getByName (cls, keyword) {
     const response = await this.handler.selectLike(cls, 'querywords', [keyword])
+    console.log(response)
     const results = {}
     response.forEach(row => {
       const { id, querywords } = row
@@ -872,7 +873,7 @@ class SQLHandler {
    * @returns {Row[]}
    */
   selectLike = async (table, column, matching) => {
-    return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} LIKE $1`, [`%${matching}%`])).rows
+    return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} ILIKE $1`, [`%${matching}%`])).rows
   }
 
   /**
