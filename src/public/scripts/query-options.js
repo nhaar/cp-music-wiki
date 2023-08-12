@@ -1,25 +1,9 @@
 import { createElement, postAndGetJSON } from './utils.js'
 
 /**
- * Object with information about the
- * current use of data for the query
- * @typedef {object} TakenInfo
- *  @property {boolean} hasUntakenId - If there exists any data input that could take data and has not received a valid input
- * @property {string[]} takenIds - The list of all IDs for the current data type that have already being claimed by the user input
- */
-
-/**
- * Create a search query system
- * @param {HTMLInputElement} input - Reference to input the query will be added to
- * @param {string} dataVar - Name of the data variable to store the option ID in the input
- * @param {string} databaseVar - Name of the column in the database corresponding to the ID
- * @param {string} databaseValue - Name of the column in the database corresponding to the displayed value in the query
- * @param {function(string) : import("./editor").Row[]} fetchDataFunction -
- * Function that takes a string to filter search results and
- * gives all the rows that match the result under the database
- * @param {function(HTMLInputElement) : TakenInfo} checkTakenFunction
- * Function that gets taken info relative to the input element(s)
- * @param {import("./submit-block").Blocker} blocker - If the query is associated with a button to block, the blocker object of the button
+ *
+ * @param {*} input
+ * @param {*} cls
  */
 export async function createSearchQuery (input, cls) {
   // for when taken function and blockers are useless
@@ -42,7 +26,7 @@ export async function createSearchQuery (input, cls) {
   // flag for hovering options or not
   const listenerRel = { mouseover: '1', mouseout: '' }
   for (const event in listenerRel) {
-    queryOptions.addEventListener(event, () => (input.dataset.choosing = listenerRel[event]))
+    queryOptions.addEventListener(event, () => { input.dataset.choosing = listenerRel[event] })
   }
 
   // function too update options each time
@@ -57,6 +41,7 @@ export async function createSearchQuery (input, cls) {
           queryOptions.innerHTML = ''
           input.dataset.id = id
           input.value = data[id]
+          input.dataset.choosing = ''
         })
       }
     })
