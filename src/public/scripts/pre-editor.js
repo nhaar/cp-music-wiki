@@ -49,6 +49,7 @@ class Controller {
           const input = createElement({ parent: this.view.input, tag: 'input' })
 
           this.view.create.classList.remove('hidden')
+          this.view.delete.classList.remove('hidden')
 
           createSearchQuery(
             input,
