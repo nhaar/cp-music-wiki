@@ -6,8 +6,6 @@ import { createElement, postAndGetJSON } from './utils.js'
  * @param {*} cls
  */
 export async function createSearchQuery (input, cls) {
-  // for when taken function and blockers are useless
-
   const { id } = input.dataset
   if (id) {
     const name = await postAndGetJSON('api/get-name', { cls, id: Number(id) })
