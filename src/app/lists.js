@@ -254,6 +254,31 @@ class Generator {
         'game-day-ost',
         'game_day_ost'
       ),
+      ds: new MediaInfo(
+        'DS Games',
+        () => {
+          tables[0].data.songs.forEach(song => {
+            let date
+            let use
+            let est = false
+            if (song.game === 'epf') {
+              date = '2008-11-25'
+              use = 'Club Penguin: Elite Penguin Force'
+            } else if (song.game === 'hr') {
+              date = '2010-05-25'
+              use = "Club Penguin: Elite Penguin Force: Herbert's Revenge"
+            }
+            if (song.isUnused) {
+              date = findId(songs, song.song).data.composedDate.date
+              if (!date) est = true
+              use += ' (Unused)'
+            }
+            instances.push(new SongInstance(use, { date, isEstimate: est }, song))
+          })
+        },
+        'ds-ost',
+        'ds_ost'
+      ),
       pc: new MediaInfo(
         'Penguin Chat',
         () => {
@@ -489,6 +514,7 @@ class Generator {
       'misc',
       'mobile',
       'gd',
+      'ds',
       'pc'
     )
   }

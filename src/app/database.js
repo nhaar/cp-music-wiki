@@ -533,14 +533,14 @@ class WikiDatabase {
     declarations.forEach(declr => {
       const property = declr.match(/\w+/)[0]
       const typePattern = /(?:{)?\w+(?:\(.*\))?(?:})?(\[\])*/
-      const type = matchGroup(declr, undefined, '(?<=\\w+\\s+)', typePattern)[0]
-      const rest = declr.match(`(?<=\\w+\\s+${typePattern.source}\\s+).*`)
+      const type = matchGroup(declr, undefined, '(?<=\\w+\\s+)', typePattern.source)[0]
+
+      const rest = declr.replace(new RegExp('\\w+\\s+' + typePattern.source), '')
       let params = []
       if (rest) {
         const quotePattern = /".*"|'.*'/g
-        const restString = rest[0]
-        const quoted = restString.match(quotePattern) || []
-        params = restString.replace(quotePattern, '').match(/\S+/g) || []
+        const quoted = rest.match(quotePattern) || []
+        params = rest.replace(quotePattern, '').match(/\S+/g) || []
         params = params.concat(quoted)
       }
       callbackfn(property, type, params)

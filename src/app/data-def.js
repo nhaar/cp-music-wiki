@@ -431,11 +431,19 @@ const def = [{
   CPI_PARTY_SONG: new ClassDef(`
     song ID(song);
     description TEXTLONG;
+  `),
+  DS_SONG: new ClassDef(`
+    song ID(song);
+    isUnused BOOLEAN;
+    game SELECT(
+      [epf "Elite Penguin Force"],
+      [hr "Herbert's Revenge"]
+    );
   `)
 }, {
-  epf_ost: new NameDef(
-    'Elite Penguin Force OST', `
-    songs {OST_SONG}[]
+  ds_ost: new NameDef(
+    'DS Games OST', `
+    songs {DS_SONG}[]
     'The songs that belong to the OST';
   `),
   epfhr_ost: new NameDef(
