@@ -68,6 +68,7 @@ class Generator {
     // an object directly containing data for a song being used
     // and run a callback function to add the use to instances
     const base1 = (uses, callback) => {
+      // console.log(uses)
       uses.forEach(use => {
         const args = callback(use)
         if (args) {
@@ -140,10 +141,15 @@ class Generator {
     const base9 = base8('available')
 
     // iterator where each row of the table is a `use` already
-    const base10 = (i) => {
-      base1(tables[i], use => {
-        return base2(use, data => {
-          return [data.name, data.available.start, data]
+    const base10 = (i, callback) => {
+      tables[i].forEach(row => {
+        base2(row, data => {
+          base1(data.songs, use => {
+            const date = use.useOwnDate
+              ? use.available.start
+              : data.available.start
+            return [callback(data), date]
+          })
         })
       })
     }
@@ -163,14 +169,6 @@ class Generator {
     const base12 = (i, callback) => {
       base11(i, 'appearances', callback)
     }
-
-    const base18 = base => (i) => {
-      base(i, 'songs', date => date.available.start)
-    }
-
-    const base13 = base18(base11)
-
-    const base19 = namecallback => base18(base17(namecallback))
 
     const base14 = base16(base1)
 
@@ -208,7 +206,7 @@ class Generator {
           base7(4, 'songs', 'useMinigameDates', 'available')
 
           // misc music
-          base13(5)
+          base10(5, data => data.name)
         },
         'flash-ost'
         ,
@@ -229,7 +227,7 @@ class Generator {
           base12(1, data => data.earliest)
 
           // series misc
-          base13(2)
+          base10(2, data => data.name)
         },
         'misc-ost',
         'youtube_video',
@@ -290,10 +288,13 @@ class Generator {
         'Penguin Chat',
         () => {
           // pc misc
-          base19(data => `${data.name} (Penguin Chat)`)(0)
-          base19(data => `${data.name} (Penguin Chat 3)`)(1)
+          base10(0, data => `${data.name} (Penguin Chat)`)
+
+          // pc 3 misc
+          base10(1, data => `${data.name} (Penguin Chat 3)`)
+
+          // pc 3 rooms
           base17(data => `${data.name} (Penguin Chat 3)`)(2, 'songUses', (data, use) => use.available.start)
-          // base19(data => `${data.name} (Penguin Chat 3)`)(2)
         },
         'penguin-chat-ost',
         'penguin_chat_misc',

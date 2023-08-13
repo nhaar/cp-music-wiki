@@ -138,7 +138,7 @@ const def = [{
     'Details for what this use is exactly';
     available {TIME_RANGE}
     'The time period this use was availabe';
-    songs ID(song)[]
+    songs {MISC_SONG}[]
     'The song used';
   `),
   penguin_chat_misc: new NameDef(
@@ -147,7 +147,7 @@ const def = [{
     'Name for the miscellaneous use';
     description TEXTLONG
     'Description for what this use is exactly';
-    songs ID(song)[]
+    songs {MISC_SONG}[]
     'The songs used';
     available {TIME_RANGE}
     'The time period this use was avaiable';
@@ -158,7 +158,7 @@ const def = [{
     'Name for the miscellaneous use';
     description TEXTLONG
     'Description for what this use is exactly';
-    songs ID(song)[]
+    songs {MISC_SONG}[]
     'The songs used';
     available {TIME_RANGE}
     'The time period this use was avaiable';
@@ -240,7 +240,7 @@ const def = [{
     'Name for the miscellaneous use';
     description TEXTLONG
     'Description for what this use is exactly';
-    songs ID(song)[]
+    songs {MISC_SONG}[]
     'The songs used';
     available {TIME_RANGE}
     'The time period this use was avaiable';
@@ -439,6 +439,11 @@ const def = [{
       [epf "Elite Penguin Force"],
       [hr "Herbert's Revenge"]
     );
+  `),
+  MISC_SONG: new ClassDef(`
+    song ID(song);
+    useOwnDate BOOLEAN;
+    available {TIME_RANGE};
   `)
 }, {
   ds_ost: new NameDef(
