@@ -176,7 +176,7 @@ const def = [{
     'Youtube Video', `
     name TEXTSHORT QUERY
     'Title for the YouTube video';
-    publish_date DATE
+    publishDate DATE
     'The date the video was published';
     appearances {VIDEO_APPEARANCE}[]
     'The different times a song played in the video';
@@ -187,7 +187,7 @@ const def = [{
     'A descriptive name for what the video is';
     earliest {DATE_ESTIMATE}
     'The earliest date the video aired';
-    appearance {VIDEO_APPEARANCE}[]
+    appearances {VIDEO_APPEARANCE}[]
     'The different times a song played in the video';
   `),
   industry_release: new NameDef(

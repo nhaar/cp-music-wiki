@@ -145,6 +145,23 @@ class Generator {
         })
       })
     }
+    const base11 = (i, key, callback) => {
+      tables[i].forEach(row => {
+        base2(row, data => {
+          base1(data[key], () => {
+            return [data.name, callback(data)]
+          })
+        })
+      })
+    }
+
+    const base12 = (i, callback) => {
+      base11(i, 'appearances', callback)
+    }
+
+    const base13 = (i) => {
+      base11(i, 'songs', date => date.available.start)
+    }
 
     const medias = {
       flash: new MediaInfo(
@@ -176,13 +193,7 @@ class Generator {
           base7(4, 'songs', 'useMinigameDates', 'available')
 
           // misc music
-          tables[5].forEach(row => {
-            base2(row, data => {
-              base1(data.songs, use => {
-                return [data.name, data.available.start]
-              })
-            })
-          })
+          base13(5)
         },
         'flash-ost'
         ,
@@ -192,6 +203,23 @@ class Generator {
         'stage_play',
         'flash_minigame',
         'flash_misc'
+      ),
+      misc: new MediaInfo(
+        'Misc',
+        () => {
+          // youtube
+          base12(0, data => ({date:data.publishDate}))
+
+          // tv
+          base12(1, data => data.earliest)
+
+          // series misc
+          base13(2)
+        },
+        'misc-ost',
+        'youtube_video',
+        'tv_video',
+        'series_misc'
       ),
       pc: new MediaInfo(
         'Penguin Chat',
@@ -420,6 +448,7 @@ class Generator {
   async updateLists () {
     this.OSTListGenerator(
       'flash',
+      'misc',
       'pc'
     )
   }
