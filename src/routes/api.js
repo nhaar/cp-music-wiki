@@ -39,6 +39,7 @@ router.post('/get', checkClass, checkId, async (req, res) => {
 
   if (db.isStaticClass(cls)) {
     const row = await db.getStatic(cls)
+    row.id = 0
     res.status(200).send(row)
   } else {
     const row = await db.getItemById(cls, id)

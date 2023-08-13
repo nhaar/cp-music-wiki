@@ -1,4 +1,4 @@
-import { createElement, selectElements, styleElement } from '../utils.js'
+import { createElement, styleElement } from '../utils.js'
 
 /**
  * A pointer representation to a variable
@@ -260,7 +260,7 @@ export class ArrayModule extends ChildModule {
    */
   middleoutput () {
     this.array = []
-    const children = selectElements(this.arrayElementClass, this.e)
+    const children = this.e.children[0].querySelectorAll(`:scope > div > .${this.arrayElementClass}`)
     children.forEach(child => {
       this.array.push(this.map[child.dataset.id])
     })

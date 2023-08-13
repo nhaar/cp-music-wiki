@@ -446,7 +446,7 @@ const def = [{
   game_day_ost: new NameDef(
     'Game Day OST', `
     songs {OST_SONG}[]
-    'The song that belong to the OST';
+    'The songs that belong to the OST';
   `)
 }]
 

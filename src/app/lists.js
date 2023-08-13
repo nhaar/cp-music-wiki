@@ -237,6 +237,25 @@ class Generator {
         'mobile-ost',
         'mobile_apps'
       ),
+      gd: new MediaInfo(
+        'Game Day',
+        () => {
+          const date = { date: '2010-09-16'}
+          console.log(tables[0])
+          tables[0].data .songs.forEach(song => {
+            if (song.uses.length === 0) {
+              instances.push(new SongInstance('Unknown', date, song))
+            } else {
+              base1(song.uses, use => {
+                return [use, date, song]
+              })
+            }
+          })
+          
+        },
+        'game-day-ost',
+        'game_day_ost'
+      ),
       pc: new MediaInfo(
         'Penguin Chat',
         () => {
@@ -252,7 +271,12 @@ class Generator {
     const getTables = async media => {
       tables = medias[media].tables
       for (let i = 0; i < tables.length; i++) {
-        tables[i] = await this.db.handler.selectAll(tables[i])
+        if (this.db.isStaticClass(tables[i])) {
+          tables[i] = await this.db.getStatic(tables[i])
+        } else {
+          tables[i] = await this.db.handler.selectAll(tables[i])
+
+        }
       }
     }
 
@@ -466,6 +490,7 @@ class Generator {
       'flash',
       'misc',
       'mobile',
+      'gd',
       'pc'
     )
   }
