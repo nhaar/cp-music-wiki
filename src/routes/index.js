@@ -23,12 +23,21 @@ router.get('/editor', (req, res) => {
 })
 
 router.get('/lists', renderPage('OST Lists', `
-<a href="series-list"> Series OST </a>
+<a href="series-list"> Series OST </a><br>
+<a href="flash-list"> Club Penguin (Flash) OST </a><br>
+<a href="misc-list"> Misc OST </a><br>
 `))
 
-router.get('/series-list', (req, res) => {
-  res.status(200).sendFile(path.join(__dirname, '../views/generated/series-ost.html'))
-})
+function renderList (name) {
+  return (req, res) => {
+    res.status(200).sendFile(path.join(__dirname,   `../views/generated/${name}.html`))
+  }
+}
+
+router.get('/series-list', renderList('series-ost'))
+router.get('/flash-list', renderList('flash-ost'))
+router.get('/misc-list', renderList('misc-ost'))
+
 
 router.get('/user-page', renderPage('Login', `
   Write your credentials to sign in
