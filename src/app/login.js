@@ -1,10 +1,7 @@
 const crypto = require('crypto')
 const db = require('./database')
 
-const SALT = 'salt'
-const ITERATIONS = 100
-const KEYLEN = 64
-const DIGEST = 'sha512'
+const { SALT, ITERATIONS, KEYLEN, DIGEST } = require('../../config')
 
 function getHash (value) {
   return crypto.pbkdf2Sync(value, SALT, ITERATIONS, KEYLEN, DIGEST).toString('hex')
