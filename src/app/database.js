@@ -4,6 +4,7 @@ const def = require('./data-def')
 
 const { deepcopy, matchGroup, removeBraces, compareObjects, capitalize } = require('./utils')
 const config = require('../../config')
+const { getHash } = require('./login')
 
 /**
  * Represents CPT code, used to define the properties of the database classes
@@ -99,7 +100,8 @@ class WikiDatabase {
         name TEXT,
         user_password TEXT,
         display_name TEXT,
-        session_token TEXT
+        session_token TEXT,
+        created_timestamp NUMERIC
       )
     `)
 
@@ -728,6 +730,11 @@ class WikiDatabase {
     // currently every user is admin so just check for existence of account
     const account = (await this.handler.select('wiki_users', 'session_token', session))[0]
     return Boolean(account)
+  }
+
+  async createAccount (name, password, display) {
+    const hash = getHash(password)
+    this.handler.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
   }
 }
 

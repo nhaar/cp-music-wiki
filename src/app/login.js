@@ -25,4 +25,4 @@ async function checkCredentials (user, password) {
   }
 }
 
-module.exports = { checkCredentials }
+module.exports = { checkCredentials, getHash }
