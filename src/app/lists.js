@@ -51,6 +51,7 @@ class Generator {
     const songs = await this.db.handler.selectAll('song')
     const authors = await this.db.handler.selectAll('author')
     const sources = await this.db.handler.selectAll('source')
+    const plays = await this.db.handler.selectAll('stage_play')
 
     // make an index of the priorities in case it gets used
     const priorityIndex = {}
@@ -101,12 +102,22 @@ class Generator {
       })
     }
 
+    const filterUsed = (use, callback) => {
+      if (use.isUnused) return callback(use)
+    }
+
     // iterate through every row of a table
     // and process its use checking for unused
     // calling a callback after
     // `i` is the index of a table
     // `key` is the property to access the `use` in the `data`
     const iterateTableNoUnused = iterateUsesInTable(iterateUsesNoUnused)
+
+    const iterateTableUsed = iterateUsesInTable((uses, callback) => {
+      iterateUsePushInstance(uses, use => {
+        return filterUsed(use, callback)
+      })
+    })
 
     // gets a callback for getting a callback
     // to get the arguments for the song instance
@@ -119,25 +130,45 @@ class Generator {
 
     const iterateUsesWithName = (namecallback) =>
       (i, key, callback) => iterateUsesInTable(iterateUsePushInstance)(i, key, (use, data) => {
-        return [namecallback(data), callback(data, use)]
+        const date = callback(data, use)
+        if (date) return [namecallback(data), date]
       })
 
     const iterateUsesWithCallback = iterateUsesWithName(data => data.name)
 
     const iterateTableUseParent = (i, key, useKey, dateKey) => iterateUsesWithCallback(i, key, (data, use) => {
-      const useParent = use[useKey]
-      const date = useParent
-        ? data[dateKey].start
-        : use.available.start
-
-      return date
+      return filterUnused(use, () => {
+        const useParent = use[useKey]
+        const date = useParent
+          ? data[dateKey].start
+          : use.available.start
+        return date
+      })
     })
 
-    const iterateMisc = i => iterateUsesWithCallback(i, 'songs', (data, use) => {
-      const date = use.useOwnDate
-        ? use.available.start
-        : data.available.start
-      return [data.name, date]
+    const iterateUnusedWithParent = (i, key) => iterateUsesWithCallback(i, key, (data, use) => {
+      return filterUsed(use, () => {
+        return getComposedDate(use.song)
+      })
+    })
+
+    const iterateUsedMisc = i => iterateUsesWithCallback(i, 'songs', (data, use) => {
+      return filterUnused(use, () => {
+        const date = use.useOwnDate
+          ? use.available.start
+          : data.available.start
+        return date
+      })
+    })
+
+    const getComposedDate = song => {
+      const date = findId(songs, song).data.composedDate
+      if (!date.date) date.isEstimate = true
+      return date
+    }
+
+    const iterateUnusedMisc = i => iterateUsesWithCallback(i, 'songs', (data, use) => {
+      return filterUsed(use, () => { return getComposedDate(use.song) })
     })
 
     const iterateAppearances = (i, callback) => {
@@ -165,6 +196,7 @@ class Generator {
             })
           })
 
+          // stage music
           iterateData(3, data => {
             instances.push(new SongInstance(data.name, data.appearances[0].start, data.themeSong))
           })
@@ -173,10 +205,9 @@ class Generator {
           iterateTableUseParent(4, 'songs', 'useMinigameDates', 'available')
 
           // misc music
-          iterateMisc(5, data => data.name)
+          iterateUsedMisc(5, data => data.name)
         },
-        'flash-ost'
-        ,
+        'flash-ost',
         'flash_room',
         'flash_party',
         'music_catalogue',
@@ -194,7 +225,7 @@ class Generator {
           iterateAppearances(1, data => data.earliest)
 
           // series misc
-          iterateMisc(2, data => data.name)
+          iterateUsedMisc(2, data => data.name)
         },
         'misc-ost',
         'youtube_video',
@@ -232,7 +263,7 @@ class Generator {
           iterateStatic(0, song => {
             let date
             let use
-            let est = false
+            const est = false
             if (song.game === 'epf') {
               date = '2008-11-25'
               use = 'Club Penguin: Elite Penguin Force'
@@ -241,11 +272,12 @@ class Generator {
               use = "Club Penguin: Elite Penguin Force: Herbert's Revenge"
             }
             if (song.isUnused) {
-              date = findId(songs, song.song).data.composedDate.date
-              if (!date) est = true
+              date = getComposedDate(song.song)
               use += ' (Unused)'
+            } else {
+              date = { date, isEstimate: est }
             }
-            instances.push(new SongInstance(use, { date, isEstimate: est }, song))
+            instances.push(new SongInstance(use, date, song))
           })
         },
         'ds-ost',
@@ -255,10 +287,10 @@ class Generator {
         'Penguin Chat',
         () => {
           // pc misc
-          iterateMisc(0, data => `${data.name} (Penguin Chat)`)
+          iterateUsedMisc(0, data => `${data.name} (Penguin Chat)`)
 
           // pc 3 misc
-          iterateMisc(1, data => `${data.name} (Penguin Chat 3)`)
+          iterateUsedMisc(1, data => `${data.name} (Penguin Chat 3)`)
 
           // pc 3 rooms
           iterateUsesWithName(data => `${data.name} (Penguin Chat 3)`)(2, 'songUses', (data, use) => use.available.start)
@@ -267,6 +299,34 @@ class Generator {
         'penguin_chat_misc',
         'penguin_chat_three_misc',
         'penguin_chat_three_room'
+      ),
+      unusedf: new MediaInfo(
+        'Unused Club Penguin (Flash)',
+        () => {
+          // rooms
+          iterateTableUsed(0, 'songUses', (use, data) => [data.name, getComposedDate(use.song)])
+
+          // party
+          iterateUnusedWithParent(1, 'partySongs')
+
+          // stage
+          iterateData(2, data => {
+            const stageName = findId(plays, data.stagePlay).data.name
+            instances.push(new SongInstance(stageName, getComposedDate(data.song), data.song))
+          })
+
+          // minigame
+          iterateUnusedWithParent(3, 'songs')
+
+          // misc
+          iterateUnusedMisc(4)
+        },
+        'unused-flash-ost',
+        'flash_room',
+        'flash_party',
+        'unused_stage',
+        'flash_minigame',
+        'flash_misc'
       )
     }
 
@@ -346,7 +406,6 @@ class Generator {
                 hqSources.push(sourceName)
               }
             })
-
             const date = instance.estimate
               ? '?'
               : instance.date
@@ -495,7 +554,8 @@ class Generator {
       'mobile',
       'gd',
       'ds',
-      'pc'
+      'pc',
+      'unusedf'
     )
   }
 }

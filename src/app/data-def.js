@@ -130,16 +130,14 @@ const def = [{
   `),
   flash_misc: new NameDef(
     'Miscellaneous Club Penguin', `
-    isUnused BOOLEAN
-    'Whether or not this song is unused';
     name TEXTSHORT QUERY
     'Name for the miscellaneous use';
     description TEXTLONG
     'Details for what this use is exactly';
     available {TIME_RANGE}
     'The time period this use was availabe';
-    songs {MISC_SONG}[]
-    'The song used';
+    songs {MISC_SONG_UNUSED}[]
+    'The songs used';
   `),
   penguin_chat_misc: new NameDef(
     'Miscelaneous Penguin Chat', `
@@ -442,6 +440,12 @@ const def = [{
   `),
   MISC_SONG: new ClassDef(`
     song ID(song);
+    useOwnDate BOOLEAN;
+    available {TIME_RANGE};
+  `),
+  MISC_SONG_UNUSED: new ClassDef(`
+    song ID(song);
+    isUnused BOOLEAN;
     useOwnDate BOOLEAN;
     available {TIME_RANGE};
   `)
