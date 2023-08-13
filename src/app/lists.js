@@ -64,11 +64,7 @@ class Generator {
     /** This array will keep the rows of all the tables that are relevant for the current media */
     let tables
 
-    // iterate through every `use` which corresponds to
-    // an object directly containing data for a song being used
-    // and run a callback function to add the use to instances
-    const base1 = (uses, callback) => {
-      // console.log(uses)
+    const iterateUsePushInstance = (uses, callback) => {
       uses.forEach(use => {
         const args = callback(use)
         if (args) {
@@ -77,44 +73,31 @@ class Generator {
       })
     }
 
-    // extract the data property and run a function on it
-    const base2 = (row, callback) => {
+    const useData = (row, callback) => {
       const { data } = row
       return callback(data)
     }
 
-    // checks for `isUnused` and runs a callback
-    const base3 = (use, callback) => {
+    const filterUnused = (use, callback) => {
       if (!use.isUnused) return callback(use)
     }
 
-    // processes the `use` for objects that follow
-    // the pattern of having a variable like "use date given by parent"
-    // or "use own data"
-    // `useKey` is the boolean for wheter to use parent
-    // `dateKey` is the property in the parent for the date
-    // assumes a structure for the use data
-    const base4 = (data, use, useKey, dateKey) => {
-      const useParent = use[useKey]
-      const date = useParent
-        ? data[dateKey].start
-        : use.available.start
-
-      return [data.name, date]
-    }
-
     // iterate through every `use`, filter for unused and run a callback
-    const base5 = (uses, callback) => {
-      base1(uses, use => {
-        return base3(use, callback)
+    const iterateUsesNoUnused = (uses, callback) => {
+      iterateUsePushInstance(uses, use => {
+        return filterUnused(use, callback)
       })
     }
 
-    const base16 = (base) => (i, key, callback) => {
+    const iterateData = (i, callback) => {
       tables[i].forEach(row => {
-        base2(row, data => {
-          base(data[key], use => callback(use, data))
-        })
+        useData(row, callback)
+      })
+    }
+
+    const iterateUsesInTable = (base) => (i, key, callback) => {
+      iterateData(i, data => {
+        base(data[key], use => callback(use, data))
       })
     }
 
@@ -123,90 +106,69 @@ class Generator {
     // calling a callback after
     // `i` is the index of a table
     // `key` is the property to access the `use` in the `data`
-    const base6 = base16(base5)
-
-    // iterate through a table following the
-    // "use date from parent" pattern
-    const base7 = (i, key, useKey, dateKey) => {
-      base6(i, key, (use, data) => base4(data, use, useKey, dateKey))
-    }
+    const iterateTableNoUnused = iterateUsesInTable(iterateUsesNoUnused)
 
     // gets a callback for getting a callback
     // to get the arguments for the song instance
     // using a certain key for the date
-    const base8 = key => (use, data) => [data.name, use[key].start]
+    const getKeyDateCallback = key => (use, data) => [data.name, use[key].start]
 
     // gets a callback for getting the arguments
     // when the date is in the key `available`
-    const base9 = base8('available')
+    const getAvailableDateCallback = getKeyDateCallback('available')
 
-    // iterator where each row of the table is a `use` already
-    const base10 = (i, callback) => {
-      tables[i].forEach(row => {
-        base2(row, data => {
-          base1(data.songs, use => {
-            const date = use.useOwnDate
-              ? use.available.start
-              : data.available.start
-            return [callback(data), date]
-          })
-        })
+    const iterateUsesWithName = (namecallback) =>
+      (i, key, callback) => iterateUsesInTable(iterateUsePushInstance)(i, key, (use, data) => {
+        return [namecallback(data), callback(data, use)]
       })
+
+    const iterateUsesWithCallback = iterateUsesWithName(data => data.name)
+
+    const iterateTableUseParent = (i, key, useKey, dateKey) => iterateUsesWithCallback(i, key, (data, use) => {
+      const useParent = use[useKey]
+      const date = useParent
+        ? data[dateKey].start
+        : use.available.start
+
+      return date
+    })
+
+    const iterateMisc = i => iterateUsesWithCallback(i, 'songs', (data, use) => {
+      const date = use.useOwnDate
+        ? use.available.start
+        : data.available.start
+      return [data.name, date]
+    })
+
+    const iterateAppearances = (i, callback) => {
+      iterateUsesWithCallback(i, 'appearances', callback)
     }
-
-    const base17 = (namecallback) => (i, key, callback) => {
-      tables[i].forEach(row => {
-        base2(row, data => {
-          base1(data[key], use => {
-            return [namecallback(data), callback(data, use)]
-          })
-        })
-      })
-    }
-
-    const base11 = base17(data => data.name)
-
-    const base12 = (i, callback) => {
-      base11(i, 'appearances', callback)
-    }
-
-    const base14 = base16(base1)
-
-    const base15 = (i, key, useKey, dateKey) => {
-      base14(i, key, (use, data) => base4(data, use, useKey, dateKey))
-    }
-
     const medias = {
       flash: new MediaInfo(
         'Club Penguin (Flash)',
         () => {
           // room music
-          base6(0, 'songUses', base9)
+          iterateTableNoUnused(0, 'songUses', getAvailableDateCallback)
 
           // party music
-          base7(1, 'partySongs', 'usePartyDate', 'active')
+          iterateTableUseParent(1, 'partySongs', 'usePartyDate', 'active')
 
           // igloo music
-          tables[2].forEach(row => {
-            base2(row, data => {
-              data.songs.forEach(gridRow => {
-                base5(gridRow, () => ['Igloo', data.launch])
-              })
+          iterateData(2, data => {
+            data.songs.forEach(gridRow => {
+              iterateUsesNoUnused(gridRow, () => ['Igloo', data.launch])
             })
           })
 
-          // stage music
-          tables[3].forEach(row => {
-            base2(row, data => {
-              instances.push(new SongInstance(data.name, data.appearances[0].start, data.themeSong))
-            })
+          iterateData(3, data => {
+            instances.push(new SongInstance(data.name, data.appearances[0].start, data.themeSong))
           })
 
           // minigame music
-          base7(4, 'songs', 'useMinigameDates', 'available')
+          iterateTableUseParent(4, 'songs', 'useMinigameDates', 'available')
 
           // misc music
-          base10(5, data => data.name)
+          iterateMisc(5, data => data.name)
         },
         'flash-ost'
         ,
@@ -221,13 +183,13 @@ class Generator {
         'Misc',
         () => {
           // youtube
-          base12(0, data => ({ date: data.publishDate }))
+          iterateAppearances(0, data => ({ date: data.publishDate }))
 
           // tv
-          base12(1, data => data.earliest)
+          iterateAppearances(1, data => data.earliest)
 
           // series misc
-          base10(2, data => data.name)
+          iterateMisc(2, data => data.name)
         },
         'misc-ost',
         'youtube_video',
@@ -237,7 +199,7 @@ class Generator {
       mobile: new MediaInfo(
         'Mobile Apps',
         () => {
-          base15(0, 'songUses', 'useMinigameDates', 'available')
+          iterateTableUseParent(0, 'songUses', 'useMinigameDates', 'available')
         },
         'mobile-ost',
         'mobile_apps'
@@ -250,7 +212,7 @@ class Generator {
             if (song.uses.length === 0) {
               instances.push(new SongInstance('Unknown', date, song))
             } else {
-              base1(song.uses, use => {
+              iterateUsePushInstance(song.uses, use => {
                 return [use, date, song]
               })
             }
@@ -288,13 +250,13 @@ class Generator {
         'Penguin Chat',
         () => {
           // pc misc
-          base10(0, data => `${data.name} (Penguin Chat)`)
+          iterateMisc(0, data => `${data.name} (Penguin Chat)`)
 
           // pc 3 misc
-          base10(1, data => `${data.name} (Penguin Chat 3)`)
+          iterateMisc(1, data => `${data.name} (Penguin Chat 3)`)
 
           // pc 3 rooms
-          base17(data => `${data.name} (Penguin Chat 3)`)(2, 'songUses', (data, use) => use.available.start)
+          iterateUsesWithName(data => `${data.name} (Penguin Chat 3)`)(2, 'songUses', (data, use) => use.available.start)
         },
         'penguin-chat-ost',
         'penguin_chat_misc',
