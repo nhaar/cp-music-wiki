@@ -42,7 +42,7 @@ export class MoveableRowsModule extends ArrayModule {
   /**
    * Renders all the rows with the user data
    */
-  postbuild () { 
+  postbuild () {
     // fix running into issude with moveable row modules children of moveable row modules
     if (!this.out.read()) this.out.assign([])
     this.out.read().forEach(row => this.addRow(row))

@@ -5,7 +5,7 @@ import {
 } from './modules/element-modules.js'
 import { EditorModule, TableChild, TableModule } from './modules/main-modules.js'
 import {
-  createElement, deepcopy, postAndGetJSON, postJSON,
+  createElement, postAndGetJSON, postJSON,
   selectElement
 } from './utils.js'
 
@@ -31,7 +31,6 @@ class Page {
   setupSubmitButton (editorModule, row, cls) {
     this.submitButton.addEventListener('click', async () => {
       await editorModule.output()
-      console.log(deepcopy(row))
       const response = await postJSON('api/update', { cls, row })
       if (response.status === 200) {
         alert('Change submitted with success')
@@ -70,7 +69,6 @@ class Page {
       data = row.data
     }
 
-    console.log(deepcopy(row))
     const Editor = constructEditorModule(main)
     const editor = new Editor(data, this.editor)
     editor.build()

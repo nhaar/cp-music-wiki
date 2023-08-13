@@ -586,7 +586,6 @@ class WikiDatabase {
    */
   async getByName (cls, keyword) {
     const response = await this.handler.selectLike(cls, 'querywords', [keyword])
-    console.log(response)
     const results = {}
     response.forEach(row => {
       const { id, querywords } = row

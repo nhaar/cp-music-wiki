@@ -446,7 +446,7 @@ const def = [{
     'The song that belong to the OST';
   `),
   mobile_ost: new NameDef(
-    `Mobile Apps OST`, `
+    'Mobile Apps OST', `
     songs {MOBILE_SONG}[];
     `
   )

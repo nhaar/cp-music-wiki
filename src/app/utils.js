@@ -51,10 +51,9 @@ function capitalize (str) {
   return `${str[0].toUpperCase()}${str.slice(1)}`
 }
 
-function createDirectoryIfNotExists(directoryPath) {
+function createDirectoryIfNotExists (directoryPath) {
   if (!fs.existsSync(directoryPath)) {
-    fs.mkdirSync(directoryPath);
-  } else {
+    fs.mkdirSync(directoryPath)
   }
 }
 
