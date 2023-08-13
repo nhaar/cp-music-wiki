@@ -96,7 +96,7 @@ const def = [{
   `),
   music_catalogue: new NameDef(
     'Music Catalogue', `
-    description TEXT
+    description TEXTLONG
     'Special details about this catalogue, if any';
     launch {CATALOGUE_DATE}
     'The date the catalogue launched';
@@ -106,14 +106,22 @@ const def = [{
   `),
   stage_play: new NameDef(
     'Stage Play', `
-    name QUERY
+    name TEXTSHORT QUERY
     'The name of the stage play';
-    appearances {STAGE_APPEARANCE}[]
+    appearances {TIME_RANGE}[]
     'The times the play debuted';
+    themeSong ID(song)
+    'The song song/associated';
   `),
+  unused_stage: new NameDef(
+    'Unused Stage Music', `
+    stagePlay ID(stage_play);
+    song ID(song);
+    `
+  ),
   flash_minigame: new NameDef(
     'Club Penguin Minigame', `
-    name QUERY
+    name TEXTSHORT QUERY
     'The name of the minigame';
     available {TIME_RANGE}
     'The time period the minigame was playable';
@@ -124,49 +132,49 @@ const def = [{
     'Miscellaneous Club Penguin', `
     isUnused BOOLEAN
     'Whether or not this song is unused';
-    name QUERY
+    name TEXTSHORT QUERY
     'Name for the miscellaneous use';
-    description TEXT
+    description TEXTLONG
     'Details for what this use is exactly';
     available {TIME_RANGE}
     'The time period this use was availabe';
-    song ID(song)
+    songs ID(song)[]
     'The song used';
   `),
   penguin_chat_misc: new NameDef(
     'Miscelaneous Penguin Chat', `
-    name QUERY
+    name TEXTSHORT QUERY
     'Name for the miscellaneous use';
-    description TEXT
+    description TEXTLONG
     'Description for what this use is exactly';
-    song ID(song)
-    'The song used';
+    songs ID(song)[]
+    'The songs used';
+    available {TIME_RANGE}
+    'The time period this use was avaiable';
+  `),
+  penguin_chat_three_misc: new NameDef(
+    'Miscelaneous Penguin Chat 3', `
+    name TEXTSHORT QUERY
+    'Name for the miscellaneous use';
+    description TEXTLONG
+    'Description for what this use is exactly';
+    songs ID(song)[]
+    'The songs used';
     available {TIME_RANGE}
     'The time period this use was avaiable';
   `),
   penguin_chat_three_room: new NameDef(
     'Penguin Chat 3 Room', `
-    name QUERY
+    name TEXTSHORT QUERY
     'Name of the room';
     open {TIME_RANGE}
     'Time period the room was open';
     songUses {SONG_APPEARANCE}[]
     'The times the room got a new song playing inside it';
   `),
-  exclusive_app_appearance: new NameDef(
-    'Miscelaneous Mobile App', `
-    song ID(song)
-    'Song used';
-    name QUERY
-    'Name for the use';
-    description TEXT
-    'Description for what this use is exactly';
-    available {TIME_RANGE}
-    'The time period this use was availabe';
-  `),
   youtube_video: new NameDef(
     'Youtube Video', `
-    name QUERY
+    name TEXTSHORT QUERY
     'Title for the YouTube video';
     publish_date DATE
     'The date the video was published';
@@ -175,7 +183,7 @@ const def = [{
   `),
   tv_video: new NameDef(
     'TV Video', `
-    name QUERY
+    name TEXTSHORT QUERY
     'A descriptive name for what the video is';
     earliest {DATE_ESTIMATE}
     'The earliest date the video aired';
@@ -184,20 +192,67 @@ const def = [{
   `),
   industry_release: new NameDef(
     'Industry Release', `
-    name QUERY
+    name TEXTSHORT QUERY
     'Name of the release';
     release DATE
     'The release date';
     songs ID(song)[]
     'The songs included in this release';
   `),
+  cpi_screen: new NameDef(
+    'Club Penguin Island Screen', `
+    name TEXTSHORT QUERY;
+    songUses {USED_SONG_USE}[];
+  `),
+  cpi_location: new NameDef(
+    'Club Penguin Island Location', `
+    name TEXTSHORT QUERY;
+    songUses {USED_SONG_USE}[];
+  `),
+  cpi_quest: new NameDef(
+    'Club Penguin Island Quest', `
+    character TEXTSHORT QUERY;
+    questSongs {QUEST_USE}[];
+    `
+  ),
+  cpi_party: new NameDef(
+    'Club Penguin Island Party', `
+    name TEXTSHORT QUERY;
+    songs {CPI_PARTY_SONG}[];
+    active {TIME_RANGE};
+    `
+  ),
+  cpi_minigame: new NameDef(
+    'Club Penguin Island Minigame', `
+    name TEXTSHORT QUERY;
+    song ID(song);
+    `
+  ),
+  cpi_activity: new NameDef(
+    'Club Penguin Island Activity', `
+    name TEXTSHORT QUERY;
+    songs {USED_SONG_USE}[];
+    `
+  ),
+  series_misc: new NameDef(
+    'Miscellaneous', `
+    name TEXTSHORT QUERY
+    'Name for the miscellaneous use';
+    description TEXTLONG
+    'Description for what this use is exactly';
+    songs ID(song)[]
+    'The songs used';
+    available {TIME_RANGE}
+    'The time period this use was avaiable';
+    `
+  ),
   screenhog_comission: new NameDef(
     'Screenhog Comission', `
-    comissioner TEXT
+    comissioner TEXTSHORT
     'Name of the comissioner';
-    projectName TEXT
+    projectName TEXTSHORT
     'Name of the project the song was used in';
-    projectDescription TEXT
+    projectDescription TEXTLONG
     'Description of the project';
     songs {COMISSIONED_SONG}[]
     'The songs comissioned for this project';
@@ -277,13 +332,8 @@ const def = [{
     'The song';
   `),
   STAGE_APPEARANCE: new ClassDef(`
-    isUnused BOOLEAN "Is unused?"
-    'If checked, this means that this represents an unused song,
-    and not a debut of the play';
     appearance {TIME_RANGE}
-    'If this is a proper use, the time the play was available';
-    song ID(song)
-    'The song song/associated';
+    'The time the play was available';
   `),
   GAME_SONG: new ClassDef(`
     isUnused BOOLEAN "Is Unused?"
@@ -348,23 +398,58 @@ const def = [{
     'A description on how this song was used in the project';
     available {DATE_ESTIMATE}
     'The date this song was first available to the public';
+  `),
+  MOBILE_SONG: new ClassDef(`
+    song ID(song);
+    app SELECT(
+      [app "App"],
+      [sled "Sled Racer"],
+      [wild "Puffle Wild"],
+      [sound "SoundStudio App"]
+    );
+  `),
+  OST_SONG: new ClassDef(`
+    song ID(song);
+    isUnused BOOLEAN;
+    uses TEXTSHORT[];
+  `),
+  USED_SONG_USE: new ClassDef(`
+    available {TIME_RANGE}
+    'The time period the song was available in-game';
+    song ID(song)
+    'The song used';
+  `),
+  QUEST_USE: new ClassDef(`
+    song ID(song);
+    useDescription TEXTLONG;
+    chapter INT;
+    episode INT;
+  `),
+  CPI_PARTY_SONG: new ClassDef(`
+    song ID(song);
+    description TEXTLONG;
   `)
 }, {
   epf_ost: new NameDef(
     'Elite Penguin Force OST', `
-    songs ID(song)[]
+    songs {OST_SONG}[]
     'The songs that belong to the OST';
   `),
   epfhr_ost: new NameDef(
     "Herbert's Revenge OST", `
-    songs ID(song)[]
+    songs {OST_SONG}[]
     'The song that belong to the OST';
   `),
   game_day_ost: new NameDef(
     'Game Day OST', `
-    songs ID(song)[]
+    songs {OST_SONG}[]
     'The song that belong to the OST';
-  `)
+  `),
+  mobile_ost: new NameDef(
+    `Mobile Apps OST`, `
+    songs {MOBILE_SONG}[];
+    `
+  )
 }]
 
 module.exports = def
