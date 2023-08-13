@@ -166,13 +166,23 @@ class Generator {
           })
 
           // stage music
-          base6(3, 'appearances', base8('appearance'))
+          tables[3].forEach(row => {
+            base2(row, data => {
+              instances.push(new SongInstance(data.name, data.appearances[0].start, data.themeSong))
+            })
+          })
 
           // minigame music
-          base7(4, 'songs', 'useMinigameDates', 'availabe')
+          base7(4, 'songs', 'useMinigameDates', 'available')
 
           // misc music
-          base10(5)
+          tables[5].forEach(row => {
+            base2(row, data => {
+              base1(data.songs, use => {
+                return [data.name, data.available.start]
+              })
+            })
+          })
         },
         'flash-ost'
         ,
