@@ -143,6 +143,11 @@ class Generator {
     const iterateAppearances = (i, callback) => {
       iterateUsesWithCallback(i, 'appearances', callback)
     }
+
+    const iterateStatic = (i, callback) => {
+      tables[i].data.songs.forEach(callback)
+    }
+
     const medias = {
       flash: new MediaInfo(
         'Club Penguin (Flash)',
@@ -208,7 +213,7 @@ class Generator {
         'Game Day',
         () => {
           const date = { date: '2010-09-16' }
-          tables[0].data.songs.forEach(song => {
+          iterateStatic(0, song => {
             if (song.uses.length === 0) {
               instances.push(new SongInstance('Unknown', date, song))
             } else {
@@ -224,7 +229,7 @@ class Generator {
       ds: new MediaInfo(
         'DS Games',
         () => {
-          tables[0].data.songs.forEach(song => {
+          iterateStatic(0, song => {
             let date
             let use
             let est = false
