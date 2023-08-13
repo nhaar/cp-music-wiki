@@ -246,6 +246,13 @@ const def = [{
     'The time period this use was avaiable';
     `
   ),
+  mobile_apps: new NameDef(
+    'Mobile Apps', `
+    name TEXTSHORT QUERY;
+    available {TIME_RANGE};
+    songUses {APP_SONG}[];
+    `
+  ),
   screenhog_comission: new NameDef(
     'Screenhog Comission', `
     comissioner TEXTSHORT
@@ -346,6 +353,11 @@ const def = [{
     available {TIME_RANGE}
     'If the option above is unchecked and if this song is used, the time this was available';
   `),
+  APP_SONG: new ClassDef(`
+    song ID(song);
+    useMinigameDates BOOLEAN;
+    available {TIME_RANGE};
+  `),
   VIDEO_APPEARANCE: new ClassDef(`
     song ID(song)
     'The song';
@@ -399,15 +411,6 @@ const def = [{
     available {DATE_ESTIMATE}
     'The date this song was first available to the public';
   `),
-  MOBILE_SONG: new ClassDef(`
-    song ID(song);
-    app SELECT(
-      [app "App"],
-      [sled "Sled Racer"],
-      [wild "Puffle Wild"],
-      [sound "SoundStudio App"]
-    );
-  `),
   OST_SONG: new ClassDef(`
     song ID(song);
     isUnused BOOLEAN;
@@ -444,12 +447,7 @@ const def = [{
     'Game Day OST', `
     songs {OST_SONG}[]
     'The song that belong to the OST';
-  `),
-  mobile_ost: new NameDef(
-    'Mobile Apps OST', `
-    songs {MOBILE_SONG}[];
-    `
-  )
+  `)
 }]
 
 module.exports = def

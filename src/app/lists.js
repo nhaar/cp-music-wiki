@@ -109,18 +109,20 @@ class Generator {
       })
     }
 
+    const base16 = (base) => (i, key, callback) => {
+      tables[i].forEach(row => {
+        base2(row, data => {
+          base(data[key], use => callback(use, data))
+        })
+      })
+    }
+
     // iterate through every row of a table
     // and process its use checking for unused
     // calling a callback after
     // `i` is the index of a table
     // `key` is the property to access the `use` in the `data`
-    const base6 = (i, key, callback) => {
-      tables[i].forEach(row => {
-        base2(row, data => {
-          base5(data[key], use => callback(use, data))
-        })
-      })
-    }
+    const base6 = base16(base5)
 
     // iterate through a table following the
     // "use date from parent" pattern
@@ -161,6 +163,12 @@ class Generator {
 
     const base13 = (i) => {
       base11(i, 'songs', date => date.available.start)
+    }
+
+    const base14 = base16(base1)
+
+    const base15 = (i, key, useKey, dateKey) => {
+      base14(i, key, (use, data) => base4(data, use, useKey, dateKey))
     }
 
     const medias = {
@@ -208,7 +216,7 @@ class Generator {
         'Misc',
         () => {
           // youtube
-          base12(0, data => ({date:data.publishDate}))
+          base12(0, data => ({ date: data.publishDate }))
 
           // tv
           base12(1, data => data.earliest)
@@ -220,6 +228,14 @@ class Generator {
         'youtube_video',
         'tv_video',
         'series_misc'
+      ),
+      mobile: new MediaInfo(
+        'Mobile Apps',
+        () => {
+          base15(0, 'songUses', 'useMinigameDates', 'available')
+        },
+        'mobile-ost',
+        'mobile_apps'
       ),
       pc: new MediaInfo(
         'Penguin Chat',
@@ -449,6 +465,7 @@ class Generator {
     this.OSTListGenerator(
       'flash',
       'misc',
+      'mobile',
       'pc'
     )
   }
