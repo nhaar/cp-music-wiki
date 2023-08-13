@@ -29,6 +29,7 @@ router.get('/lists', renderPage('OST Lists', `
 <a href="mobile-list"> Mobile Apps OST </a><br>
 <a href="game-day-list"> Club Penguin: Game Day! OST </a><br>
 <a href="ds-list"> Club Penguin DS Games OST </a><br>
+<a href="penguin-chat-list"> Penguin Chat OST </a><br>
 `))
 
 function renderList (name) {
@@ -43,6 +44,7 @@ router.get('/misc-list', renderList('misc-ost'))
 router.get('/mobile-list', renderList('mobile-ost'))
 router.get('/game-day-list', renderList('game-day-ost'))
 router.get('/ds-list', renderList('ds-ost'))
+router.get('/penguin-chat-list', renderList('penguin-chat-ost'))
 
 router.get('/user-page', renderPage('Login', `
   Write your credentials to sign in

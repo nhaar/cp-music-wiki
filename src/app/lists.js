@@ -147,23 +147,30 @@ class Generator {
         })
       })
     }
-    const base11 = (i, key, callback) => {
+
+    const base17 = (namecallback) => (i, key, callback) => {
       tables[i].forEach(row => {
         base2(row, data => {
-          base1(data[key], () => {
-            return [data.name, callback(data)]
+          base1(data[key], use => {
+            return [namecallback(data), callback(data, use)]
           })
         })
       })
     }
 
+    const base11 = base17(data => data.name)
+
     const base12 = (i, callback) => {
       base11(i, 'appearances', callback)
     }
 
-    const base13 = (i) => {
-      base11(i, 'songs', date => date.available.start)
+    const base18 = base => (i) => {
+      base(i, 'songs', date => date.available.start)
     }
+
+    const base13 = base18(base11)
+
+    const base19 = namecallback => base18(base17(namecallback))
 
     const base14 = base16(base1)
 
@@ -283,10 +290,15 @@ class Generator {
         'Penguin Chat',
         () => {
           // pc misc
-          base10(0)
+          base19(data => `${data.name} (Penguin Chat)`)(0)
+          base19(data => `${data.name} (Penguin Chat 3)`)(1)
+          base17(data => `${data.name} (Penguin Chat 3)`)(2, 'songUses', (data, use) => use.available.start)
+          // base19(data => `${data.name} (Penguin Chat 3)`)(2)
         },
         'penguin-chat-ost',
-        'penguin_chat_appearance'
+        'penguin_chat_misc',
+        'penguin_chat_three_misc',
+        'penguin_chat_three_room'
       )
     }
 
