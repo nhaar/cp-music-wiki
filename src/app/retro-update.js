@@ -158,7 +158,6 @@ class DatabaseManipulator {
       })
     }
 
-    console.log(clsys.helperClasses, clsys.defaults)
   }
 
   /**

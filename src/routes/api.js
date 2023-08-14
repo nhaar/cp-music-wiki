@@ -55,7 +55,6 @@ function getToken (req) {
 // update a data type
 router.post('/update', checkAdmin, checkClass, async (req, res) => {
   const { cls, row } = req.body
-  console.log(row.names)
   const error = msg => sendBadReq(res, msg)
 
   const token = getToken(req)

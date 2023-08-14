@@ -125,7 +125,6 @@ class ClassSystem {
         }
       }
 
-      console.log(classesOnHold)
       if (classesOnHold.length === 0) break
     }
 

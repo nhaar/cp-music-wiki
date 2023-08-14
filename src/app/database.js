@@ -105,7 +105,6 @@ class WikiDatabase {
    * @returns {number} - ID of the user
    */
   async getUserId (token) {
-    console.log(token)
     return (await handler.select('wiki_users', 'session_token', token, 'id'))[0].id
   }
 
