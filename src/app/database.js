@@ -4,6 +4,7 @@ const def = require('./data-def')
 
 const { deepcopy, matchGroup, removeBraces, compareObjects, capitalize } = require('./utils')
 const config = require('../../config')
+const { getHash, generateToken } = require('./crypto')
 // const { getHash } = require('./login')
 
 /**
@@ -733,10 +734,23 @@ class WikiDatabase {
     return Boolean(account)
   }
 
-  // async createAccount (name, password, display) {
-  //   const hash = getHash(password)
-  //   this.handler.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
-  // }
+  async checkCredentials (user, password) {
+    const internalData = (await db.handler.select('wiki_users', 'name', user))[0]
+    if (!internalData) return
+
+    const hash = getHash(password)
+
+    if (internalData.user_password === hash) {
+      const sessionToken = generateToken()
+      db.handler.update('wiki_users', 'session_token', 'id', [internalData.id, sessionToken])
+      return sessionToken
+    }
+  }
+
+  async createAccount (name, password, display) {
+    const hash = getHash(password)
+    this.handler.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
+  }
 }
 
 /**

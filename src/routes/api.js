@@ -9,8 +9,6 @@ const db = require('../app/database')
 const Gen = require('../app/lists')
 const gen = new Gen(db)
 
-const { checkCredentials } = require('../app/login')
-
 const checkClass = checkValid(body => db.isStaticClass(body.cls) || db.isMainClass(body.cls), 'Invalid type provided')
 
 const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an integer')
@@ -152,7 +150,7 @@ router.get('/get-preeditor-data', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { user, password } = req.body
   if (typeof user !== 'string' || typeof password !== 'string') sendBadReq(res, 'Invalid data')
-  const token = await checkCredentials(user, password)
+  const token = await db.checkCredentials(user, password)
   if (token) {
     res.status(200).send({ token })
   } else {
