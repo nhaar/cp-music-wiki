@@ -157,7 +157,6 @@ class DatabaseManipulator {
         return version
       })
     }
-
   }
 
   /**
@@ -225,7 +224,7 @@ class DatabaseManipulator {
   setInObject (object, property, type) {
     if (clsys.isArrayType(type)) {
       object[property] = []
-    } else if (type.includes('{')) {
+    } else if (clsys.isHelperType(type)) {
       object[property] = clsys.defaults[removeBraces(type)]
     } else {
       object[property] = null

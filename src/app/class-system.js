@@ -38,6 +38,19 @@ const def = require('./data-def')
  */
 
 /**
+ * An array containing values for a row in the following order:
+ *
+ * * Index 0 is the JSON string of `ItemData`
+ * * Index 1 is the string for the query words
+ * @typedef {string[]} ItemValues
+ */
+
+/**
+ * Object mapping classes to an array of property paths
+ * @typedef {object} PathMap
+ */
+
+/**
  * Class that handles the system that relates to the classes of data
  */
 class ClassSystem {
@@ -84,12 +97,14 @@ class ClassSystem {
       this.iterateDeclarations(code, (property, type) => {
         if (this.isArrayType(type)) {
           defaultObject[property] = []
-        } else if (type.includes('{')) {
+        } else if (this.isHelperType(type)) {
           defaultObject[property] = this.getDefault(removeBraces(type))
         } else {
           let value = {
             BOOLEAN: false
           }[removeArgs(type)]
+
+          // default "default" is null
           if (value === undefined) value = null
           defaultObject[property] = value
         }
@@ -107,7 +122,7 @@ class ClassSystem {
         const { code } = this.helperClasses[cls]
         const helperClasses = []
         this.iterateDeclarations(code, (property, type) => {
-          if (type.includes('{')) helperClasses.push(removeBrackets(removeBraces(type)))
+          if (this.isHelperType(type)) helperClasses.push(removeBrackets(removeBraces(type)))
         })
 
         let onHold = false
@@ -135,9 +150,14 @@ class ClassSystem {
     }
   }
 
+  // /**
+  //  * Insert a static class if it doesn't exist yet
+  //  * @param {ClassName} cls - Name of the class
+  //  */
   /**
    * Insert a static class if it doesn't exist yet
    * @param {ClassName} cls - Name of the class
+   * @param {ItemData} defaultData - Default item data object
    */
   insertStatic = async (cls, defaultData) => {
     await handler.insert('static', 'class, data', [cls, defaultData], 'ON CONFLICT (class) DO NOTHING')
@@ -229,6 +249,15 @@ class ClassSystem {
   }
 
   /**
+   * Check if a CPT type declaration represents a declaration of a helper type
+   * @param {string} type - Type declaration
+   * @returns {boolean} True if it represents a helper type
+   */
+  isHelperType (type) {
+    return type.includes('{')
+  }
+
+  /**
    * Check if the object for a database class follows the rules defined for it
    * @param {ClassName} cls - Class of the data to validate
    * @param {ItemData} data - Data object to validate
@@ -275,7 +304,7 @@ class ClassSystem {
             const errorMsg = indefiniteDescription => {
               errors.push(`${path.join('')} must be ${indefiniteDescription}`)
             }
-            if (type.includes('{')) {
+            if (this.isHelperType(type)) {
               if (isObject(value)) {
                 const propertyType = this.helperClasses[removeBraces(type)]
                 iterateObject(propertyType, value, path)

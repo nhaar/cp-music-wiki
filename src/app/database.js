@@ -5,35 +5,13 @@ const { getHash, generateToken } = require('./crypto')
 
 const handler = require('./sql-handler')
 
-/**
- * An array containing values for a row in the following order:
- *
- * * Index 0 is the JSON string of `ItemData`
- * * Index 1 is the string for the query words
- * @typedef {string[]} ItemValues
- */
-
-/**
- * Object mapping classes to an array of property paths
- * @typedef {object} PathMap
- */
-
 const clsys = require('./class-system')
 
 /**
- * Contains the methods to communicate with the database
- * via a defined database structure
+ * General database class
  */
 class WikiDatabase {
-  /**
-   * Connect to the database using the class definitions given
-   * @param {DefMap} mainClasses
-   * @param {DefMap} helperClasses
-   * @param {DefMap} staticClasses
-   */
   constructor () {
-    // general class information processing
-
     // create table for patches
     handler.create(`
       revisions (
@@ -188,7 +166,7 @@ class WikiDatabase {
         }
 
         let value
-        if (type.includes('{')) {
+        if (clsys.isHelperType(type)) {
           value = base(
             clsys.helperClasses[type.match('(?<={).*(?=})')[0]].code,
             {}
