@@ -6,10 +6,11 @@ const multer = require('multer')
 const path = require('path')
 
 const db = require('../app/database')
+const clsys = require('../app/class-system')
 const Gen = require('../app/lists')
-const gen = new Gen(db)
+const gen = new Gen()
 
-const checkClass = checkValid(body => db.isStaticClass(body.cls) || db.isMainClass(body.cls), 'Invalid type provided')
+const checkClass = checkValid(body => clsys.isStaticClass(body.cls) || clsys.isMainClass(body.cls), 'Invalid type provided')
 
 const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an integer')
 
@@ -27,7 +28,7 @@ router.post('/editor-data', async (req, res) => {
 router.post('/default', checkClass, async (req, res) => {
   const { cls } = req.body
 
-  const row = await db.getDefault(cls)
+  const row = await clsys.getDefault(cls)
   res.status(200).send(row)
 })
 
@@ -35,12 +36,12 @@ router.post('/default', checkClass, async (req, res) => {
 router.post('/get', checkClass, checkId, async (req, res) => {
   const { cls, id } = req.body
 
-  if (db.isStaticClass(cls)) {
-    const row = await db.getStatic(cls)
+  if (clsys.isStaticClass(cls)) {
+    const row = await clsys.getStatic(cls)
     row.id = 0
     res.status(200).send(row)
   } else {
-    const row = await db.getItemById(cls, id)
+    const row = await clsys.getItemById(cls, id)
     if (!row) sendNotFound(res, 'Item not found in the database')
     else res.status(200).send(row)
   }
@@ -54,18 +55,19 @@ function getToken (req) {
 // update a data type
 router.post('/update', checkAdmin, checkClass, async (req, res) => {
   const { cls, row } = req.body
+  console.log(row.names)
   const error = msg => sendBadReq(res, msg)
 
   const token = getToken(req)
 
   // validate data
-  if (db.isStaticClass(cls) && row.id !== 0) error('Invalid id for static class')
+  if (clsys.isStaticClass(cls) && row.id !== 0) error('Invalid id for static class')
   else if (typeof row !== 'object') error('Invalid row object')
   else {
     const { data } = row
     if (typeof data !== 'object') error('Invalid data object')
     else {
-      const validationErrors = db.validate(cls, data)
+      const validationErrors = clsys.validate(cls, data)
       if (validationErrors.length === 0) {
         await db.update(cls, row, token)
         gen.updateLists()
@@ -113,8 +115,8 @@ router.post('/delete-item', checkAdmin, checkClass, checkId, async (req, res) =>
 
   const token = getToken(req)
 
-  if (db.isMainClass(cls)) {
-    const row = await db.getItemById(cls, id)
+  if (clsys.isMainClass(cls)) {
+    const row = await clsys.getItemById(cls, id)
     if (row) {
       await db.deleteItem(cls, id)
       db.addDeletion(cls, id, token)
@@ -130,7 +132,7 @@ router.post('/get-by-name', checkClass, async (req, res) => {
   const { keyword, cls } = req.body
   if (typeof keyword !== 'string') sendBadReq(res, 'Invalid keyword')
   else {
-    const results = await db.getByName(cls, keyword)
+    const results = await clsys.getByName(cls, keyword)
     res.status(200).send(results)
   }
 })
@@ -138,7 +140,7 @@ router.post('/get-by-name', checkClass, async (req, res) => {
 // get name with id
 router.post('/get-name', checkClass, checkId, async (req, res) => {
   const { cls, id } = req.body
-  const name = await db.getQueryNameById(cls, id)
+  const name = await clsys.getQueryNameById(cls, id)
   res.status(200).send({ name })
 })
 

@@ -14,9 +14,6 @@ const path = require('path')
 createDirectoryIfNotExists(path.join(__dirname, 'views/generated'))
 createDirectoryIfNotExists(path.join(__dirname, 'public/music'))
 
-// const db = require('./app/database')
-// db.initializeDatabase()
-
 nunjucks.configure('src/views', {
   autoescape: true,
   express: app

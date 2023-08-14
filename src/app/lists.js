@@ -1,6 +1,9 @@
 const fs = require('fs')
 const path = require('path')
 
+const handler = require('./sql-handler')
+const clsys = require('./class-system')
+
 /**
  * Represents the use of a song in some media at some point in history
  */
@@ -37,21 +40,14 @@ class MediaInfo {
 
 class Generator {
   /**
-   * @param {WikiDatabase} db - Database to use
-   */
-  constructor (db) {
-    this.db = db
-  }
-
-  /**
    *
    * @param  {...string} mediaList
    */
   async OSTListGenerator (...mediaList) {
-    const songs = await this.db.handler.selectAll('song')
-    const authors = await this.db.handler.selectAll('author')
-    const sources = await this.db.handler.selectAll('source')
-    const plays = await this.db.handler.selectAll('stage_play')
+    const songs = await handler.selectAll('song')
+    const authors = await handler.selectAll('author')
+    const sources = await handler.selectAll('source')
+    const plays = await handler.selectAll('stage_play')
 
     // make an index of the priorities in case it gets used
     const priorityIndex = {}
@@ -378,10 +374,10 @@ class Generator {
     const getTables = async media => {
       tables = medias[media].tables
       for (let i = 0; i < tables.length; i++) {
-        if (this.db.isStaticClass(tables[i])) {
-          tables[i] = await this.db.getStatic(tables[i])
+        if (clsys.isStaticClass(tables[i])) {
+          tables[i] = await clsys.getStatic(tables[i])
         } else {
-          tables[i] = await this.db.handler.selectAll(tables[i])
+          tables[i] = await handler.selectAll(tables[i])
         }
       }
     }

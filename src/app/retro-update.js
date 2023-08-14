@@ -2,7 +2,8 @@
 this file is not accessed by any other file, it is meant to be run standalone
 every time a change to the database must be made, this must be accessed first
 */
-const db = require('./database')
+const handler = require('./sql-handler')
+const clsys = require('./class-system')
 const jsondiffpatch = require('jsondiffpatch')
 const { deepcopy, removeBraces } = require('./utils')
 
@@ -30,7 +31,7 @@ const { deepcopy, removeBraces } = require('./utils')
  */
 async function getAllVersions (cls, id, defaultData) {
   const versions = [defaultData]
-  const patches = await db.handler.selectPatches(cls, id)
+  const patches = await handler.selectPatches(cls, id)
   patches.forEach((patch, i) => {
     const nextVersion = jsondiffpatch.patch(deepcopy(versions[i]), patch)
     versions.push(nextVersion)
@@ -50,11 +51,11 @@ async function getAllVersions (cls, id, defaultData) {
  * @param {VersionList} versions - All the versions to save
  */
 async function overridePatches (cls, id, versions) {
-  const patchIds = await db.handler.selectPatchIds(cls, id)
+  const patchIds = await handler.selectPatchIds(cls, id)
   if (versions.length - 1 !== patchIds.length) throw new Error('Versions given cannot describe the patches to override')
   patchIds.forEach((id, i) => {
     const patch = JSON.stringify(jsondiffpatch.diff(versions[i], versions[i + 1]))
-    db.handler.update('revisions', 'patch', 'id', [id, patch])
+    handler.update('revisions', 'patch', 'id', [id, patch])
   })
 }
 
@@ -80,9 +81,9 @@ class DatabaseManipulator {
     /** The original default class data before being updated */
     const originalDefaults = {}
 
-    const allClasses = db.getAllClasses()
+    const allClasses = clsys.getAllClasses()
     for (const cls in allClasses) {
-      originalDefaults[cls] = deepcopy(db.defaults[cls])
+      originalDefaults[cls] = deepcopy(clsys.defaults[cls])
     }
 
     // run all add commands
@@ -105,7 +106,7 @@ class DatabaseManipulator {
       }
       if (callback) callback(cls, property, type)
       if (codeCallback) {
-        const clsRef = db.getAnyClass(cls)
+        const clsRef = clsys.getAnyClass(cls)
         codeCallback(clsRef, property, type)
       }
       if (!classMap[cls]) classMap[cls] = []
@@ -113,13 +114,13 @@ class DatabaseManipulator {
     }
 
     matches.drop.forEach(base('DROP', (cls, property) => {
-      this.dropInObject(db.defaults[cls], property)
+      this.dropInObject(clsys.defaults[cls], property)
     }, (clsRef, property) => {
       clsRef.code = clsRef.code.replace(new RegExp(`.*${property}[^;]*;`), '')
     }))
 
     matches.set.forEach(base('SET', (cls, property, type) => {
-      this.setInObject(db.defaults[cls], property, type)
+      this.setInObject(clsys.defaults[cls], property, type)
     }, (clsRef, property, type) => {
       if (clsRef.code.match(`${property}`)) {
         clsRef.code = clsRef.code.replace(groupPatterns(`(?<=${property}\\s+)`, typePattern, /.*/), type)
@@ -157,7 +158,7 @@ class DatabaseManipulator {
       })
     }
 
-    console.log(db.helperClasses, db.defaults)
+    console.log(clsys.helperClasses, clsys.defaults)
   }
 
   /**
@@ -204,16 +205,16 @@ class DatabaseManipulator {
     const cls = words[2]
     switch (category) {
       case 'main': {
-        db.handler.createClass(cls)
+        handler.createClass(cls)
         break
       }
       case 'static': {
-        db.handler.insertStatic(cls, {})
+        handler.insertStatic(cls, {})
         break
       }
     }
-    db[`${category}Classes`][cls] = {}
-    db.defaults[cls] = {}
+    clsys[`${category}Classes`][cls] = {}
+    clsys.defaults[cls] = {}
   }
 
   /**
@@ -223,10 +224,10 @@ class DatabaseManipulator {
    * @param {string} type - Second argumment of method
    */
   setInObject (object, property, type) {
-    if (db.isArrayType(type)) {
+    if (clsys.isArrayType(type)) {
       object[property] = []
     } else if (type.includes('{')) {
-      object[property] = db.defaults[removeBraces(type)]
+      object[property] = clsys.defaults[removeBraces(type)]
     } else {
       object[property] = null
     }
@@ -307,7 +308,7 @@ class DatabaseManipulator {
 
       const getNewValue = () => {
         if (curType === '[]') return []
-        else return deepcopy(db.defaults[curType])
+        else return deepcopy(clsys.defaults[curType])
       }
 
       // the last step we will assign, while in these others
@@ -362,7 +363,7 @@ class DatabaseManipulator {
     let type = cls
     // unify all classes because the cls will be first
     // assigned the given class and it can then point to helper classes
-    const allClasses = db.getAllClasses()
+    const allClasses = clsys.getAllClasses()
     steps.forEach(step => {
       // ignore if it is a number or it's just the *
       // because that represents an array element ie there is no type of interest
@@ -404,11 +405,11 @@ class DatabaseManipulator {
       overridePatches(cls, id, versions)
     }
 
-    if (db.isStaticClass(cls)) {
+    if (clsys.isStaticClass(cls)) {
       await versionBase(cls, 0)
     } else {
       // find biggest ID to iterate through everything
-      const seq = await db.handler.getBiggestSerial(cls)
+      const seq = await handler.getBiggestSerial(cls)
       // iterate every ID, presuming no deletion
       for (let i = 1; i <= seq; i++) {
         await versionBase(cls, i)

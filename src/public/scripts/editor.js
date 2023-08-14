@@ -71,6 +71,7 @@ class Page {
 
     const Editor = constructEditorModule(main)
     const editor = new Editor(data, this.editor)
+    console.log(data)
     editor.build()
     editor.input()
     editor.setup()
