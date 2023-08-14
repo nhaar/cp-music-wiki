@@ -5,8 +5,10 @@ const multer = require('multer')
 
 const path = require('path')
 
-const db = require('../app/database')
-const clsys = require('../app/class-system')
+const bridge = require('../app/database/class-frontend')
+const user = require('../app/database/user')
+const rev = require('../app/database/revisions')
+const clsys = require('../app/database/class-system')
 const Gen = require('../app/lists')
 const gen = new Gen()
 
@@ -17,10 +19,10 @@ const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an inte
 // send data for a given editor class
 router.post('/editor-data', async (req, res) => {
   const { t } = req.body
-  if (typeof t !== 'number' || t < 0 || t >= db.classNumber) {
+  if (typeof t !== 'number' || t < 0 || t >= bridge.classNumber) {
     sendBadReq(res, 'Invalid class number provided')
   } else {
-    res.status(200).send(db.getEditorData(t))
+    res.status(200).send(bridge.getEditorData(t))
   }
 })
 
@@ -68,7 +70,12 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
     else {
       const validationErrors = clsys.validate(cls, data)
       if (validationErrors.length === 0) {
-        await db.update(cls, row, token)
+        await rev.addChange(cls, row, token)
+        if (clsys.isStaticClass(cls)) {
+          await clsys.updateStatic(cls, row)
+        } else {
+          await clsys.updateItem(cls, row)
+        }
         gen.updateLists()
         res.sendStatus(200)
       } else sendBadReqJSON(res, { errors: validationErrors })
@@ -85,7 +92,7 @@ async function checkAdmin (req, res, next) {
   if (cookie) {
     const session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
     if (session) {
-      isAdmin = await db.isAdmin(session[0])
+      isAdmin = await user.isAdmin(session[0])
     }
   }
 
@@ -109,23 +116,6 @@ router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) 
   }
 })
 
-router.post('/delete-item', checkAdmin, checkClass, checkId, async (req, res) => {
-  const { cls, id } = req.body
-
-  const token = getToken(req)
-
-  if (clsys.isMainClass(cls)) {
-    const row = await clsys.getItemById(cls, id)
-    if (row) {
-      await db.deleteItem(cls, id)
-      db.addDeletion(cls, id, token)
-      gen.updateLists()
-    } else sendNotFound(res, 'Item not found in the database')
-  } else sendBadReq(res, 'Can only delete item from main class')
-
-  res.sendStatus(200)
-})
-
 // get filtering by a name
 router.post('/get-by-name', checkClass, async (req, res) => {
   const { keyword, cls } = req.body
@@ -144,14 +134,14 @@ router.post('/get-name', checkClass, checkId, async (req, res) => {
 })
 
 router.get('/get-preeditor-data', async (req, res) => {
-  const data = db.getPreeditorData()
+  const data = bridge.getPreeditorData()
   res.status(200).send(data)
 })
 
 router.post('/login', async (req, res) => {
   const { user, password } = req.body
   if (typeof user !== 'string' || typeof password !== 'string') sendBadReq(res, 'Invalid data')
-  const token = await db.checkCredentials(user, password)
+  const token = await user.checkCredentials(user, password)
   if (token) {
     res.status(200).send({ token })
   } else {

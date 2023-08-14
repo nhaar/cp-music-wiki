@@ -1,8 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 
-const handler = require('./sql-handler')
-const clsys = require('./class-system')
+const handler = require('./database/sql-handler')
+const clsys = require('./database/class-system')
 
 /**
  * Represents the use of a song in some media at some point in history

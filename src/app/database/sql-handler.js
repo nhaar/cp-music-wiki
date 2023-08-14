@@ -1,6 +1,6 @@
 const { Pool } = require('pg')
 
-const config = require('../../config')
+const config = require('../../../config')
 
 /**
  * Class that connects to the Postgres database and runs

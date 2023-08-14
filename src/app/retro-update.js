@@ -2,7 +2,7 @@
 this file is not accessed by any other file, it is meant to be run standalone
 every time a change to the database must be made, this must be accessed first
 */
-const handler = require('./sql-handler')
+const handler = require('./database/sql-handler')
 const clsys = require('./class-system')
 const jsondiffpatch = require('jsondiffpatch')
 const { deepcopy, removeBraces } = require('./utils')

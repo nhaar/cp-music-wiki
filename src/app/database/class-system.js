@@ -1,4 +1,4 @@
-const { removeBraces, matchGroup, deepcopy, compareObjects } = require('./utils')
+const { removeBraces, matchGroup, deepcopy, compareObjects } = require('../utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
 
