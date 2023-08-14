@@ -1,9 +1,9 @@
 /**
- * Class that handles validating data for a class
+ * Class to validate an assigned part of a class
  */
 class Validator {
   /**
-   * @param {function(TypeData) : boolean} f - Takes as argument an object that follows a class data's structure, and returns true if the object is following the rule assigned to this validator, else it returns false, indicating the data is not valid
+   * @param {function(ItemData) : boolean} f - Takes as argument an object that follows a class data's structure, and returns true if the object is following the rule assigned to this validator, else it returns false, indicating the data is not valid
    * @param {string} msg - Error message to display for the data if it is invalid
    */
   constructor (f, msg) {
@@ -14,9 +14,9 @@ class Validator {
 /** Class for a database class definition */
 class ClassDef {
   /**
-   * Assigns both values to the object
-   * @param {CPT} code - The code snippet which contains the declaration for all properties within the class
-   * @param {Validator[]} validators - A list of all data validators for the class data
+   * Assign both values to the object
+   * @param {import("./database").CPT} code - The code snippet which contains the declaration for all properties within the class
+   * @param {Validator[]} validators - A list of all data validators for the class
    */
   constructor (code, validators = []) {
     Object.assign(this, { code, validators })
@@ -25,6 +25,12 @@ class ClassDef {
 
 /** Class for a class definition that has a name (for main and static classes) */
 class NameDef {
+  /**
+   * Assign both values to the object
+   * @param {string} name - The "pretty name" for the class
+   * @param {import("./database").CPT} code - The code snippet which contains the declaration for all properties within the class
+   * @param {Validator[]} validators - A list of all data validators for the class
+   */
   constructor (name, code, validators = []) {
     Object.assign(this, { name, code, validators })
   }

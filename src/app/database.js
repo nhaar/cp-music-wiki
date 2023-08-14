@@ -45,6 +45,11 @@ const { getHash, generateToken } = require('./crypto')
  */
 
 /**
+ * Object mapping classes to an array of property paths
+ * @typedef {object} PathMap
+ */
+
+/**
  * Contains the methods to communicate with the database
  * via a defined database structure
  */
@@ -133,22 +138,27 @@ class WikiDatabase {
   isMainClass = cls => this.keysInclude(this.mainClasses, cls)
 
   /**
-   * Get the data from a main class item given its id
+   * Get the data in the database from a main class item given its id
    * @param {ClassName} cls - Name of the main class
    * @param {number} id - Id of the row to get
    * @returns {Row} Data retrieved from the database
    */
   getItemById = async (cls, id) => await this.handler.selectId(cls, id)
 
+  /**
+   * Check if a CPT type declaration represents a declaration of an array type
+   * @param {string} type - Type part of the declaration
+   * @returns {boolean} True if it represents an array
+   */
   isArrayType (type) {
     return type.includes('[]')
   }
 
   /**
-   * Check if the object for a database class follows the rules defined for it and returns a list of all the errors found
+   * Check if the object for a database class follows the rules defined for it
    * @param {ClassName} cls - Class of the data to validate
    * @param {ItemData} data - Data object to validate
-   * @returns {string[]} Array where each element is a string describing an error
+   * @returns {string[]} Array where each element is a string describing an error with the data
    */
   validate (cls, data) {
     const errors = []
@@ -247,7 +257,7 @@ class WikiDatabase {
   /**
    * Add or update a row in the database for a specific class to match the data given
    * @param {ClassName} cls - Name of the class being updated
-   * @param {Row} row - Row data
+   * @param {Row} row - Data of the row to update or add
    */
   async updateItem (cls, row) {
     const { id, data, isNew } = row
@@ -265,14 +275,14 @@ class WikiDatabase {
 
   /**
    * Get the row for a static class
-   * @param {ClassName} cls - Clas to get
+   * @param {ClassName} cls - Class to get
    * @returns {Row} Fetched row
    */
   getStatic = async cls => (await this.handler.select('static', 'class', cls))[0]
 
   /**
-   * Update the row for a static clas
-   * @param {Row} row - Row to update with
+   * Update the row for a static class
+   * @param {Row} row - Row to use to update
    */
   async updateStatic (cls, row) {
     await this.handler.update('static', 'data', 'class', [cls, JSON.stringify(row.data)])
@@ -281,7 +291,7 @@ class WikiDatabase {
   /**
    * Create and save the default object structure for each database class, where every array is
    * replaced with an empty array, every helper class is expanded with its defined properties,
-   * and every other property is kept null
+   * and every base property is kept to their standard value
    */
   assignDefaults () {
     this.defaults = {}
@@ -344,8 +354,8 @@ class WikiDatabase {
   }
 
   /**
-   * Get object with all main, static and helper class definitions
-   * @returns {DefMap} Containing all classes
+   * Get an object with all main, static and helper class definitions
+   * @returns {DefMap} Definition map for all classes
    */
   getAllClasses () {
     return Object.assign(this.getMainClasses(), this.helperClasses)
@@ -353,22 +363,28 @@ class WikiDatabase {
 
   /**
    * Get object with all main and static class definitions
-   * @returns {DefMap} Containing all main and static classes
+   * @returns {DefMap} Definition map for all main and static classes
    */
   getMainClasses () {
     return Object.assign({}, this.mainClasses, this.staticClasses)
   }
 
+  /**
+   * Delete an item from a main class by removing its row in the database
+   * and all references of the id in other classes
+   * @param {ClassName} cls - Class of the item being deleted
+   * @param {number} id - Id of the item to delete
+   */
   async deleteItem (cls, id) {
     await this.handler.delete(cls, 'id', id)
     await this.deleteReferences(cls, id)
   }
 
   /**
-   * Add a patch to the revisions table
+   * Add a revision for a change or creation to the revisions table
    * @param {ClassName} cls - Class of the data being changed
    * @param {Row} row - Row for the data being changed
-   * @param {boolean} isStatic - True if the class is static
+   * @param {string} token - Session token for the user submitting the revision
    */
   async addChange (cls, row, token) {
     let oldRow
@@ -397,10 +413,21 @@ class WikiDatabase {
     )
   }
 
+  /**
+   * Get the ID of a user given a session token
+   * @param {string} token - Session token
+   * @returns {number} - ID of the user
+   */
   async getUserId (token) {
     return (await this.handler.select('wiki_users', 'session_token', token, 'id'))[0].id
   }
 
+  /**
+   * Add a revision that represents an item deletion
+   * @param {ClassName} cls - Class of the deleted item
+   * @param {number} id - ID of the deleted item
+   * @param {string} token - Session token for the user submitting the revision
+   */
   async addDeletion (cls, id, token) {
     const userId = await this.getUserId(token)
     this.handler.insert(
@@ -410,6 +437,12 @@ class WikiDatabase {
     )
   }
 
+  /**
+   * Find all the paths in every class definition
+   * that leads to a type/param following a specific condition
+   * @param {PathMap} variable - Object to store the paths
+   * @param {function(string, string[]) : boolean} condition - Function that takes as the first argument the type of a property and as the second argument the parameters of a property, and returns a boolean for whether the values meet the criteria
+   */
   findPaths (variable, condition) {
     const mainClasses = this.getMainClasses()
     for (const cls in mainClasses) {
@@ -435,6 +468,11 @@ class WikiDatabase {
     }
   }
 
+  /**
+   * Find all paths that lead to a type `ID(class)` in every class
+   * @param {ClassName} cls - Class to find references of
+   * @returns {PathMap} Object with the paths
+   */
   findIdPaths (cls) {
     const referencers = {}
     this.findPaths(referencers, type => {
@@ -443,6 +481,17 @@ class WikiDatabase {
     return referencers
   }
 
+  /**
+   * Search a path in an object and check if it matches a value,
+   * removing that value if it does and doing nothing otherwise
+   * 
+   * The removal is done by setting the property to null, if it is a property
+   * or by splicing the element from the array, if it is the member of an array
+   * @param {object} data - The object to search
+   * @param {string[]} path - An array of property/indexes representing a path
+   * @param {any} value - The value to check at the end of the path
+   * @returns {data | null} If a deletion ocurred, returns the new object, otherwise returns null
+   */
   removeFromPath (data, path, value) {
     const original = deepcopy(data)
     const iterate = (obj, i) => {
@@ -479,6 +528,12 @@ class WikiDatabase {
     }
   }
 
+  /**
+   * Remove all references of an id of an item from a class
+   * across the other classes in the database
+   * @param {ClassName} cls - The class of the item being removed
+   * @param {number} id - The id of the item being removed
+   */
   async deleteReferences (cls, id) {
     const map = this.findIdPaths(cls)
     for (const cls in map) {
@@ -503,6 +558,12 @@ class WikiDatabase {
     }
   }
 
+  /**
+   * Update an item from a class in the database
+   * @param {ClassName} cls - The class of the item
+   * @param {Row} row - Row data for the item
+   * @param {string} token - The session token of the user who submitted the update
+   */
   async update (cls, row, token) {
     await db.addChange(cls, row, token)
     if (this.isStaticClass(cls)) {
@@ -516,7 +577,7 @@ class WikiDatabase {
    * Create and save an object that maps each `ClassName` in the database
    * onto an array representing paths that lead to the search query properties
    *
-   * This object is used to avoid repeating this operation each search query request
+   * This object is created at the beginning to avoid repeating this operation each search query request
    */
   queryIndexing () {
     const queryIndex = {}
@@ -528,9 +589,9 @@ class WikiDatabase {
   }
 
   /**
-   * Iterate through every property declaration in a CPT code snippet and run a function while iterating
-   * @param {CPT} code - Code snippet with declarations
-   * @param {function(string, string) : void} callbackfn - Callback function for each iteration which takes as the first argument the name of the property in the declaration, as the second argument the type of the property being declared and as the third argument the array of the other parameters used in the declaration
+   * Iterate through every property declaration in a CPT code snippet and run a function for each declaration
+   * @param {CPT} code - Code snippet
+   * @param {function(string, string, string[]) : void} callbackfn - Callback function for each declaration which takes as the first argument the name of the property in the declaration, as the second argument the type declaration and as the third argument the array of the parameters declared
    */
   iterateDeclarations (code, callbackfn) {
     const declarations = splitDeclarations(code)
@@ -554,8 +615,8 @@ class WikiDatabase {
   /**
    * Get the words that can be used in a search query to identify a class item
    * and return them in the query format stored in the database
-   * @param {ClassName} cls - Type of the data
-   * @param {ItemData} data - Object for the data
+   * @param {ClassName} cls - Class of the item
+   * @param {ItemData} data - Data of the item
    * @returns {string} The useable expresions/words separated by "&&", the format stored in the database
    */
   getQueryWords (cls, data) {
@@ -586,7 +647,7 @@ class WikiDatabase {
    * Get all rows that match a searcy query result in a given class
    * @param {ClassName} cls - Class to search in
    * @param {string} keyword - Word to match the search result
-   * @returns {object} Object that maps ids into expressions/names for the rows
+   * @returns {object} Object that maps ids into pharses/names for the rows
    */
   async getByName (cls, keyword) {
     const response = await this.handler.selectLike(cls, 'querywords', [keyword])
@@ -607,7 +668,7 @@ class WikiDatabase {
 
   /**
    * Get the array dimension for a property type declaration in CPT
-   * @param {string} type - Type in the declaration
+   * @param {string} type - Type declaration
    * @returns {number} Array dimension, 0 if not an array
    */
   getDimension (type) {
@@ -617,7 +678,7 @@ class WikiDatabase {
   }
 
   /**
-   * Get the first expression/word in the query words for a row based on the id of the row and class
+   * Get the first phrase/word in the query words for a row based on the id of the row and its class
    * @param {ClassName} cls - Class to search
    * @param {number} id - Id of the row to get
    * @returns {string} First query word in the row
@@ -652,6 +713,9 @@ class WikiDatabase {
     return data
   }
 
+  /**
+   * Create the editor model, used by the frontend editor to know how to create the modules
+   */
   createEditorModels () {
     const base = (code, obj) => {
       this.iterateDeclarations(code, (property, type, params) => {
@@ -717,23 +781,44 @@ class WikiDatabase {
     return { main: this.modelObjects[cls], cls, isStatic: this.isStaticClass(cls) }
   }
 
+  /**
+   * Get the category of a class
+   * @param {ClassName} cls - Name of the class
+   * @returns {string} String with the name of the category
+   */
   getClassCategory (cls) {
     if (this.isStaticClass(cls)) return 'static'
     else if (this.isMainClass(cls)) return 'main'
     else return 'helper'
   }
 
+  /**
+   * Get the definition object for a class
+   * @param {ClassName} cls - Class name
+   * @returns {object} Definition object
+   */
   getAnyClass (cls) {
     const cat = this.getClassCategory(cls)
     return this[`${cat}Classes`][cls]
   }
 
+  /**
+   * Check if a user is an admin
+   * @param {string} session - The session token
+   * @returns {boolean} True if is an admin
+   */
   async isAdmin (session) {
     // currently every user is admin so just check for existence of account
     const account = (await this.handler.select('wiki_users', 'session_token', session))[0]
     return Boolean(account)
   }
 
+  /**
+   * Generate session token if the credentials are correct
+   * @param {string} user - Username
+   * @param {string} password - Password
+   * @returns {string | undefined} The session token if the credentials are correct or undefined if they aren't
+   */
   async checkCredentials (user, password) {
     const internalData = (await db.handler.select('wiki_users', 'name', user))[0]
     if (!internalData) return
@@ -747,6 +832,12 @@ class WikiDatabase {
     }
   }
 
+  /**
+   * Create an account in the database
+   * @param {string} name - Username of the account
+   * @param {string} password - Password of the account
+   * @param {string} display - The display name of the account
+   */
   async createAccount (name, password, display) {
     const hash = getHash(password)
     this.handler.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
@@ -758,6 +849,7 @@ class WikiDatabase {
  * the SQL queries
  */
 class SQLHandler {
+  /** Connects to the database */
   constructor () {
     this.pool = new Pool({
       user: config.user,
@@ -772,13 +864,13 @@ class SQLHandler {
 
   /**
    * Create a table if it doesn't exist
-   * @param {string} query - SQL code that looks like `table (...)` used to create a table
+   * @param {string} query - A string that looks like `TABLENAME (...)` where the parenthesis is what would be in parenthesis in SQL
    */
   async create (query) { await this.pool.query(`CREATE TABLE IF NOT EXISTS ${query}`) }
 
   /**
    * Create the table for a main class
-   * @param {ClassName} cls - Main class name
+   * @param {ClassName} cls - Class name
    */
   async createClass (cls) {
     await this.create(`
@@ -791,7 +883,7 @@ class SQLHandler {
   }
 
   /**
-   * Select all rows from a table which a column is equal to a value
+   * Select all rows from a table in which a column is equal to a value
    * @param {string} table - Name of the table
    * @param {string} column - Name of the column to look for
    * @param {string | number} value - Value for the column to match
@@ -858,7 +950,7 @@ class SQLHandler {
    * Insert a row into a table
    * @param {string} table - Name of the table
    * @param {string} columns - Name of all the columns to insert, comma separated
-   * @param {*[]} values - Array with all the values to be inserted in the same order as the columns are written
+   * @param {any[]} values - Array with all the values to be inserted in the same order as the columns are written
    */
   async insert (table, columns, values, condition = '') {
     return await this.pool.query(
@@ -878,18 +970,17 @@ class SQLHandler {
    * Insert a row into a table associated with a main class
    * @param {ClassName} cls - Name of the class
    * @param {ItemValues} values - Values for the type
-   * @returns
    */
   insertData = async (cls, values) => {
     await this.insert(cls, this.columns, values, '')
   }
 
   /**
-   * Update a row inside a table which a column matches a value
+   * Update a row inside a table in which a column matches a value
    * @param {string} table - Name of the table
    * @param {string} setting - Name of all the columns to update, comma separated
    * @param {string} column - Name of the column to match
-   * @param {*[]} values - Array where the first element is the value to be matched, and the other values are the ones to update each column in the order the columns are written
+   * @param {any[]} values - Array where the first element is the value to be matched, and the other values are the ones to update each column in the order the columns are written
    */
   update = async (table, setting, column, values) => {
     await this.pool.query(
@@ -908,11 +999,11 @@ class SQLHandler {
   }
 
   /**
-   * Select all rows in a table where a column matches a certain value
+   * Select all rows in a table where a column is like a certain value
    * @param {string} table - Name of the table
    * @param {string} column - Name of the column to match the value
    * @param {string} matching - String to be matched
-   * @returns {Row[]}
+   * @returns {object[]}
    */
   selectLike = async (table, column, matching) => {
     return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} ILIKE $1`, [`%${matching}%`])).rows
@@ -927,6 +1018,12 @@ class SQLHandler {
     return Number((await this.pool.query(`SELECT last_value FROM ${table}_id_seq`)).rows[0].last_value)
   }
 
+  /**
+   * Delete a row in a table where a column matches a value
+   * @param {string} table - Table name
+   * @param {string} column - Column name
+   * @param {any} value - Value to match in column
+   */
   async delete (table, column, value) {
     await this.pool.query(`DELETE FROM ${table} WHERE ${column} = $1`, [value])
   }
@@ -934,8 +1031,8 @@ class SQLHandler {
 
 /**
  * Remove all bracket characters from a string
- * @param {string} str
- * @returns {string}
+ * @param {string} str - String
+ * @returns {string} Modified string
  */
 function removeBrackets (str) {
   return str.replace(/\[|\]/g, '')
@@ -943,8 +1040,8 @@ function removeBrackets (str) {
 
 /**
  * Check if a value is a JS object
- * @param {any} value
- * @returns {boolean}
+ * @param {any} value - Value
+ * @returns {boolean} True if is a JS object
  */
 function isObject (value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -961,8 +1058,8 @@ function removeArgs (type) {
 
 /**
  * Check if value is a string
- * @param {any} value
- * @returns {boolean}
+ * @param {any} value - Value
+ * @returns {boolean} True if is a string
  */
 function isString (value) {
   return typeof value === 'string'
@@ -988,7 +1085,7 @@ function splitDeclarations (code) {
  * Match for a pattern than enclosures everything inside two characters
  * @param {string} str - String to match
  * @param {string} lChar - Left character of the enclosure
- * @param {string} rChar - Right character of the enclosure (leave blank for same as left)
+ * @param {string} rChar - Right character of the enclosure, leave blank for same as left
  * @returns {object | null} Match result
  */
 function matchInside (str, lChar, rChar) {
@@ -996,6 +1093,12 @@ function matchInside (str, lChar, rChar) {
   return str.match(`(?<=${lChar}).*(?=${rChar})`)
 }
 
+/**
+ * Separates the words in a camel case name and capitalize the first letter
+ * of each word
+ * @param {string} str - Camel case string
+ * @returns {string} Converted string
+ */
 function camelToPhrase (str) {
   const firstWord = str.match(/[a-z]+((?=[A-Z])|$)/)[0]
   const otherWords = str.match(/[A-Z][a-z]*/g)
