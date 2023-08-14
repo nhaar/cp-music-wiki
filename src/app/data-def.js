@@ -205,11 +205,12 @@ const def = [{
   cpi_location: new NameDef(
     'Club Penguin Island Location', `
     name TEXTSHORT QUERY;
-    songUses {USED_SONG_USE}[];
+    areas {CPI_AREA}[];
   `),
   cpi_quest: new NameDef(
     'Club Penguin Island Quest', `
     character TEXTSHORT QUERY;
+    releaseDate {DATE_ESTIMATE};
     questSongs {QUEST_USE}[];
     `
   ),
@@ -223,13 +224,8 @@ const def = [{
   cpi_minigame: new NameDef(
     'Club Penguin Island Minigame', `
     name TEXTSHORT QUERY;
+    releaseDate {DATE_ESTIMATE};
     song ID(song);
-    `
-  ),
-  cpi_activity: new NameDef(
-    'Club Penguin Island Activity', `
-    name TEXTSHORT QUERY;
-    songs {USED_SONG_USE}[];
     `
   ),
   series_misc: new NameDef(
@@ -448,6 +444,14 @@ const def = [{
     isUnused BOOLEAN;
     useOwnDate BOOLEAN;
     available {TIME_RANGE};
+  `),
+  CPI_AREA: new ClassDef(`
+    name TEXTSHORT;
+    songUses {USED_SONG_USE}[];
+  `),
+  CPI_IGLOO_SONG: new ClassDef(`
+    displayName TEXTSHORT;
+    song ID(song);
   `)
 }, {
   ds_ost: new NameDef(
@@ -464,7 +468,12 @@ const def = [{
     'Game Day OST', `
     songs {OST_SONG}[]
     'The songs that belong to the OST';
-  `)
+  `),
+  cpi_igloo: new NameDef(
+    'Club Penguin Island Igloo Music', `
+    songs {CPI_IGLOO_SONG}[];
+    `
+  )
 }]
 
 module.exports = def

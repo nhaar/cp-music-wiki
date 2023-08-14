@@ -215,6 +215,50 @@ class Generator {
         'flash_minigame',
         'flash_misc'
       ),
+      cpi: new MediaInfo(
+        'Club Penguin Island',
+        () => {
+          // screens
+          iterateUsesInTable(iterateUsePushInstance)(0, 'songUses', (use, data) => {
+            return [data.name, use.available.start]
+          })
+
+          // locations
+          iterateData(1, data => {
+            data.areas.forEach(area => {
+              const name = data.name
+              iterateUsePushInstance(area.songUses, use => {
+                const areaName = area.name
+                const finalName = areaName
+                  ? `${name} - ${areaName}`
+                  : name
+                return [finalName, use.available.start]
+              })
+            })
+          })
+
+          // quests
+          iterateUsesInTable(iterateUsePushInstance)(2, 'questSongs', (use, data) => {
+            return [`${data.character} Quest`, data.releaseDate]
+          })
+
+          // party
+          iterateUsesInTable(iterateUsePushInstance)(3, 'songs', (use, data) => {
+            return [data.name, data.active.start]
+          })
+
+          // minigame
+          iterateData(4, data => {
+            instances.push(new SongInstance(data.name, data.releaseDate, data.song))
+          })
+        },
+        'cpi-ost',
+        'cpi_screen',
+        'cpi_location',
+        'cpi_quest',
+        'cpi_party',
+        'cpi_minigame'
+      ),
       misc: new MediaInfo(
         'Misc',
         () => {
@@ -550,6 +594,7 @@ class Generator {
   async updateLists () {
     this.OSTListGenerator(
       'flash',
+      'cpi',
       'misc',
       'mobile',
       'gd',

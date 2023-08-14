@@ -25,6 +25,7 @@ router.get('/editor', (req, res) => {
 router.get('/lists', renderPage('OST Lists', `
 <a href="series-list"> Series OST </a><br>
 <a href="flash-list"> Club Penguin (Flash) OST </a><br>
+<a href="cpi-list"> Club Penguin Island OST </a><br>
 <a href="misc-list"> Misc OST </a><br>
 <a href="mobile-list"> Mobile Apps OST </a><br>
 <a href="game-day-list"> Club Penguin: Game Day! OST </a><br>
@@ -41,6 +42,7 @@ function renderList (name) {
 
 router.get('/series-list', renderList('series-ost'))
 router.get('/flash-list', renderList('flash-ost'))
+router.get('/cpi-list', renderList('cpi-ost'))
 router.get('/misc-list', renderList('misc-ost'))
 router.get('/mobile-list', renderList('mobile-ost'))
 router.get('/game-day-list', renderList('game-day-ost'))

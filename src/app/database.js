@@ -4,7 +4,7 @@ const def = require('./data-def')
 
 const { deepcopy, matchGroup, removeBraces, compareObjects, capitalize } = require('./utils')
 const config = require('../../config')
-const { getHash } = require('./login')
+// const { getHash } = require('./login')
 
 /**
  * Represents CPT code, used to define the properties of the database classes
@@ -313,7 +313,7 @@ class WikiDatabase {
         const { code } = this.helperClasses[cls]
         const helperClasses = []
         this.iterateDeclarations(code, (property, type) => {
-          if (type.includes('{')) helperClasses.push(removeBraces(type))
+          if (type.includes('{')) helperClasses.push(removeBrackets(removeBraces(type)))
         })
 
         let onHold = false
@@ -331,6 +331,7 @@ class WikiDatabase {
         }
       }
 
+      console.log(classesOnHold)
       if (classesOnHold.length === 0) break
     }
 
@@ -732,10 +733,10 @@ class WikiDatabase {
     return Boolean(account)
   }
 
-  async createAccount (name, password, display) {
-    const hash = getHash(password)
-    this.handler.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
-  }
+  // async createAccount (name, password, display) {
+  //   const hash = getHash(password)
+  //   this.handler.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
+  // }
 }
 
 /**
