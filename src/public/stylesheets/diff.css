@@ -1,6 +1,7 @@
 .diff-viewer {
   display: grid;
   column-gap: 5px;
+  row-gap: 10px;
   grid-template-columns: 50% 50%;
 }
 
@@ -24,7 +25,6 @@
   border-radius: 5px;
   border-style: solid;
   flex-grow: 1;
-  height: 100%;
 }
 
 .remove-diff {
