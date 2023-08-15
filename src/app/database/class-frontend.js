@@ -121,7 +121,7 @@ class FrontendBridge {
       const name = await clsys.getQueryNameById(cls, row.item_id)
       console.log(row.wiki_user)
       const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
-      latest.push(`(diff | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name}</a> | ${name} [${user}]`)
+      latest.push(`(diff | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>  [${user}]`)
     }
 
     return latest
