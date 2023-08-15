@@ -6,6 +6,7 @@ const Diff = require('diff')
 const jsondiffpatch = require('jsondiffpatch')
 
 class RevisionHandler {
+  /** Create the database if it doesn't exist */
   constructor () {
     sql.create(`
       revisions (
@@ -28,30 +29,19 @@ class RevisionHandler {
    * @param {string} token - Session token for the user submitting the revision
    */
   async addChange (cls, row, token) {
-    let oldRow
-    const isStatic = clsys.isStaticClass(cls)
-    if (isStatic) {
-      oldRow = await clsys.getStatic(cls)
-    } else {
-      oldRow = await sql.selectId(cls, row.id)
-    }
+    let oldRow = clsys.getItem(cls, row.item)
+    let id = row.id
     if (!oldRow) {
-      if (!isStatic) {
-        // to add id to row object if creating new entry
-        row.id = (await sql.getBiggestSerial(cls))
-        // this property is for the updating function only
-        row.isNew = true
+      if (!clsys.isStaticClass(cls)) {
+        // figure out id of new item by seeing biggest serial
+        id = (await sql.getBiggestSerial(cls))
       }
       oldRow = { data: clsys.defaults[cls] }
     }
     const userId = await user.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
-    sql.insert(
-      'revisions',
-      'class, item_id, patch, wiki_user, timestamp',
-      [cls, row.id, JSON.stringify(delta), userId, Date.now()]
-    )
+    await this.insertRev(cls, id, userId, delta)
   }
 
   /**
@@ -62,13 +52,34 @@ class RevisionHandler {
    */
   async addDeletion (cls, id, token) {
     const userId = await user.getUserId(token)
-    sql.insert(
+    await this.insertRev(cls, id, userId)
+  }
+
+  /**
+   * Insert a revision in the table
+   * @param {import('./class-system').ClassName} cls - Class of the item being revised
+   * @param {number} itemId - Id of the item being revised
+   * @param {string} user - Id of the user submitting the revision
+   * @param {jsondiffpatch.DiffPatcher} patch - The patch of the revision, if it is not a deletion
+   */
+  async insertRev (cls, itemId, user, patch) {
+    if (patch) patch = JSON.stringify(patch)
+    await sql.insert(
       'revisions',
-      'class, item_id, wiki_user, timestamp',
-      [cls, id, userId, Date.now()]
+      'class, item_id, wiki_user, timestamp, patch',
+      cls,
+      itemId,
+      user,
+      Date.now(),
+      patch = null
     )
   }
 
+  /**
+   * Get what the data object for an item looked like at a certain revision
+   * @param {number} revId - Id of the revision
+   * @returns {ItemData} What the data was
+   */
   async getRevisionData (revId) {
     const row = await sql.selectId('revisions', revId)
     const cls = row.class
@@ -76,16 +87,20 @@ class RevisionHandler {
 
     const revisions = await sql.selectGreaterCondition('revisions', 'id', revId, 'class', cls, 'item_id', itemId)
 
-    const data = (await clsys.getItemById(cls, itemId)).data
+    const data = (await clsys.getMainItem(cls, itemId)).data
     for (let i = revisions.length - 1; i >= 0; i--) {
       jsondiffpatch.unpatch(data, revisions[i].patch)
     }
 
-    console.log(data)
     return data
   }
 
-  async getPreviousRev (revId) {
+  /**
+   * Get the next revision for the same item relative to another revision
+   * @param {number} revId - The base revision
+   * @returns {number} Id of the next revision
+   */
+  async getNextRev (revId) {
     const cur = await sql.selectId('revisions', revId)
     const cls = cur.class
     const itemId = cur.item_id
@@ -99,6 +114,12 @@ class RevisionHandler {
     return previous.rows[0].min
   }
 
+  /**
+   * Get the difference between two revisions
+   * @param {import('./class-system').ItemData} old - Data for the older revision
+   * @param {import('./class-system').ItemData} cur - Data for the newer revision
+   * @returns {any[][]} An array where each element is an array containing the diff information
+   */
   getRevDiff (old, cur) {
     const strs = [old, cur].map(data => JSON.stringify(data, null, 2))
     const diff = Diff.diffLines(...strs)

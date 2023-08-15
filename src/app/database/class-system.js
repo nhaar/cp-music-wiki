@@ -237,7 +237,7 @@ class ClassSystem {
    * @param {number} id - Id of the row to get
    * @returns {Row} Data retrieved from the database
    */
-  getItemById = async (cls, id) => await handler.selectId(cls, id)
+  getMainItem = async (cls, id) => await handler.selectId(cls, id)
 
   /**
    * Check if a CPT type declaration represents a declaration of an array type
@@ -358,15 +358,32 @@ class ClassSystem {
   }
 
   /**
-   * Add or update a row in the database for a specific class to match the data given
-   * @param {ClassName} cls - Name of the class being updated
-   * @param {Row} row - Data of the row to update or add
+   * Update an item in the database or add if it doesn't exist
+   * @param {ClassName} cls - Class of the item
+   * @param {Row} row - Row object for the item
    */
   async updateItem (cls, row) {
-    const { id, data, isNew } = row
-    const itemValues = [JSON.stringify(data), this.getQueryWords(cls, data)]
-    if (isNew) await handler.insertData(cls, itemValues)
-    else await handler.updateData(cls, id, itemValues)
+    const { data } = row
+    if (this.isStaticClass(cls)) {
+      await handler.update('static', 'data', 'class', [cls, JSON.stringify(data)])
+    } else {
+      const { id } = row
+      const itemValues = [JSON.stringify(data), this.getQueryWords(cls, data)]
+      if (id === undefined) await handler.insertData(cls, itemValues)
+      else await handler.updateData(cls, id, itemValues)
+    }
+  }
+
+  /**
+   * Get an item from a main or static class
+   * @param {ClassName} cls - Class of the item
+   * @param {number} id - Id of the item if not a static class
+   * @returns {Row} Row data for the item
+   */
+  async getItem (cls, id) {
+    return this.isStaticClass(cls)
+      ? await this.getStatic(cls)
+      : await this.getMainItem(cls, id)
   }
 
   /**
@@ -388,7 +405,6 @@ class ClassSystem {
    * @param {Row} row - Row to use to update
    */
   async updateStatic (cls, row) {
-    await handler.update('static', 'data', 'class', [cls, JSON.stringify(row.data)])
   }
 
   /**

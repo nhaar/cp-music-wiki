@@ -38,14 +38,12 @@ router.post('/default', checkClass, async (req, res) => {
 router.post('/get', checkClass, checkId, async (req, res) => {
   const { cls, id } = req.body
 
-  if (clsys.isStaticClass(cls)) {
-    const row = await clsys.getStatic(cls)
-    row.id = 0
+  const row = await clsys.getItem(cls, id)
+  if (row) {
+    if (clsys.isStaticClass(cls)) row.id = 0
     res.status(200).send(row)
   } else {
-    const row = await clsys.getItemById(cls, id)
-    if (!row) sendNotFound(res, 'Item not found in the database')
-    else res.status(200).send(row)
+    sendNotFound(res, 'Item not found in the database')
   }
 })
 
@@ -71,11 +69,7 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
       const validationErrors = clsys.validate(cls, data)
       if (validationErrors.length === 0) {
         await rev.addChange(cls, row, token)
-        if (clsys.isStaticClass(cls)) {
-          await clsys.updateStatic(cls, row)
-        } else {
-          await clsys.updateItem(cls, row)
-        }
+        clsys.update(cls, row)
         gen.updateLists()
         res.sendStatus(200)
       } else sendBadReqJSON(res, { errors: validationErrors })

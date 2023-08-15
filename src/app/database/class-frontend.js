@@ -120,7 +120,7 @@ class FrontendBridge {
       const row = rows[i]
       const cls = row.class
       const name = await clsys.getQueryNameById(cls, row.item_id)
-      const previous = await rev.getPreviousRev(row.id)
+      const previous = await rev.getNextRev(row.id)
       const diff = `<a href="Diff?old=${previous}&cur=${row.id}">diff</a>`
       const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
       latest.push(`(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>  [${user}]`)
