@@ -1,4 +1,5 @@
 const clsys = require('./class-system')
+const sql = require('./sql-handler')
 const { capitalize } = require('../utils')
 
 class FrontendBridge {
@@ -97,6 +98,33 @@ class FrontendBridge {
     const { cls } = this.getPreeditorData()[t]
 
     return { main: this.modelObjects[cls], cls, isStatic: clsys.isStaticClass(cls) }
+  }
+
+  getClassT (cls) {
+    const preeditor = this.getPreeditorData()
+    for (let t = 0; t < preeditor.length; t++) {
+      if (preeditor[t].cls === cls) return t
+    }
+  }
+
+  async getLastRevisions (days) {
+    const timestamp = Date.now() - days * 24 * 3600 * 1000
+    const rows = await sql.selectGreater('revisions', 'timestamp', timestamp)
+
+    const classes = clsys.getMainClasses()
+
+    const latest = []
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const cls = row.class
+      const name = await clsys.getQueryNameById(cls, row.item_id)
+      console.log(row.wiki_user)
+      const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
+      latest.push(`(diff | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name}</a> | ${name} [${user}]`)
+    }
+
+    return latest
   }
 }
 
