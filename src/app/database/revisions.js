@@ -85,6 +85,20 @@ class RevisionHandler {
     return data
   }
 
+  async getPreviousRev (revId) {
+    const cur = await sql.selectId('revisions', revId)
+    const cls = cur.class
+    const itemId = cur.item_id
+
+    const previous = await sql.pool.query(`
+    SELECT MIN(id)
+    FROM revisions
+    WHERE id > ${revId} AND class = $1 AND item_id = $2
+    `, [cls, itemId])
+
+    return previous.rows[0].min
+  }
+
   getRevDiff (old, cur) {
     const strs = [old, cur].map(data => JSON.stringify(data, null, 2))
     const diff = Diff.diffLines(...strs)
