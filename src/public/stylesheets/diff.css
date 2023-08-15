@@ -1,3 +1,8 @@
+:root {
+  --add-color: #b4d2fb;
+  --remove-color: #f7e4a6;
+}
+
 .diff-viewer {
   display: grid;
   column-gap: 5px;
@@ -28,9 +33,21 @@
 }
 
 .remove-diff {
-  border-color: red;  
+  border-color: var(--remove-color);  
+}
+
+.remove-span, .add-span {
+  font-weight: bold;
+}
+
+.remove-span {
+  background-color: var(--remove-color);
+}
+
+.add-span {
+  background-color: var(--add-color);
 }
 
 .add-diff {
-  border-color: green;
+  border-color: var(--add-color);
 }

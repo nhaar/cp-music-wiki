@@ -29,7 +29,6 @@ postAndGetJSON('api/get-revisions', params).then(data => {
     createElement({ parent: diffContainer, innerHTML: formatValue(value), className })
   }
 
-  console.log(diff)
   diff.forEach(group => {
     const type = group[0]
     if (type === 'remove' || type === 'add') {
@@ -39,8 +38,23 @@ postAndGetJSON('api/get-revisions', params).then(data => {
       const types = type.match(/(remove|add)/g)
       console.log(types)
       for (let i = 0; i < 2; i++) {
-        createNewDiff(group[1 + i].value, types[i])
+        const value = createHTML(group[3], i)
+        createNewDiff(value, types[i])
       }
     }
   })
 })
+
+function createHTML (diff, isAdd) {
+  let str = ''
+  const className = isAdd ? 'add-span' : 'remove-span'
+  diff.forEach(change => {
+    if ((change.added && !isAdd) || (change.removed && isAdd)) {
+      str += `<span class="${className}">${change.value}</span>`
+    } else if (!change.added && !change.removed) {
+      str += change.value
+    }
+  })
+
+  return str
+}

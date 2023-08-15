@@ -94,17 +94,19 @@ class RevisionHandler {
     for (let i = 0; i < diff.length; i++) {
       const statement = diff[i]
       const next = diff[i + 1]
+      let charDiff
+      if (next) charDiff = Diff.diffChars(statement.value, next.value)
       if (statement.removed) {
         if (next.added) {
           i++
-          groups.push(['removeadd', statement, next])
+          groups.push(['removeadd', statement, next, charDiff])
         } else {
           groups.push(['remove', statement])
         }
       } else if (statement.added) {
         if (next.removed) {
           i++
-          groups.push(['addremove', statement, next])
+          groups.push(['addremove', statement, next, charDiff])
         } else {
           groups.push(['add', statement])
         }
