@@ -206,14 +206,14 @@ class ClassSystem {
    * @returns {DefMap} Definition map for all classes
    */
   getAllClasses () {
-    return Object.assign(this.getMainClasses(), this.helperClasses)
+    return Object.assign(this.getMajorClasses(), this.helperClasses)
   }
 
   /**
    * Get object with all main and static class definitions
    * @returns {DefMap} Definition map for all main and static classes
    */
-  getMainClasses () {
+  getMajorClasses () {
     return Object.assign({}, this.mainClasses, this.staticClasses)
   }
 
@@ -414,7 +414,7 @@ class ClassSystem {
    * @param {function(string, string[]) : boolean} condition - Function that takes as the first argument the type of a property and as the second argument the parameters of a property, and returns a boolean for whether the values meet the criteria
    */
   findPaths (variable, condition) {
-    const mainClasses = this.getMainClasses()
+    const mainClasses = this.getMajorClasses()
     for (const cls in mainClasses) {
       variable[cls] = []
 
@@ -611,11 +611,15 @@ class ClassSystem {
    */
   getAnyClass (cls) {
     const cat = this.getClassCategory(cls)
-    return this[this.getDefName(cat)][cls]
+    return this.getDefObj(cat)[cls]
   }
 
   getDefName (cat) {
     return `${cat}Classes`
+  }
+
+  getDefObj (cat) {
+    return this[this.getDefName(cat)]
   }
 }
 

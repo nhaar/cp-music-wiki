@@ -19,10 +19,10 @@ const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an inte
 // send data for a given editor class
 router.post('/editor-data', async (req, res) => {
   const { t } = req.body
-  if (typeof t !== 'number' || t < 0 || t >= bridge.classNumber) {
+  if (typeof t !== 'number' || t < 0 || t >= bridge.preeditorData.length) {
     sendBadReq(res, 'Invalid class number provided')
   } else {
-    res.status(200).send(bridge.getEditorData(t))
+    res.status(200).send(bridge.editorData[t])
   }
 })
 
@@ -128,8 +128,7 @@ router.post('/get-name', checkClass, checkId, async (req, res) => {
 })
 
 router.get('/get-preeditor-data', async (req, res) => {
-  const data = bridge.getPreeditorData()
-  res.status(200).send(data)
+  res.status(200).send(bridge.preeditorData)
 })
 
 router.post('/login', async (req, res) => {

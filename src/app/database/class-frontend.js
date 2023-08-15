@@ -5,70 +5,77 @@ const { capitalize } = require('../utils')
 
 class FrontendBridge {
   constructor () {
-    // save number of classes for preeditor data
-    this.classNumber = Object.keys(clsys.mainClasses).concat(Object.keys(clsys.staticClasses)).length
-
-    this.createEditorModels()
+    // save variables that will be requested by the frontend
+    this.createPreeditorData()
+    this.createEditorData()
   }
 
   /**
-   * Get the data used by the pre-editor frontend page
-   * @returns {object[]} Each object contains the class name, the pretty name and a boolean for being static, and the array contains every main and static class info
-   */
-  getPreeditorData () {
-    const data = []
-    const base = (classDefs, isStatic) => {
-      for (const cls in classDefs) {
-        data.push({ cls, name: classDefs[cls].name, isStatic })
-      }
-    }
+   * Create the object that contains the information for the pre-editor,
+   * which consists of an array of objects where each object
+   * contains the class name, the pretty name and if the class is static
+   * */
+  createPreeditorData () {
+    this.preeditorData = [];
 
     [
       ['main', false],
       ['static', true]
     ].forEach(element => {
-      base(clsys[`${element[0]}Classes`], element[1])
+      const classDefs = clsys.getDefObj(element[0])
+      for (const cls in classDefs) {
+        this.preeditorData.push({ cls, name: classDefs[cls].name, isStatic: element[1] })
+      }
     })
-
-    return data
   }
 
   /**
-   * Create the editor model, used by the frontend editor to know how to create the modules
+   * Create the editor models, to be used by the editor in the frontend
+   * @returns {object} An object that maps classes to "editor models", which are objects that represent the structure of a class, each property in the editor model is a property in a class, if the property is a helper class, then the editor model shows the editor model for that class, if it is a normal type, it shows the string, and if it is an array, it shows what type the array is of and what its dimension is
    */
   createEditorModels () {
-    const base = (code, obj) => {
+    // the function takes a CPT snippet, presumed to be
+    // what defines the object, returns the model following the snippet
+    const getModel = code => {
+      const obj = {}
       clsys.iterateDeclarations(code, (property, type, params) => {
-        // create automatic generated header
-        let header = camelToPhrase(property)
-        let description = ''
-        const applySandwich = (param, char, callback) => {
+        const sandwichVariables = {}
+        const applySandwich = (param, char, name) => {
           if (param.includes(char)) {
-            callback(param.match(`(?<=${char}).*(?=${char})`)[0])
+            sandwichVariables[name] = param.match(`(?<=${char}).*(?=${char})`)[0]
           }
         }
         params.forEach(param => {
-          applySandwich(param, '"', res => { header = res })
-          applySandwich(param, "'", res => { description = res })
+          [
+            ['"', 'header'],
+            ["'", 'description']
+          ].forEach(element => {
+            applySandwich(param, ...element)
+          })
         })
 
-        let args = matchInside(type, '\\(', '\\)')
+        // create automatically generated header if no header
+        const header = sandwichVariables.header || camelToPhrase(property)
+        const description = sandwichVariables.description || ''
 
+        // extrat arguments from type
+        let args = matchInside(type, '\\(', '\\)')
         if (args) {
           args = args[0].split(',')
           if (args.length === 1) args = args[0]
           type = type.replace(/\(.*\)/, '')
         }
 
+        // if the value is a helper type, it will become an object recursivelly
+        // until the lowest level where the value will be a string
         let value
         if (clsys.isHelperType(type)) {
-          value = base(
-            clsys.helperClasses[type.match('(?<={).*(?=})')[0]].code,
-            {}
-          )
+          value = getModel(clsys.helperClasses[matchInside(type, '{', '}')[0]].code)
         } else {
           value = type.match(/\w+/)[0]
         }
+        // array types will just include the value inside of an array to indicate it is
+        // an array type
         if (clsys.isArrayType(type)) {
           const dim = clsys.getDimension(type)
           value = [value, dim]
@@ -79,32 +86,37 @@ class FrontendBridge {
       return obj
     }
 
-    const mainClasses = clsys.getMainClasses()
-    this.modelObjects = {}
-    for (const cls in mainClasses) {
-      const modelObj = {}
-      const code = mainClasses[cls].code
-
-      base(code, modelObj)
-      this.modelObjects[cls] = modelObj
+    const classes = clsys.getMajorClasses()
+    const modelObjects = {}
+    for (const cls in classes) {
+      const code = classes[cls].code
+      modelObjects[cls] = getModel(code)
     }
+
+    return modelObjects
+  }
+
+  /** Create the editor data object, which is used by the frontend */
+  createEditorData () {
+    const modelObjects = this.createEditorModels()
+    this.editorData = []
+    this.preeditorData.forEach((data) => {
+      const { cls } = data
+      this.editorData.push(
+        { main: modelObjects[cls], cls, isStatic: clsys.isStaticClass(cls) }
+      )
+    })
   }
 
   /**
-   * Get the data for the editor frontend page
-   * @param {number} t - Parameter given by the editor page
-   * @returns {object} Object similar to `DefMap`, but containing only the code of the helper, and two extra properties, `cls` for the editing class name and `isStatic` if it is static
+   * Get what is the value of `t` (the index in the pre-editor data)
+   * of a class
+   * @param {import('./class-system').ClassName} cls - Name of the class
+   * @returns {number} The value of the index
    */
-  getEditorData (t) {
-    const { cls } = this.getPreeditorData()[t]
-
-    return { main: this.modelObjects[cls], cls, isStatic: clsys.isStaticClass(cls) }
-  }
-
   getClassT (cls) {
-    const preeditor = this.getPreeditorData()
-    for (let t = 0; t < preeditor.length; t++) {
-      if (preeditor[t].cls === cls) return t
+    for (let t = 0; t < this.preeditorData.length; t++) {
+      if (this.preeditor[t].cls === cls) return t
     }
   }
 
