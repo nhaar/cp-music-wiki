@@ -149,6 +149,12 @@ router.post('/login', async (req, res) => {
   }
 })
 
+router.get('/recent-changes', async (req, res) => {
+  const latest = await rev.getLastRevisions(1)
+  res.status(200).send(latest)
+  // get revisions from last day, later add frontend give options
+})
+
 function sendStatusJSON (res, status, obj) {
   res.status(status).send(obj)
 }

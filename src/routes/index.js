@@ -50,6 +50,13 @@ router.get('/ds-list', renderList('ds-ost'))
 router.get('/penguin-chat-list', renderList('penguin-chat-ost'))
 router.get('/unused-flash-list', renderList('unused-flash-ost'))
 
+router.get('/RecentChanges', renderPage('Recent Changes', `
+<div class="size-selector"></div>
+<ul class="changes"></ul>
+
+<script src="scripts/recent-changes.js" type="module">
+`))
+
 router.get('/user-page', renderPage('Login', `
   Write your credentials to sign in
   <br>

@@ -67,6 +67,26 @@ class RevisionHandler {
       [cls, id, userId, Date.now()]
     )
   }
+
+  async getLastRevisions (days) {
+    const timestamp = Date.now() - days * 24 * 3600 * 1000
+    const rows = await sql.selectGreater('revisions', 'timestamp', timestamp)
+
+    const classes = clsys.getMainClasses()
+
+    const latest = []
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const cls = row.class
+      const name = await clsys.getQueryNameById(cls, row.item_id)
+      console.log(row.wiki_user)
+      const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
+      latest.push(`(diff | history) .. ${classes[cls].name} | ${name} [${user}]`)
+    }
+
+    return latest
+  }
 }
 
 module.exports = new RevisionHandler()

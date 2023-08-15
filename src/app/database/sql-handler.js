@@ -26,6 +26,10 @@ class SQLHandler {
    */
   async create (query) { await this.pool.query(`CREATE TABLE IF NOT EXISTS ${query}`) }
 
+  async selectGreater (table, column, value) {
+    return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} > $1`, [value])).rows
+  }
+
   /**
    * Select all rows from a table in which a column is equal to a value
    * @param {string} table - Name of the table
