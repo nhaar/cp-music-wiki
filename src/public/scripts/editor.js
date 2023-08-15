@@ -5,7 +5,7 @@ import {
 } from './modules/element-modules.js'
 import { EditorModule, TableChild, TableModule } from './modules/main-modules.js'
 import {
-  createElement, postAndGetJSON, postJSON,
+  createElement, paramsToObject, postAndGetJSON, postJSON,
   selectElement
 } from './utils.js'
 
@@ -51,8 +51,7 @@ class Page {
    */
   async initialize () {
     // get URL params
-    const urlParams = new URLSearchParams(window.location.search)
-    const params = this.paramsToObject(urlParams)
+    const params = paramsToObject()
     const editorData = await postAndGetJSON('api/editor-data', { t: Number(params.t) })
     const { isStatic, cls, main } = editorData
 
@@ -77,21 +76,6 @@ class Page {
 
     this.renderSubmitButton()
     this.setupSubmitButton(editor, row, cls)
-  }
-
-  /**
-   * Converts URL parameters into an object
-   * containing the values of each of the query parameters
-   * @param {URLSearchParams} urlParams - URL parameters to target
-   * @returns {object} Object for the query parameters
-   */
-  paramsToObject (urlParams) {
-    const params = {}
-    const paramsArray = [...urlParams.entries()]
-    paramsArray.forEach(array => {
-      params[array[0]] = array[1]
-    })
-    return params
   }
 }
 

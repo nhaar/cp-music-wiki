@@ -2,6 +2,7 @@ const sql = require('./sql-handler')
 const clsys = require('./class-system')
 const user = require('./user')
 
+const Diff = require('diff')
 const jsondiffpatch = require('jsondiffpatch')
 
 class RevisionHandler {
@@ -66,6 +67,51 @@ class RevisionHandler {
       'class, item_id, wiki_user, timestamp',
       [cls, id, userId, Date.now()]
     )
+  }
+
+  async getRevisionData (revId) {
+    const row = await sql.selectId('revisions', revId)
+    const cls = row.class
+    const itemId = row.item_id
+
+    const revisions = await sql.selectGreaterCondition('revisions', 'id', revId, 'class', cls, 'item_id', itemId)
+
+    const data = (await clsys.getItemById(cls, itemId)).data
+    for (let i = revisions.length - 1; i >= 0; i--) {
+      jsondiffpatch.unpatch(data, revisions[i].patch)
+    }
+
+    console.log(data)
+    return data
+  }
+
+  getRevDiff (old, cur) {
+    const strs = [old, cur].map(data => JSON.stringify(data, null, 2))
+    const diff = Diff.diffLines(...strs)
+
+    const groups = []
+
+    for (let i = 0; i < diff.length; i++) {
+      const statement = diff[i]
+      const next = diff[i + 1]
+      if (statement.removed) {
+        if (next.added) {
+          i++
+          groups.push(['removeadd', statement, next])
+        } else {
+          groups.push(['remove', statement])
+        }
+      } else if (statement.added) {
+        if (next.removed) {
+          i++
+          groups.push(['addremove', statement, next])
+        } else {
+          groups.push(['add', statement])
+        }
+      }
+    }
+
+    return groups
   }
 }
 

@@ -57,6 +57,13 @@ router.get('/RecentChanges', renderPage('Recent Changes', `
 <script src="scripts/recent-changes.js" type="module">
 `))
 
+router.get('/Diff', renderPage('Difference between revisions', `
+<div class="diff-viewer"></div>
+<script src="scripts/diff.js" type="module">
+`, `
+<link rel="stylesheet" href="stylesheets/diff.css">
+`))
+
 router.get('/user-page', renderPage('Login', `
   Write your credentials to sign in
   <br>
@@ -77,9 +84,9 @@ router.use('*', (req, res) => {
   res.status(404).send('Page not found')
 })
 
-function renderPage (header, content) {
+function renderPage (header, content, extrahead) {
   return (req, res) => {
-    res.status(200).render('page.html', { header, content })
+    res.status(200).render('page.html', { header, content, extrahead })
   }
 }
 

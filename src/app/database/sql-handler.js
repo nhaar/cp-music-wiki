@@ -30,6 +30,10 @@ class SQLHandler {
     return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} > $1`, [value])).rows
   }
 
+  async selectGreaterCondition (table, numberCol, numberValue, matchCol, matchValue, idCol, id) {
+    return (await this.pool.query(`SELECT * FROM ${table} WHERE ${numberCol} > $1 AND ${matchCol} = $2 AND ${idCol} = $3`, [numberValue, matchValue, id])).rows
+  }
+
   /**
    * Select all rows from a table in which a column is equal to a value
    * @param {string} table - Name of the table

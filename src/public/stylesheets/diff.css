@@ -1,0 +1,36 @@
+.diff-viewer {
+  display: grid;
+  column-gap: 5px;
+  grid-template-columns: 50% 50%;
+}
+
+.diff-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.sign {
+  
+  font-size: 1.25em;
+  font-weight: bold;
+  padding: 5px;
+}
+
+.add-diff, .remove-diff {
+  padding: 10px;
+  border-width: 1px;
+  border-left-width: 3px;
+  border-radius: 5px;
+  border-style: solid;
+  flex-grow: 1;
+  height: 100%;
+}
+
+.remove-diff {
+  border-color: red;  
+}
+
+.add-diff {
+  border-color: green;
+}

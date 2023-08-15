@@ -155,6 +155,15 @@ router.get('/recent-changes', async (req, res) => {
   // get revisions from last day, later add frontend give options
 })
 
+router.post('/get-revisions', async (req, res) => {
+  const { cur, old } = req.body
+  const curData = await rev.getRevisionData(Number(cur))
+  const oldData = await rev.getRevisionData(Number(old))
+  const diff = rev.getRevDiff(oldData, curData)
+
+  res.status(200).send({ curData, diff })
+})
+
 function sendStatusJSON (res, status, obj) {
   res.status(status).send(obj)
 }

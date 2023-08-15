@@ -175,3 +175,19 @@ export function getCookies () {
 
   return cookies
 }
+
+/**
+ * Converts URL parameters into an object
+ * containing the values of each of the query parameters
+ * @param {URLSearchParams} urlParams - URL parameters to target
+ * @returns {object} Object for the query parameters
+ */
+export function paramsToObject () {
+  const urlParams = new URLSearchParams(window.location.search)
+  const params = {}
+  const paramsArray = [...urlParams.entries()]
+  paramsArray.forEach(array => {
+    params[array[0]] = array[1]
+  })
+  return params
+}
