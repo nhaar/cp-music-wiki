@@ -36,7 +36,6 @@ postAndGetJSON('api/get-revisions', params).then(data => {
       createNewDiff((group[1].value), type)
     } else if (type === 'removeadd' || type === 'addremove') {
       const types = type.match(/(remove|add)/g)
-      console.log(types)
       for (let i = 0; i < 2; i++) {
         const value = createHTML(group[3], i)
         createNewDiff(value, types[i])

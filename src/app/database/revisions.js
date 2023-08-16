@@ -29,7 +29,7 @@ class RevisionHandler {
    * @param {string} token - Session token for the user submitting the revision
    */
   async addChange (cls, row, token) {
-    let oldRow = clsys.getItem(cls, row.item)
+    let oldRow = await clsys.getItem(cls, row.id)
     let id = row.id
     if (!oldRow) {
       if (!clsys.isStaticClass(cls)) {
@@ -62,12 +62,12 @@ class RevisionHandler {
    * @param {string} user - Id of the user submitting the revision
    * @param {jsondiffpatch.DiffPatcher} patch - The patch of the revision, if it is not a deletion
    */
-  async insertRev (cls, itemId, user, patch) {
+  async insertRev (cls, itemId, user, patch = null) {
     if (patch) patch = JSON.stringify(patch)
     await sql.insert(
       'revisions',
       'class, item_id, wiki_user, timestamp, patch',
-      [cls, itemId, user, Date.now(), patch = null]
+      [cls, itemId, user, Date.now(), patch]
     )
   }
 

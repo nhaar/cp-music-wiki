@@ -116,7 +116,7 @@ class FrontendBridge {
    */
   getClassT (cls) {
     for (let t = 0; t < this.preeditorData.length; t++) {
-      if (this.preeditor[t].cls === cls) return t
+      if (this.preeditorData[t].cls === cls) return t
     }
   }
 
@@ -125,7 +125,7 @@ class FrontendBridge {
     const timestamp = Date.now() - days * 86400000
     const rows = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
 
-    const classes = clsys.getMainClasses()
+    const classes = clsys.getMajorClasses()
 
     const latest = []
 

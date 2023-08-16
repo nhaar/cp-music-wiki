@@ -79,7 +79,7 @@ class SQLHandler {
     return await this.select(
       table,
       getAndCompares(
-        `${greaterColumn} > ${greaterValue} ${trimSplit(equalColumns).map(col => `, ${col} =`)}`
+        `${greaterColumn} > ${trimSplit(equalColumns).map(col => `, ${col} =`)}`
       ), [greaterValue].concat(equalValues)
     )
   }
@@ -244,7 +244,7 @@ function getConditional (condition) {
  * @returns
  */
 function trimSplit (str) {
-  return str.split(',').map(segment => segment.trim())
+  return str.split(',').map(segment => segment.trim()).filter(segment => segment)
 }
 
 module.exports = new SQLHandler()

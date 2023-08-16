@@ -578,7 +578,6 @@ class ClassSystem {
     try {
       return (await handler.selectId(cls, id, 'querywords')).querywords.split('&&')[0]
     } catch (error) {
-      // console.log(error)
       return ''
     }
   }
