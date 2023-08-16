@@ -63,6 +63,9 @@ class ClassSystem {
       this[this.getDefName(category)] = def[i]
     })
 
+    /** Columns for main class tables */
+    this.columns = 'data, querywords'
+
     this.assignDefaults()
     this.queryIndexing()
 
@@ -160,7 +163,7 @@ class ClassSystem {
    * @param {ItemData} defaultData - Default item data object
    */
   insertStatic = async (cls, defaultData) => {
-    await handler.insert('static', 'class, data', [cls, defaultData], 'ON CONFLICT (class) DO NOTHING')
+    await handler.insert('static', 'class, data', [cls, defaultData], 'class')
   }
 
   /**
@@ -365,12 +368,12 @@ class ClassSystem {
   async updateItem (cls, row) {
     const { data } = row
     if (this.isStaticClass(cls)) {
-      await handler.update('static', 'data', 'class', [cls, JSON.stringify(data)])
+      await handler.updateOneCondition('static', 'data', [JSON.stringify(data)], 'class', cls)
     } else {
       const { id } = row
       const itemValues = [JSON.stringify(data), this.getQueryWords(cls, data)]
-      if (id === undefined) await handler.insertData(cls, itemValues)
-      else await handler.updateData(cls, id, itemValues)
+      if (id === undefined) await this.insertData(cls, itemValues)
+      else await this.updateData(cls, id, itemValues)
     }
   }
 
@@ -398,7 +401,7 @@ class ClassSystem {
    * @param {ClassName} cls - Class to get
    * @returns {Row} Fetched row
    */
-  getStatic = async cls => (await handler.select('static', 'class', cls))[0]
+  getStatic = async cls => (await handler.selectWithColumn('static', 'class', cls))[0]
 
   /**
    * Update the row for a static class
@@ -620,6 +623,25 @@ class ClassSystem {
 
   getDefObj (cat) {
     return this[this.getDefName(cat)]
+  }
+
+  /**
+   * Insert a row into a table associated with a main class
+   * @param {ClassName} cls - Name of the class
+   * @param {ItemValues} values - Values for the type
+   */
+  insertData = async (cls, values) => {
+    await handler.insert(cls, this.columns, values)
+  }
+
+  /**
+   * Update a row inside a table associated with a main class
+   * @param {ClassName} cls - Name of the main class
+   * @param {number} id - Id of the row to update
+   * @param {ItemValues} values - Values to update
+   */
+  async updateData (cls, id, values) {
+    await handler.updateById(cls, this.columns, values, id)
   }
 }
 

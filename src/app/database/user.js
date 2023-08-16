@@ -24,7 +24,7 @@ class UserHandler {
    * @returns {number} ID of the user
    */
   async getUserId (token) {
-    return (await sql.select('wiki_users', 'session_token', token, 'id'))[0].id
+    return (await sql.selectWithColumn('wiki_users', 'session_token', token, 'id'))[0].id
   }
 
   /**
@@ -34,7 +34,7 @@ class UserHandler {
    */
   async isAdmin (session) {
     // currently every user is admin so just check for existence of account
-    const account = (await sql.select('wiki_users', 'session_token', session))[0]
+    const account = (await sql.selectWithColumn('wiki_users', 'session_token', session))[0]
     return Boolean(account)
   }
 
@@ -63,14 +63,14 @@ class UserHandler {
    * @returns {string | undefined} The session token if the credentials are correct or undefined if they aren't
    */
   async checkCredentials (user, password) {
-    const internalData = (await sql.select('wiki_users', 'name', user))[0]
+    const internalData = (await sql.selectWithColumn('wiki_users', 'name', user))[0]
     if (!internalData) return
 
     const hash = this.getHash(password)
 
     if (internalData.user_password === hash) {
       const sessionToken = this.generateToken()
-      sql.update('wiki_users', 'session_token', 'id', [internalData.id, sessionToken])
+      sql.updateById('wiki_users', 'session_token', [sessionToken], internalData.id)
       return sessionToken
     }
   }

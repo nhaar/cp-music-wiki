@@ -67,11 +67,7 @@ class RevisionHandler {
     await sql.insert(
       'revisions',
       'class, item_id, wiki_user, timestamp, patch',
-      cls,
-      itemId,
-      user,
-      Date.now(),
-      patch = null
+      [cls, itemId, user, Date.now(), patch = null]
     )
   }
 
@@ -85,7 +81,7 @@ class RevisionHandler {
     const cls = row.class
     const itemId = row.item_id
 
-    const revisions = await sql.selectGreaterCondition('revisions', 'id', revId, 'class', cls, 'item_id', itemId)
+    const revisions = await sql.selectGreaterAndEqual('revisions', 'id', revId, 'class, item_id', [cls, itemId])
 
     const data = (await clsys.getMainItem(cls, itemId)).data
     for (let i = revisions.length - 1; i >= 0; i--) {
@@ -149,6 +145,45 @@ class RevisionHandler {
     }
 
     return groups
+  }
+
+  /**
+   * Select all the revisions in chronological order tied to a class item and get one of its columns
+   * @param {ClassName} cls - Name of the class of the item
+   * @param {number} id - Id of item or 0 for static classes
+   * @param {string} column - Name of the column to get
+   * @returns {string[] | number[]} Array with all the column values
+   */
+  async selectRevisions (cls, id, column) {
+    return (
+      await cls.selectAndEquals(
+        'revisions',
+        'class, item_id',
+        [cls, id],
+        column,
+        'ORDER BY id ASC'
+      )
+    ).map(change => change[column])
+  }
+
+  /**
+   * Get all patches for a class item
+   * @param {ClassName} cls - Name of the class
+   * @param {number} id - Id of item or 0 for static classes
+   * @returns {jsondiffpatch.DiffPatcher[]} Array with all the patches
+   */
+  async selectPatches (cls, id) {
+    return await this.selectRevisions(cls, id, 'patch')
+  }
+
+  /**
+   * Get all the patch ids for a class item
+   * @param {ClassName} cls - Name of the class
+   * @param {number} id - Id of item or 0 for static classes
+   * @returns {number[]} Array with all the ids
+   */
+  async selectPatchIds (cls, id) {
+    return await this.selectRevisions(cls, id, 'id')
   }
 }
 

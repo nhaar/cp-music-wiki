@@ -121,8 +121,9 @@ class FrontendBridge {
   }
 
   async getLastRevisions (days) {
-    const timestamp = Date.now() - days * 24 * 3600 * 1000
-    const rows = await sql.selectGreater('revisions', 'timestamp', timestamp)
+    // days is converted to ms
+    const timestamp = Date.now() - days * 86400000
+    const rows = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
 
     const classes = clsys.getMainClasses()
 

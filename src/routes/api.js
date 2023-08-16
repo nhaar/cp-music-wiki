@@ -69,7 +69,7 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
       const validationErrors = clsys.validate(cls, data)
       if (validationErrors.length === 0) {
         await rev.addChange(cls, row, token)
-        clsys.update(cls, row)
+        clsys.updateItem(cls, row)
         gen.updateLists()
         res.sendStatus(200)
       } else sendBadReqJSON(res, { errors: validationErrors })
