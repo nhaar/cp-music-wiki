@@ -10,10 +10,27 @@
   font-family: sans-serif;
 }
 
+a {
+  text-decoration: none;
+  color: #3366cc;
+  background: none;
+}
+
+a:visited {
+  color: #795cb2;
+}
+
+a:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 body {
   margin: 0;
   display: grid;
-  grid-template-columns: 284px 1fr;
+  /* grid-template-columns: 284px 1fr; */
+  display: flex;
+  flex-direction: column;
   column-gap: 20px;
   row-gap: 20px;
   padding: 0 40px;
@@ -34,71 +51,149 @@ body {
 
 .header-container {
   display: flex;
+  height: 50px;
+  width: 100%;
+  padding: 8px 0;
+  align-items: center;
 }
 
-.header {
+.header-aside {
+  display: flex;
+  width: 280px;
+}
+
+.menu-img {
+  width: 18px;
+  height: 15px;
+  padding: 17px 14px;
+  transition-property: background-color;
+  transition-duration: 0.2s;
+  margin-right: 12px;
+}
+
+.menu-img:hover, .ellipsis-img:hover {
+  background-color: #f7f7f7;
+  cursor: pointer;
+}
+
+.header-content {
   height: var(--top-bar-height);
   display: flex;
   flex-grow: 1;
+  align-items: center;
 }
 
 .empty {
   flex-grow: 1;
 }
 
+.search-outline {
+  box-sizing: border-box;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  z-index: 100;
+}
+
 .searchbar {
-  height: var(--top-bar-height);
+  position: relative;
+  margin-left: 24px;
+  height: 32px;
   display: flex;
   justify-content: center;
   align-items: center;
+
+
+  border: 1px solid gray;
+  border-radius: 2px;
+}
+
+
+.searchbar img {
+  width: 16px;
+  height: 16px;
+  margin-left: 10px;
+  margin-right: 8px;
 }
 
 .searchbar input {
-  height: 28px;
+  height: 32px;
+
   box-sizing: border-box;
-  width: 420px;
-  border-radius: 2px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-width: 1px;
-  padding: 3px 2px;
+  width: 400px;
+  border: none;
+  transition: border 0.1s;
   border-right: 0;
 }
 
+.searchbar input:focus {
+  outline: none;
+}
+
+
 .searchbar button {
-  height: 28px;
-  width: 55px;
+  height: 32px;
+  width: 69px;
   color: white;
   background-color: white;
+  border:none;
+  font-weight: bold;
+  padding: 0 12px;
 
-  border-width: 1px;
-  border-left-width: 0;
-  border-radius: 2px;
-  border-bottom-left-radius: 0;
-  border-top-left-radius: 0;
-  border-left-color: white;
-  transition-property: color, border;
+  transition-property: color, border-color, background-color;
   transition-duration: 0.3s;
 }
 
-.searchbar:hover button {
+.searchbar:hover button, .searchbar:focus-within button {
   color: black;
-  border-left-color: black;
-  border-left-width: 1px
+  background-color: #f8f9fa;
+  border-left: 1px solid gray;
 }
 
 .searchbar button:hover {
   cursor: pointer;
 }
 
+.account a {
+  display: flex;
+  align-items: center;
+}
+
+.ellipsis-img {
+  width: 20px;
+  padding: 20px 15px;
+}
+
 .sidebar {
-  top: var(--top-distance);
-  left: 0;
-  width: var(--side-bar-width);
+  width: 150px;
+  height: 50px;
+  padding: 30px 19px 12px 30px;
+  margin-left: 12px;
+  margin-right: 60px;
   background-color: #f8f9fa;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .content {
-  top: var(--top-distance);
-  left: var(--side-bar-width);
+  display: flex;
+  min-height: 70vh;
+  padding-bottom: 50px;
+  border-bottom: 1px solid gray;
+}
+
+.page-title {
+  font-family: "Linux Libertine";
+  font-size: 1.8em;
+  font-weight: normal;
+  margin: 0;
+  margin-top: 10px;
+}
+
+.main-content {
+  width: 100%;
+}
+
+.logo a:hover {
+  text-decoration: none;
 }

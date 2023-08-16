@@ -8,33 +8,44 @@
   </head>
 
   <body>
-      <div class="logo">
-        <div> Club Penguin Music Wiki</div>
-      </div>
-      <div class="header-container">
-        <div class="header">
+      <section class="header-container">
+        <div class="header-aside">
+          <img src="images/menu.png" class="menu-img">
+          <div class="logo">
+            <a href="/"> Club Penguin Music Wiki</a>
+          </div>
+        </div>
+        <div class="header-content">
           <div class="searchbar">
-            <input type="input" placeholder="Search Club Penguin Music">
+            <div class="search-outline">
+              <img src="images/search.png" class="search-img">
+              <input type="input" placeholder="Search Club Penguin Music">
+            </div>
             <button>Search</button>
           </div>
           <div class="empty"></div>
           <div class="account">
-            <a href="/user-page" class="user-link"> Login </a>
+            <a href="/user-page" class="user-link">
+              <img class="ellipsis-img" src="images/ellipsis-h.png">
+            </a>
           </div>
         </div>
-      </div>
+      </section>
+    <section class="content">
     <div class="sidebar">
       <a href="/">Main Page</a>
+      <br>
       <a href="/RecentChanges">Recent Changes</a>
     </div>
-    <section class="content">
-      
-      <h1>
+    <div class="main-content">
+      <h1 class="page-title">
         {{ header }}
       </h1>
       <hr>
       {{ content | safe }}
+    </div>
     </section>
+
 
     <script src="../scripts/page.js" type="module"></script>
   </body>
