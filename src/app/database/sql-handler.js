@@ -55,19 +55,19 @@ class SQLHandler {
 
   /**
    * Use select with the condition having all mentioned columns to be equal to a specified value
+   * and orders by ascending id
    * @param {string} table - Table to select in
    * @param {string} conditions - A string of all the columns to check, comma separated
    * @param {any[]} values - All the values the columns need to be equal to, in the order of `conditions`
    * @param {string} selecting - The columns to select, comma separated, leave blank for all
-   * @param {string} extra - Extra SQL code, if any
    * @returns {object[]} All selected rows
    */
-  async selectAndEquals (table, conditions, values, selecting, extra) {
-    return await this.select(table, getAndEquals(conditions), values, selecting, extra)
+  async selectAndEquals (table, conditions, values, selecting) {
+    return await this.select(table, getAndEquals(conditions), values, selecting, 'ORDER BY id ASC')
   }
 
   /**
-   * Use select where a column is greater than a value and other columns need to be equal to certain values
+   * Use select where a column is greater than a value and other columns need to be equal to certain values and order by descending
    * @param {string} table - Table to select in
    * @param {string} greaterColumn - The column that needs to be greater than a value
    * @param {any} greaterValue - The value the column needs to be greater than
@@ -80,7 +80,9 @@ class SQLHandler {
       table,
       getAndCompares(
         `${greaterColumn} > ${trimSplit(equalColumns).map(col => `, ${col} =`)}`
-      ), [greaterValue].concat(equalValues)
+      ), [greaterValue].concat(equalValues),
+      '*',
+      `ORDER BY ${greaterColumn} DESC`
     )
   }
 

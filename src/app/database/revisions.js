@@ -160,8 +160,7 @@ class RevisionHandler {
         'revisions',
         'class, item_id',
         [cls, id],
-        column,
-        'ORDER BY id ASC'
+        column
       )
     ).map(change => change[column])
   }
