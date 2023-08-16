@@ -124,19 +124,27 @@ class FrontendBridge {
     // days is converted to ms
     const timestamp = Date.now() - days * 86400000
     const rows = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
-
     const classes = clsys.getMajorClasses()
-
     const latest = []
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       const cls = row.class
       const name = await clsys.getQueryNameById(cls, row.item_id)
-      const previous = await rev.getNextRev(row.id)
-      const diff = `<a href="Diff?old=${previous}&cur=${row.id}">diff</a>`
-      const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
-      latest.push(`(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>  [${user}]`)
+      const next = await rev.getNextRev(row.id)
+      if (next) {
+        const timestamp = (await sql.selectId('revisions', next, 'timestamp')).timestamp
+        const date = new Date(Number(timestamp))
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        const time = `${hours}:${minutes}`
+
+        const diff = `<a href="Diff?old=${row.id}&cur=${next}">diff</a>`
+        const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
+        latest.push(
+          `(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time}  [${user}]`
+        )
+      }
     }
 
     return latest

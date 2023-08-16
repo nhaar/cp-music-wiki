@@ -48,7 +48,7 @@ function createHTML (diff, isAdd) {
   let str = ''
   const className = isAdd ? 'add-span' : 'remove-span'
   diff.forEach(change => {
-    if ((change.added && !isAdd) || (change.removed && isAdd)) {
+    if ((change.added && isAdd) || (change.removed && !isAdd)) {
       str += `<span class="${className}">${change.value}</span>`
     } else if (!change.added && !change.removed) {
       str += change.value
