@@ -133,6 +133,17 @@ class FrontendBridge {
       const name = await clsys.getQueryNameById(cls, row.item_id)
       const next = await rev.getNextRev(row.id)
       if (next) {
+        const sizes = [row.id, next]
+        for (let i = 0; i < 2; i++) {
+          const text = JSON.stringify(await rev.getRevisionData(sizes[i]))
+          const encoder = new TextEncoder()
+          sizes[i] = encoder.encode(text).length
+        }
+        const delta = sizes[1] - sizes[0]
+        const diffLength = delta > 0
+          ? `<span style="color:green;"> +${delta} </span>`
+          : `<span style="color:red;">  ${delta} </span>`
+
         const timestamp = (await sql.selectId('revisions', next, 'timestamp')).timestamp
         const date = new Date(Number(timestamp))
         const hours = date.getHours().toString().padStart(2, '0')
@@ -142,7 +153,7 @@ class FrontendBridge {
         const diff = `<a href="Diff?old=${row.id}&cur=${next}">diff</a>`
         const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
         latest.push(
-          `(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time}  [${user}]`
+          `(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time} .. (${diffLength}) .. ${user}`
         )
       }
     }
