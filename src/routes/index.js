@@ -52,14 +52,16 @@ router.get('/unused-flash-list', renderList('unused-flash-ost'))
 
 router.get('/RecentChanges', renderPage('Recent Changes', `
 <div class="size-selector"></div>
-<ul class="changes"></ul>
+<div class="changes"></div>
 
-<script src="scripts/recent-changes.js" type="module">
+<script src="scripts/recent-changes.js" type="module"></script>
+`, `
+<link rel="stylesheet" href="stylesheets/recent-changes.css">
 `))
 
 router.get('/Diff', renderPage('Difference between revisions', `
 <div class="diff-viewer"></div>
-<script src="scripts/diff.js" type="module">
+<script src="scripts/diff.js" type="module">console.log('kkkk')</script>
 `, `
 <link rel="stylesheet" href="stylesheets/diff.css">
 `))
@@ -86,6 +88,7 @@ router.use('*', (req, res) => {
 
 function renderPage (header, content, extrahead) {
   return (req, res) => {
+    console.log(content)
     res.status(200).render('page.html', { header, content, extrahead })
   }
 }

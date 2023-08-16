@@ -126,6 +126,7 @@ class FrontendBridge {
     const rows = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
     const classes = clsys.getMajorClasses()
     const latest = []
+    let curDate
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
@@ -150,16 +151,34 @@ class FrontendBridge {
         const minutes = date.getMinutes().toString().padStart(2, '0')
         const time = `${hours}:${minutes}`
 
+        const day = `${date.getDate()} ${getMonthName(date.getMonth())} ${date.getFullYear()}`
+        let dayText = ''
+
+        if (curDate !== day) {
+          const prefix = curDate
+            ? '</ul>'
+            : ''
+          dayText = `${prefix}<h3>${day}</h3><ul>`
+          curDate = day
+        }
+
         const diff = `<a href="Diff?old=${row.id}&cur=${next}">diff</a>`
         const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
         latest.push(
-          `(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time} .. (${diffLength}) .. ${user}`
+          `${dayText}<li>(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time} .. (${diffLength}) .. ${user}</li>`
         )
       }
     }
 
-    return latest
+    return latest.join('') + '</ul>'
   }
+}
+
+function getMonthName (month) {
+  return [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ][month - 1]
 }
 
 /**
