@@ -8,3 +8,149 @@ h3 {
   font-size: 14px;
   margin-bottom: 0;
 }
+
+.options-parent {
+  text-align: right;
+}
+
+.change-options {
+  display: flex;
+  right: 0px;
+  position: relative;
+  padding: 5px 30px 5px 38px;
+  height: 34px;
+  display: inline-block;
+  align-items: center;
+
+  background-color: #f8f9fa;
+  border: 1px solid gray;
+  border-radius: 2px;
+  user-select: none;
+
+  text-align: center;
+  color: black;
+}
+
+.button-options-text {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: bold;
+  margin: 0 3px;
+}
+
+.change-options:hover {
+  cursor: pointer;
+  background-color: white;
+  text-decoration: none;
+}
+
+.img-gear {
+  top: 50%;
+  transform: translate(0, -50%);
+  left: 10px;
+  position: absolute;
+  width: 25px;
+}
+
+.img-arrow {
+  top: 50%;
+  transform: translate(0, -50%);
+  right: 10px;
+  position: absolute;
+  width: 15px;
+}
+
+
+.top-settings div, .bottom-settings div {
+  display: flex;
+  align-items: center;
+}
+
+.settings-menu {
+  text-align: left;
+  position: absolute;
+  right: 40px;
+  transform: translate(0, -5px);
+  background-color: white;
+  border: 1px solid gray;
+  border-radius: 2px;
+  box-shadow: 2px 2px 2px rgba(100, 100, 100, 0.2);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875em;
+  line-height: 2.5;
+}
+
+.top-settings, .bottom-settings {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  padding-right: 100px;
+}
+
+.top-settings {  
+  padding-top: 5px;
+  border-bottom: 1px solid gray;
+}
+
+
+.settings-menu button {
+  margin: 0;
+  padding: 7px 14px;
+  font-weight: bold;
+  border: 0.5px solid gray;
+  cursor: pointer;
+}
+
+
+.settings-menu button:not(.selected-option) {
+  background-color: #f8f9fa;
+}
+
+.settings-menu button:not(.selected-option):hover {
+  background-color: white;
+}
+
+
+.selected-option {
+  background-color: #3a4b88;
+  color: white;
+  cursor: default;
+  border: 0.5px solid #3a4b88;
+}
+
+.settings-menu button:not(:first-child):not(:last-child) {
+  border-radius: 0;
+}
+
+.settings-menu button:first-child {
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+}
+.settings-menu button:last-child {
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+}
+
+
+.settings-menu input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.setting-label {
+  font-weight: bold;
+}
+
+.minor-label {
+  color: gray;
+  font-weight: bold;
+}
+
+.line {
+  flex-grow: 1;
+}

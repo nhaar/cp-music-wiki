@@ -51,10 +51,55 @@ router.get('/penguin-chat-list', renderList('penguin-chat-ost'))
 router.get('/unused-flash-list', renderList('unused-flash-ost'))
 
 router.get('/RecentChanges', renderPage('Recent Changes', `
-<div class="size-selector"></div>
-<div class="changes"></div>
+
+
+    <div class="options-parent">
+
+    <a class="change-options" role="button">
+      <img class="img-gear" src="images/gear.png">
+      <div class="button-options-text"></div>
+      <img class="img-arrow" src="images/arrow-down.png">
+    </a>
+
+      <div class="settings-menu hidden">
+        <div class="top-settings">
+          <span class="setting-label">Results to show</span>
+          <div>
+            <button>50</button>
+            <button>100</button>
+            <button>250</button>
+            <button>500</button>
+          </div>
+          <div>        
+            <input type="checkbox">
+            <span>Group results by page</span>
+          </div>
+        </div>
+        <div class="bottom-settings">
+          <span class="setting-label">Time period to search</span>
+          <span class="minor-label">Recent hours</span>
+          <div>
+            <button>1</button>
+            <button>2</button>
+            <button>6</button>
+            <button>12</button>
+          </div>
+          <span class="minor-label">Recent days</span>
+          <div>
+            <button>1</button>
+            <button>3</button>
+            <button>7</button>
+            <button>14</button>
+            <button>30</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  <div class="changes"></div>
 
 <script src="scripts/recent-changes.js" type="module"></script>
+
 `, `
 <link rel="stylesheet" href="stylesheets/recent-changes.css">
 `))

@@ -198,6 +198,6 @@ body {
   text-decoration: none;
 }
 
-.hidden {
+.hidden *, .hidden {
   display: none;
 }

@@ -13,7 +13,6 @@ const sidebarElement = selectElement('sidebar')
 
 let sidebar = cookies.sidebar !== 'true'
 function swapImage () {
-  console.log('hey')
   sidebar = !sidebar
   menu.src = sidebar
     ? 'images/double-arrow.png'
