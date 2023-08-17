@@ -1,7 +1,7 @@
 const clsys = require('./class-system')
 const sql = require('./sql-handler')
 const rev = require('./revisions')
-const { capitalize } = require('../utils')
+const { capitalize, matchInside } = require('../utils')
 
 class FrontendBridge {
   constructor () {
@@ -165,7 +165,7 @@ class FrontendBridge {
         const diff = `<a href="Diff?old=${row.id}&cur=${next}">diff</a>`
         const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
         latest.push(
-          `${dayText}<li>(${diff} | history) .. <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time} .. (${diffLength}) .. ${user}</li>`
+          `${dayText}<li>(${diff} | hist) . . <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time} . . (${diffLength}) . . ${user}</li>`
         )
       }
     }
@@ -179,18 +179,6 @@ function getMonthName (month) {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ][month - 1]
-}
-
-/**
- * Match for a pattern than enclosures everything inside two characters
- * @param {string} str - String to match
- * @param {string} lChar - Left character of the enclosure
- * @param {string} rChar - Right character of the enclosure, leave blank for same as left
- * @returns {object | null} Match result
- */
-function matchInside (str, lChar, rChar) {
-  if (!rChar) rChar = lChar
-  return str.match(`(?<=${lChar}).*(?=${rChar})`)
 }
 
 /**

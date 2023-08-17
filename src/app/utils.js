@@ -57,4 +57,16 @@ function createDirectoryIfNotExists (directoryPath) {
   }
 }
 
-module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces, capitalize, createDirectoryIfNotExists }
+/**
+ * Match for a pattern than enclosures everything inside two characters
+ * @param {string} str - String to match
+ * @param {string} lChar - Left character of the enclosure
+ * @param {string} rChar - Right character of the enclosure, leave blank for same as left
+ * @returns {object | null} Match result
+ */
+function matchInside (str, lChar, rChar) {
+  if (!rChar) rChar = lChar
+  return str.match(`(?<=${lChar}).*(?=${rChar})`)
+}
+
+module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces, capitalize, createDirectoryIfNotExists, matchInside }

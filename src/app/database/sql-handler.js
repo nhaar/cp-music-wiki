@@ -62,8 +62,8 @@ class SQLHandler {
    * @param {string} selecting - The columns to select, comma separated, leave blank for all
    * @returns {object[]} All selected rows
    */
-  async selectAndEquals (table, conditions, values, selecting) {
-    return await this.select(table, getAndEquals(conditions), values, selecting, 'ORDER BY id ASC')
+  async selectAndEquals (table, conditions, values, selecting, order = true) {
+    return await this.select(table, getAndEquals(conditions), values, selecting, order ? 'ORDER BY id ASC' : '')
   }
 
   /**
@@ -95,7 +95,7 @@ class SQLHandler {
    * @returns {object[]} All the rows that match
    */
   async selectWithColumn (table, column, value, selecting) {
-    return await this.selectAndEquals(table, column, [value], selecting)
+    return await this.selectAndEquals(table, column, [value], selecting, column === 'id')
   }
 
   /**
@@ -190,7 +190,7 @@ class SQLHandler {
    * @returns {number} The biggest ID
    */
   async getBiggestSerial (table) {
-    return Number((await this.select(table, '', [], 'last_value'))[0].last_value)
+    return Number((await this.select(`${table}_id_seq`, '', [], 'last_value'))[0].last_value)
   }
 
   /**

@@ -1,5 +1,5 @@
 import { createSearchQuery } from './query-options.js'
-import { selectElement, createElement, styleElement, postJSON } from './utils.js'
+import { selectElement, createElement, styleElement, postAndGetJSON } from './utils.js'
 
 /* global location, alert */
 
@@ -93,8 +93,12 @@ class Controller {
         if (confirm) {
           const doubleCheck = window.confirm('REALLY ERASE?')
           if (doubleCheck) {
-            await postJSON('api/delete-item', { cls: clsData.cls, id: Number(input.dataset.id) })
-            alert('Deleted')
+            const response = await postAndGetJSON('api/delete', { cls: clsData.cls, id: Number(input.dataset.id) })
+            if (response.length === 0) {
+              alert('Deleted')
+            } else {
+              alert(`Erros ${JSON.stringify(response)}`)
+            }
             location.reload()
           }
         }

@@ -68,6 +68,7 @@ class ClassSystem {
 
     this.assignDefaults()
     this.queryIndexing()
+    this.findIdReferences()
 
     // create table for each main class
     for (const cls in this.mainClasses) {
@@ -441,6 +442,61 @@ class ClassSystem {
     }
   }
 
+  findIdReferences () {
+    const classes = this.getMajorClasses()
+    this.idPaths = {}
+    for (const cls in classes) {
+      this.idPaths[cls] = {}
+      this.findPaths(this.idPaths[cls], type => {
+        return type.match(`^ID\\(${cls}\\)(\\[\\])*$`)
+      })
+    }
+  }
+
+  selectAllInClass (cls) {
+    if (this.isStaticClass(cls)) {
+      return handler.selectWithColumn('static', 'class', cls)
+    } else {
+      return handler.selectAll(cls)
+    }
+  }
+
+  async checkReferences (cls, id) {
+    const clsPaths = this.idPaths[cls]
+    const encountered = []
+    for (const cls in clsPaths) {
+      const paths = clsPaths[cls]
+      const allElements = await this.selectAllInClass(cls)
+
+      paths.forEach(path => {
+        const pathTraveller = (obj, i) => {
+          if (i < path.length) {
+            const step = path[i]
+            i++
+            if (step === undefined) return
+            if (step === '[]') {
+              obj.forEach(next => {
+                pathTraveller(next, i)
+              })
+            } else {
+              pathTraveller(obj[step], i)
+            }
+          } else {
+            if (obj === id) {
+              encountered.push([cls, path])
+            }
+          }
+        }
+
+        allElements.forEach(element => {
+          pathTraveller(element.data, 0)
+        })
+      })
+    }
+
+    return encountered
+  }
+
   /**
    * Search a path in an object and check if it matches a value,
    * removing that value if it does and doing nothing otherwise
@@ -587,13 +643,13 @@ class ClassSystem {
    * @param {ClassName} cls - Class to find references of
    * @returns {PathMap} Object with the paths
    */
-  findIdPaths (cls) {
-    const referencers = {}
-    this.findPaths(referencers, type => {
-      return type.includes(`ID(${cls})`)
-    })
-    return referencers
-  }
+  // findIdPaths (cls) {
+  //   const referencers = {}
+  //   this.findPaths(referencers, type => {
+  //     return type.includes(`ID(${cls})`)
+  //   })
+  //   return referencers
+  // }
 
   /**
    * Get the category of a class

@@ -97,6 +97,20 @@ async function checkAdmin (req, res, next) {
   }
 }
 
+router.post('/delete', async (req, res) => {
+  const { cls, id } = req.body
+
+  // check any references
+  const refs = await clsys.checkReferences(cls, id)
+  console.log(refs)
+  if (refs.length === 0) {
+    // delete
+    res.status(200).send(refs)
+  } else {
+    res.status(401).send(refs)
+  }
+})
+
 // receive music files
 router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) => {
   const error = msg => sendBadReq(res, msg)

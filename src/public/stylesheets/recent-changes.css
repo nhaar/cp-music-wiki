@@ -154,3 +154,7 @@ h3 {
 .line {
   flex-grow: 1;
 }
+
+.changes {
+  font-size: 14px;
+}
