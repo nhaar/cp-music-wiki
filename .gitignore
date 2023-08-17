@@ -4,3 +4,7 @@
 /src/views/generated
 /test
 /config.js
+
+
+/src/public/bundle.js
+/src/public/bundle.js.LICENSE.txt
