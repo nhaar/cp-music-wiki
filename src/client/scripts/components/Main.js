@@ -34,13 +34,14 @@ function Searchbar () {
 function UserArea () {
   return (
     <div>
-      <img className='ellipsis-img icon-img' src={Ellipsis} />
+      <a href='/Special:UserLogin'>
+        <img className='ellipsis-img icon-img' src={Ellipsis} />
+      </a>
     </div>
   )
 }
 
 function Header (props) {
-  console.log(props)
   return (
     <div className='header'>
       <HeaderAside props={{ ...props }} />
@@ -64,7 +65,7 @@ function Middle (props) {
     <div className='content'>
       <Sidebar sidebar={props.sidebar} />
       <div className='content--body'>
-        <div className='page-title'> Main Page </div>
+        <div className='page-title'> {props.title} </div>
         <props.content />
       </div>
     </div>
@@ -103,7 +104,7 @@ export default function Main (props) {
   return (
     <div>
       <Header swapSidebar={swapSidebar} sidebar={sidebar} />
-      <Middle content={props.content} sidebar={sidebar} />
+      <Middle content={props.content} sidebar={sidebar} title={props.title} />
       <Footer />
     </div>
   )

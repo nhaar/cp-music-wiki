@@ -145,8 +145,7 @@ router.get('/get-preeditor-data', async (req, res) => {
 })
 
 router.post('/login', async (req, res) => {
-  const { password } = req.body
-  const username = req.body.user
+  const { password, user: username } = req.body
   if (typeof username !== 'string' || typeof password !== 'string') sendBadReq(res, 'Invalid data')
   const token = await user.checkCredentials(username, password)
   if (token) {

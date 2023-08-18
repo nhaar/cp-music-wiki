@@ -5,9 +5,55 @@ const path = require('path')
 
 const apiRouter = require('./api')
 
+function getViewFile (fileName) {
+  return path.join(__dirname, `../../client/dist/${fileName}.html`)
+}
+
+function getView (scriptName, vars) {
+  let scriptTag = ''
+  if (vars) {
+    scriptTag = `
+    <script>
+    ${
+      Object.entries(vars).map(entry => {
+        return `var ${entry[0]} = "${entry[1]}";`
+      })
+        .join('\n')
+    }
+    </script>
+    `
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script defer src="/${scriptName}.bundle.js">
+          var test = "Hello World!";
+        </script>
+      </head>
+        <body>
+          <div id="root"></div>
+          ${scriptTag}
+        </body>
+    </html>
+  `
+}
+
 // homepage
 router.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/dist/page.html'))
+  res.send(getView('main-page'))
+})
+
+router.get('/Special\\::value', (req, res) => {
+  const value = req.params.value
+  if (value === 'UserLogin') {
+    res.status(200).send(getView('user-login'))
+  } else {
+    res.sendStatus(404)
+  }
 })
 
 // editor selector
@@ -104,7 +150,7 @@ router.get('/RecentChanges', renderPage('Recent Changes', `
 
 router.get('/Diff', renderPage('Difference between revisions', `
 <div class="diff-viewer"></div>
-<script src="scripts/diff.js" type="module">console.log('kkkk')</script>
+<script src="scripts/diff.js" type="module"></script>
 `, `
 <link rel="stylesheet" href="stylesheets/diff.css">
 `))

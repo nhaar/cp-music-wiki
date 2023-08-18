@@ -115,21 +115,31 @@ body {
   margin-right: 8px;
 }
 
-.searchbar > input {
+input {
   height: 32px;
 
   box-sizing: border-box;
-  width: 400px;
-  border: none;
+  border: solid 1px gray;
+  border-radius: 2px;
   transition: border 0.1s;
-  border-right: 0;
-  text-indent: 35px;
-  margin-right: 70px;
-  border-top-left-radius: 2px;
-  border-bottom-left-radius: 2px;
+  text-indent: 5px;
 }
 
-.searchbar > input:focus {
+.searchbar > input {
+  border: none;
+  width: 400px;
+  text-indent: 35px;
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+  margin-right: 70px;
+
+
+}
+
+input:focus {
   outline: none;
   box-shadow: inset 0px 0px 3px #3366cc;
 }
