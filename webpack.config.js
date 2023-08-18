@@ -4,7 +4,9 @@ const webpack = require('webpack')
 
 module.exports = {
   mode: 'development',
-  entry: path.join(__dirname, 'src/client/scripts/page.js'),
+  entry: {
+    main: ['webpack-hot-middleware/client?reload=true', path.join(__dirname, 'src/client/scripts/page.js')]
+  },
   module: {
     rules: [
       {
@@ -39,9 +41,5 @@ module.exports = {
       filename: 'page.html'
     }),
     new webpack.HotModuleReplacementPlugin()
-  ],
-  target: 'node',
-  node: {
-    __dirname: false
-  }
+  ]
 }

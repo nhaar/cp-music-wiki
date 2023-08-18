@@ -22,13 +22,14 @@ createDirectoryIfNotExists(path.join(__dirname, '../client/music'))
 app.use(express.json())
 
 app.use(express.static(path.join(__dirname, '../client/dist')))
+
 app.use(
   webpackDevMiddleware(compiler, {
     publicPath: config.output.publicPath
   })
 )
 
-console.log(config.output.publicPath)
+app.use(require('webpack-hot-middleware')(compiler))
 
 app.use('/', indexRouter)
 
