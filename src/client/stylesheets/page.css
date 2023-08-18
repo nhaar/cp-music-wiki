@@ -135,13 +135,15 @@ input {
   border-top-left-radius: 2px;
   border-bottom-left-radius: 2px;
   margin-right: 70px;
-
-
 }
 
 input:focus {
   outline: none;
   box-shadow: inset 0px 0px 3px #3366cc;
+}
+
+.user-area {
+  align-self: center;
 }
 
 

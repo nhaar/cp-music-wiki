@@ -32,11 +32,19 @@ function Searchbar () {
 }
 
 function UserArea () {
-  return (
-    <div>
+  const { username } = getCookies()
+
+  const Element = username
+    ? <a href='/'> {username} </a>
+    : (
       <a href='/Special:UserLogin'>
         <img className='ellipsis-img icon-img' src={Ellipsis} />
       </a>
+      )
+
+  return (
+    <div className='user-area'>
+      {Element}
     </div>
   )
 }
