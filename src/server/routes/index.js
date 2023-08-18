@@ -5,10 +5,6 @@ const path = require('path')
 
 const apiRouter = require('./api')
 
-function getViewFile (fileName) {
-  return path.join(__dirname, `../../client/dist/${fileName}.html`)
-}
-
 function getView (scriptName, vars) {
   let scriptTag = ''
   if (vars) {

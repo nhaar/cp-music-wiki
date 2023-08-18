@@ -14,10 +14,10 @@ export default function UserLogin () {
     if (token) {
       document.cookie = `session=${token}`
       document.cookie = `username=${values.user}`
-      alert('Login successful')
+      window.alert('Login successful')
       window.location.href = '/'
     } else {
-      alert('Invalid username or password')
+      window.alert('Invalid username or password')
     }
   }
 

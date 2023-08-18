@@ -61,6 +61,7 @@ function getModule (...names) {
         apply: compiler => {
           compiler.hooks.afterEmit.tap('AfterEmitPlugin', compilation => {
             exec('npx standard --fix', (err, stdout, stderr) => {
+              if (err) throw err
               if (stdout) process.stdout.write(stdout)
               if (stderr) process.stderr.write(stderr)
             })
