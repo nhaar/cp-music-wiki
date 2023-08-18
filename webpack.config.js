@@ -1,6 +1,7 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const path = require('path')
 const webpack = require('webpack')
+const exec = require('child_process').exec
 
 module.exports = {
   mode: 'development',
@@ -40,6 +41,16 @@ module.exports = {
       template: path.join(__dirname, 'src/client/views/temp.html'),
       filename: 'page.html'
     }),
-    new webpack.HotModuleReplacementPlugin()
+    new webpack.HotModuleReplacementPlugin(),
+    {
+      apply: compiler => {
+        compiler.hooks.afterEmit.tap('AfterEmitPlugin', compilation => {
+          exec('npx standard --fix', (err, stdout, stderr) => {
+            if (stdout) process.stdout.write(stdout)
+            if (stderr) process.stderr.write(stderr)
+          })
+        })
+      }
+    }
   ]
 }
