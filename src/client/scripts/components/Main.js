@@ -1,11 +1,14 @@
 import React from 'react'
 
 import '../../stylesheets/page.css'
+import Menu from '../../images/menu.png'
+import Search from '../../images/search.png'
+import Ellipsis from '../../images/ellipsis-h.png'
 
 function HeaderAside () {
   return (
     <div className='header--aside'>
-      <img className='menu-img icon-img' src='menu.png' />
+      <img className='menu-img icon-img' src={Menu} />
       <a className='logo' href='/'> Club Penguin Music Wiki </a>
     </div>
   )
@@ -14,7 +17,7 @@ function HeaderAside () {
 function Searchbar () {
   return (
     <div className='searchbar'>
-      <img src='search' />
+      <img src={Search} />
       <input type='text' placeholder='Search Club Penguin Music' />
       <button> Search </button>
     </div>
@@ -24,7 +27,7 @@ function Searchbar () {
 function UserArea () {
   return (
     <div>
-      <img className='ellipsis-img icon-img' src='ellipsis.png' />
+      <img className='ellipsis-img icon-img' src={Ellipsis} />
     </div>
   )
 }
