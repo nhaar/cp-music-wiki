@@ -1,14 +1,47 @@
 import React from 'react'
 
+function HeaderAside () {
+  return (
+    <div>
+      <img src='menu.png' />
+      <a href='/'> Club Penguin Music Wiki </a>
+    </div>
+  )
+}
+
+function Searchbar () {
+  return (
+    <div>
+      <input type='text' placeholder='Search Club Penguin Music' />
+      <button> Search </button>
+    </div>
+  )
+}
+
+function UserArea () {
+  return (
+    <div>
+      <img src='ellipsis.png' />
+    </div>
+  )
+}
+
 function Header () {
   return (
-    <div />
+    <div>
+      <HeaderAside />
+      <Searchbar />
+      <UserArea />
+    </div>
   )
 }
 
 function Sidebar () {
   return (
-    <div />
+    <div>
+      <a href='/'> Main Page </a>
+      <a href='/Special:Recent_changes'> Recent Changes </a>
+    </div>
   )
 }
 
@@ -23,7 +56,9 @@ function Middle (props) {
 
 function Footer () {
   return (
-    <div />
+    <div>
+      Club Penguin Music Wiki Engine v{require('../../../../package.json').version}
+    </div>
   )
 }
 
