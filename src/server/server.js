@@ -1,4 +1,3 @@
-const nunjucks = require('nunjucks')
 const express = require('express')
 const app = express()
 
@@ -19,11 +18,6 @@ const path = require('path')
 
 createDirectoryIfNotExists(path.join(__dirname, '../client/views/generated'))
 createDirectoryIfNotExists(path.join(__dirname, '../client/music'))
-
-nunjucks.configure('../client/views', {
-  autoescape: true,
-  express: app
-})
 
 app.use(express.json())
 
