@@ -1,17 +1,20 @@
 import React from 'react'
 
+import '../../stylesheets/page.css'
+
 function HeaderAside () {
   return (
-    <div>
-      <img src='menu.png' />
-      <a href='/'> Club Penguin Music Wiki </a>
+    <div className='header--aside'>
+      <img className='menu-img icon-img' src='menu.png' />
+      <a className='logo' href='/'> Club Penguin Music Wiki </a>
     </div>
   )
 }
 
 function Searchbar () {
   return (
-    <div>
+    <div className='searchbar'>
+      <img src='search' />
       <input type='text' placeholder='Search Club Penguin Music' />
       <button> Search </button>
     </div>
@@ -21,14 +24,14 @@ function Searchbar () {
 function UserArea () {
   return (
     <div>
-      <img src='ellipsis.png' />
+      <img className='ellipsis-img icon-img' src='ellipsis.png' />
     </div>
   )
 }
 
 function Header () {
   return (
-    <div>
+    <div className='header'>
       <HeaderAside />
       <Searchbar />
       <UserArea />
@@ -38,7 +41,7 @@ function Header () {
 
 function Sidebar () {
   return (
-    <div>
+    <div className='sidebar'>
       <a href='/'> Main Page </a>
       <a href='/Special:Recent_changes'> Recent Changes </a>
     </div>
@@ -47,17 +50,20 @@ function Sidebar () {
 
 function Middle (props) {
   return (
-    <div>
+    <div className='content'>
       <Sidebar />
-      <props.content />
+      <div className='content--body'>
+        <div className='page-title'> Main Page </div>
+        <props.content />
+      </div>
     </div>
   )
 }
 
 function Footer () {
   return (
-    <div>
-      Club Penguin Music Wiki Engine v{require('../../../../package.json').version}
+    <div className='footer'>
+      <small>Club Penguin Music Wiki Engine v{require('../../../../package.json').version}</small>
     </div>
   )
 }

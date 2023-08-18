@@ -6,6 +6,21 @@
   --top-distance: calc(var(--top-bar-height) + 2 * var(--top-bar-padding));
 }
 
+.header {
+  display: flex;
+  height: 50px;
+  padding: 10px 0;
+  margin-bottom: 20px;
+}
+
+.middle {
+  display: flex;
+}
+
+button {
+  cursor: pointer;
+}
+
 * {
   font-family: sans-serif;
 }
@@ -27,26 +42,17 @@ a:hover {
 
 body {
   margin: 0;
-  display: grid;
-  /* grid-template-columns: 284px 1fr; */
   display: flex;
   flex-direction: column;
-  column-gap: 20px;
+  gap: 20px;
   row-gap: 20px;
   padding: 0 40px;
 }
 
-.account {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-
 .logo {
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: var(--top-bar-height);
+  height: 100%;
 }
 
 .header-container {
@@ -57,7 +63,7 @@ body {
   align-items: center;
 }
 
-.header-aside {
+.header--aside {
   display: flex;
   width: 280px;
 }
@@ -71,20 +77,9 @@ body {
   margin-right: 12px;
 }
 
-.menu-img:hover, .ellipsis-img:hover {
+.icon-img:hover {
   background-color: #f7f7f7;
   cursor: pointer;
-}
-
-.header-content {
-  height: var(--top-bar-height);
-  display: flex;
-  flex-grow: 1;
-  align-items: center;
-}
-
-.empty {
-  flex-grow: 1;
 }
 
 .search-outline {
@@ -96,27 +91,31 @@ body {
 }
 
 .searchbar {
+  height: 100%;
   position: relative;
   margin-left: 24px;
   height: 32px;
   display: flex;
-  justify-content: center;
   align-items: center;
-
+  align-self: center;
 
   border: 1px solid gray;
   border-radius: 2px;
+
+  margin-right: auto;
 }
 
 
-.searchbar img {
+.searchbar > img {
+  position: absolute;
+  left: 0;
   width: 16px;
   height: 16px;
   margin-left: 10px;
   margin-right: 8px;
 }
 
-.searchbar input {
+.searchbar > input {
   height: 32px;
 
   box-sizing: border-box;
@@ -124,39 +123,43 @@ body {
   border: none;
   transition: border 0.1s;
   border-right: 0;
+  text-indent: 35px;
+  margin-right: 70px;
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
 }
 
-.searchbar input:focus {
+.searchbar > input:focus {
   outline: none;
+  box-shadow: inset 0px 0px 3px #3366cc;
 }
 
 
-.searchbar button {
+.searchbar > button {
+  box-sizing: content-box;
+  position: absolute;
   height: 32px;
-  width: 69px;
+  right: 0;
+  width: 70px;
   color: white;
   background-color: white;
-  border:none;
+  border: none;
   font-weight: bold;
-  padding: 0 12px;
+  padding: 0;
 
   transition-property: color, border-color, background-color;
   transition-duration: 0.3s;
+  clip-path: polygon(94% 0, 100% 54%, 94% 100%, 0 100%, 0 0);
 }
 
-.searchbar:hover button, .searchbar:focus-within button {
+.searchbar:hover > button, .searchbar:focus-within > button {
   color: black;
   background-color: #f8f9fa;
   border-left: 1px solid gray;
 }
 
-.searchbar button:hover {
-  cursor: pointer;
-}
-
-.account a {
-  display: flex;
-  align-items: center;
+.searchbar > button:hover {
+  background-color: white;
 }
 
 .ellipsis-img {
@@ -173,6 +176,13 @@ body {
   background-color: #f8f9fa;
   font-size: 12px;
   line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.column-flex {
+  display: flex;
+  flex-direction: column;
 }
 
 .content {
@@ -188,16 +198,26 @@ body {
   font-weight: normal;
   margin: 0;
   margin-top: 10px;
-}
+  margin-bottom: 20px;
 
-.main-content {
+  border-bottom: 0.5px solid gray;
   width: 100%;
 }
 
-.logo a:hover {
+.content--body:nth-child(2) {
+  width: 100%;
+}
+
+.logo:hover {
   text-decoration: none;
 }
 
-.hidden *, .hidden {
+.hidden {
   display: none;
+}
+
+.footer {
+  padding-top: 5px;
+  color: black;
+  text-align: right;
 }
