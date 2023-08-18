@@ -5,11 +5,11 @@ const multer = require('multer')
 
 const path = require('path')
 
-const bridge = require('../app/database/class-frontend')
-const user = require('../app/database/user')
-const rev = require('../app/database/revisions')
-const clsys = require('../app/database/class-system')
-const Gen = require('../app/lists')
+const bridge = require('../database/class-frontend')
+const user = require('../database/user')
+const rev = require('../database/revisions')
+const clsys = require('../database/class-system')
+const Gen = require('../misc/lists')
 const gen = new Gen()
 
 const checkClass = checkValid(body => clsys.isStaticClass(body.cls) || clsys.isMainClass(body.cls), 'Invalid type provided')

@@ -7,7 +7,7 @@ const apiRouter = require('./api')
 
 // homepage
 router.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/dist/page.html'))
+  res.sendFile(path.join(__dirname, '../../client/dist/page.html'))
 })
 
 // editor selector

@@ -1,9 +1,6 @@
 /node_modules
-/database
-/src/public/music
-/src/views/generated
+/src/client/music
+/src/client/views/generated
 /test
 /config.js
-
-
-/src/public/dist
+/src/client/dist

@@ -4,7 +4,7 @@ const webpack = require('webpack')
 
 module.exports = {
   mode: 'development',
-  entry: path.join(__dirname, 'src/public/scripts/page.js'),
+  entry: path.join(__dirname, 'src/client/scripts/page.js'),
   module: {
     rules: [
       {
@@ -28,14 +28,14 @@ module.exports = {
     extensions: ['*', '.js', '.jsx']
   },
   output: {
-    path: path.join(__dirname, 'src/public/dist'),
+    path: path.join(__dirname, 'src/client/dist'),
     filename: 'bundle.js',
     publicPath: '/'
   },
   devtool: 'inline-source-map',
   plugins: [
     new HtmlWebpackPlugin({
-      template: './src/views/temp.html',
+      template: './src/client/views/temp.html',
       filename: 'page.html'
     }),
     new webpack.HotModuleReplacementPlugin()

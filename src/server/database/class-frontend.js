@@ -1,7 +1,7 @@
 const clsys = require('./class-system')
 const sql = require('./sql-handler')
 const rev = require('./revisions')
-const { capitalize, matchInside } = require('../utils')
+const { capitalize, matchInside } = require('../misc/utils')
 
 class FrontendBridge {
   constructor () {
