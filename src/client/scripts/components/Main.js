@@ -2,13 +2,20 @@ import React from 'react'
 
 import '../../stylesheets/page.css'
 import Menu from '../../images/menu.png'
+import Arrow from '../../images/double-arrow.png'
 import Search from '../../images/search.png'
 import Ellipsis from '../../images/ellipsis-h.png'
+import { getCookies } from '../utils'
 
-function HeaderAside () {
+function HeaderAside (props) {
+  const imgPath = props.props.sidebar ? Arrow : Menu
+  function click () {
+    props.props.swapSidebar()
+  }
+
   return (
     <div className='header--aside'>
-      <img className='menu-img icon-img' src={Menu} />
+      <img className='menu-img icon-img' src={imgPath} onClick={click} />
       <a className='logo' href='/'> Club Penguin Music Wiki </a>
     </div>
   )
@@ -32,19 +39,20 @@ function UserArea () {
   )
 }
 
-function Header () {
+function Header (props) {
+  console.log(props)
   return (
     <div className='header'>
-      <HeaderAside />
+      <HeaderAside props={{ ...props }} />
       <Searchbar />
       <UserArea />
     </div>
   )
 }
 
-function Sidebar () {
+function Sidebar (props) {
   return (
-    <div className='sidebar'>
+    <div className={`sidebar ${props.sidebar ? '' : 'hidden'}`}>
       <a href='/'> Main Page </a>
       <a href='/Special:Recent_changes'> Recent Changes </a>
     </div>
@@ -54,7 +62,7 @@ function Sidebar () {
 function Middle (props) {
   return (
     <div className='content'>
-      <Sidebar />
+      <Sidebar sidebar={props.sidebar} />
       <div className='content--body'>
         <div className='page-title'> Main Page </div>
         <props.content />
@@ -72,10 +80,30 @@ function Footer () {
 }
 
 export default function Main (props) {
+  const [sidebar, setSidebar] = React.useState(Number(getCookies().sidebar))
+
+  if (isNaN(sidebar)) {
+    const defaultValue = 1
+    setSidebar(defaultValue)
+    updateSidebarSetting(defaultValue)
+  }
+
+  function updateSidebarSetting (value) {
+    document.cookie = `sidebar=${value ? '1' : '0'}`
+  }
+
+  function swapSidebar () {
+    setSidebar(prev => {
+      const cur = !prev
+      updateSidebarSetting(cur)
+      return cur
+    })
+  }
+
   return (
     <div>
-      <Header />
-      <Middle content={props.content} />
+      <Header swapSidebar={swapSidebar} sidebar={sidebar} />
+      <Middle content={props.content} sidebar={sidebar} />
       <Footer />
     </div>
   )
