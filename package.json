@@ -2,7 +2,7 @@
   "name": "cp-music-wiki",
   "version": "1.0.0",
   "description": "",
-  "main": "src/app.js",
+  "main": "src/server/server.js",
   "scripts": {
     "start": "node src/server/server.js",
     "build": "webpack"
