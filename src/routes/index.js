@@ -6,11 +6,9 @@ const path = require('path')
 const apiRouter = require('./api')
 
 // homepage
-router.get('/', renderPage('Main Page', `
-  <a href="lists"> Open lists </a>
-  <br>
-  <a href="pre-editor"> Go to the editor </a>
-`))
+router.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/dist/page.html'))
+})
 
 // editor selector
 router.get('/pre-editor', (req, res) => {
@@ -133,7 +131,6 @@ router.use('*', (req, res) => {
 
 function renderPage (header, content, extrahead) {
   return (req, res) => {
-    console.log(content)
     res.status(200).render('page.html', { header, content, extrahead })
   }
 }

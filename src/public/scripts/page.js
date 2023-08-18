@@ -1,31 +1,8 @@
-import { getCookies, selectElement, styleElement } from './utils.js'
+import React from 'react'
+import Main from './components/Main.js'
 
-const cookies = getCookies()
+import { createRoot } from 'react-dom/client'
 
-if (cookies.session) {
-  const anchor = selectElement('user-link')
-  anchor.setAttribute('href', '/')
-  anchor.innerHTML = cookies.username
-}
-
-const menu = selectElement('menu-img')
-const sidebarElement = selectElement('sidebar')
-
-let sidebar = cookies.sidebar !== 'true'
-function swapImage () {
-  sidebar = !sidebar
-  menu.src = sidebar
-    ? 'images/double-arrow.png'
-    : 'images/menu.png'
-  if (sidebar) {
-    document.cookie = 'sidebar=true'
-    sidebarElement.classList.remove('hidden')
-  } else {
-    styleElement(sidebarElement, 'hidden')
-    document.cookie = 'sidebar=false'
-  }
-}
-
-swapImage()
-
-menu.addEventListener('click', swapImage)
+const container = document.getElementById('root')
+const root = createRoot(container)
+root.render(<Main tab='home' />)

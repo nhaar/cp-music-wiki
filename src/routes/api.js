@@ -102,7 +102,6 @@ router.post('/delete', async (req, res) => {
 
   // check any references
   const refs = await clsys.checkReferences(cls, id)
-  console.log(refs)
   if (refs.length === 0) {
     // delete
     res.status(200).send(refs)

@@ -1,7 +1,9 @@
+const HtmlWebpackPlugin = require('html-webpack-plugin')
 const path = require('path')
 const webpack = require('webpack')
 
 module.exports = {
+  mode: 'development',
   entry: path.join(__dirname, 'src/public/scripts/page.js'),
   module: {
     rules: [
@@ -11,6 +13,14 @@ module.exports = {
         use: {
           loader: 'babel-loader'
         }
+      },
+      {
+        test: /\.html$/,
+        use: [
+          {
+            loader: 'html-loader'
+          }
+        ]
       }
     ]
   },
@@ -18,15 +28,20 @@ module.exports = {
     extensions: ['*', '.js', '.jsx']
   },
   output: {
-    path: path.join(__dirname, 'src/public'),
+    path: path.join(__dirname, 'src/public/dist'),
     filename: 'bundle.js',
     publicPath: '/'
   },
+  devtool: 'inline-source-map',
   plugins: [
+    new HtmlWebpackPlugin({
+      template: './src/views/temp.html',
+      filename: 'page.html'
+    }),
     new webpack.HotModuleReplacementPlugin()
   ],
-  devServer: {
-    hot: true,
-    historyApiFallback: true
+  target: 'node',
+  node: {
+    __dirname: false
   }
 }

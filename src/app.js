@@ -2,9 +2,15 @@ const nunjucks = require('nunjucks')
 const express = require('express')
 const app = express()
 
-const config = require('../config')
+const webpack = require('webpack')
+const webpackDevMiddleware = require('webpack-dev-middleware')
 
-const SERVER_PORT = config.port
+const config = require('../webpack.config.js')
+const compiler = webpack(config)
+
+const { port } = require('../config')
+
+const SERVER_PORT = port
 
 const indexRouter = require('./routes/index')
 const { createDirectoryIfNotExists } = require('./app/utils')
@@ -19,8 +25,17 @@ nunjucks.configure('src/views', {
   express: app
 })
 
-app.use(express.static('src/public'))
 app.use(express.json())
+
+app.use(express.static(path.join(__dirname, './public/dist')))
+app.use(
+  webpackDevMiddleware(compiler, {
+    publicPath: config.output.publicPath
+  })
+)
+
+console.log(config.output.publicPath)
+
 app.use('/', indexRouter)
 
 app.listen(SERVER_PORT, () => {
