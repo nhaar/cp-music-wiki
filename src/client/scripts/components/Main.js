@@ -1,11 +1,38 @@
 import React from 'react'
 
-function Main () {
+function Header () {
+  return (
+    <div />
+  )
+}
+
+function Sidebar () {
+  return (
+    <div />
+  )
+}
+
+function Middle (props) {
   return (
     <div>
-      Wiki
+      <Sidebar />
+      <props.content />
     </div>
   )
 }
 
-export default Main
+function Footer () {
+  return (
+    <div />
+  )
+}
+
+export default function Main (props) {
+  return (
+    <div>
+      <Header />
+      <Middle content={props.content} />
+      <Footer />
+    </div>
+  )
+}

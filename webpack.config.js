@@ -35,7 +35,7 @@ module.exports = {
   devtool: 'inline-source-map',
   plugins: [
     new HtmlWebpackPlugin({
-      template: './src/client/views/temp.html',
+      template: path.join(__dirname, 'src/client/views/temp.html'),
       filename: 'page.html'
     }),
     new webpack.HotModuleReplacementPlugin()
