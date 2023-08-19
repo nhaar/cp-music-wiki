@@ -1,21 +1,52 @@
 import React from 'react'
 import '../../stylesheets/pre-editor.css'
 import QueryInput from './QueryInput'
+import { findIndexInObject, postAndGetJSON } from '../utils'
 
-function EditButton () {
-  return <button className='blue-button'> EDIT </button>
+function EditButton (props) {
+  function handleClick () {
+    if (isNaN(props.info.id)) {
+      window.alert('No item selected!')
+    } else {
+      const id = props.info.isStatic ? 0 : props.info.id
+      window.location.href = `/Special:Editor?t=${props.info.t}&id=${id}`
+    }
+  }
+  return <button className='blue-button' onClick={handleClick}> EDIT </button>
 }
 
-function DeleteButton () {
-  return <button className='red-button'> DELETE </button>
+function DeleteButton (props) {
+  async function handleClick () {
+    if (isNaN(props.info.id)) {
+      window.alert('No item selected!')
+    } else {
+      const confirm = window.confirm(`Are you sure you want to delete "${props.info.name} - ${props.info.item}"`)
+      if (confirm) {
+        const doubleCheck = window.confirm('REALLY ERASE?')
+        if (doubleCheck) {
+          const response = await postAndGetJSON('api/delete', { cls: props.info.cls, id: Number(props.info.id) })
+          if (response.length === 0) {
+            alert('Deleted')
+          } else {
+            alert(`Erros ${JSON.stringify(response)}`)
+          }
+        }
+      }
+    }
+  }
+  return <button className='red-button' onClick={handleClick}> DELETE </button>
 }
 
-function CreateButton () {
-  return <button className='green-button'> CREATE NEW </button>
+function CreateButton (props) {
+  function handleClick () {
+    window.location.href = `/Special:Editor&t=${props.info.t}`
+  }
+  return <button className='green-button' onClick={handleClick}> CREATE NEW </button>
 }
 
 export default function PreEditor (props) {
-  const [children, setChildren] = React.useState([])
+  const [buttonInfo, setButtonInfo] = React.useState({})
+  const [clsInfo, setClsInfo] = React.useState({})
   const options = []
   props.args.forEach((info, i) => {
     options.push(
@@ -23,19 +54,40 @@ export default function PreEditor (props) {
     )
   })
 
+  function passInfo (id, item) {
+    const newInfo = {
+      item,
+      id,
+      ...clsInfo
+    }
+    setButtonInfo(newInfo)
+  }
+
   function updateChildren (e) {
     const info = props.args[e.target.value]
+    const index = findIndexInObject(props.args, 'cls', info.cls)
+    const newInfo = { t: index, ...info }
     if (info.isStatic) {
-      setChildren([
-        <EditButton key={0} />
-      ])
+      newInfo.id = 0
+      setButtonInfo(newInfo)
+    }
+
+    setClsInfo(newInfo)
+  }
+
+  let children
+  if (clsInfo.cls) {
+    if (clsInfo.isStatic) {
+      children = [
+        <EditButton key={0} info={buttonInfo} />
+      ]
     } else {
-      setChildren([
-        <QueryInput key={0} cls={info.cls} />,
-        <EditButton key={1} />,
-        <CreateButton key={2} />,
-        <DeleteButton key={3} />
-      ])
+      children = [
+        <QueryInput key={0} cls={clsInfo.cls} passInfo={passInfo} />,
+        <EditButton key={1} info={buttonInfo} />,
+        <CreateButton key={2} info={clsInfo} />,
+        <DeleteButton key={3} info={buttonInfo} />
+      ]
     }
   }
 

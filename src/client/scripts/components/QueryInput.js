@@ -23,7 +23,7 @@ export default function QueryInput (props) {
     for (const id in data) {
       const name = data[id]
       function clickOption () {
-        props.updateFunction(id)
+        props.passInfo(id, name)
         setOptions([])
         setIsHovering(false)
         setText(name)
@@ -54,7 +54,7 @@ export default function QueryInput (props) {
   function queryType (e) {
     updateQuery(e)
     setText(e.target.value)
-    props.updateFunction('')
+    props.passInfo()
   }
 
   return (
