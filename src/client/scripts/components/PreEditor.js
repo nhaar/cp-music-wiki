@@ -26,9 +26,9 @@ function DeleteButton (props) {
         if (doubleCheck) {
           const response = await postAndGetJSON('api/delete', { cls: props.info.cls, id: Number(props.info.id) })
           if (response.length === 0) {
-            alert('Deleted')
+            window.alert('Deleted')
           } else {
-            alert(`Erros ${JSON.stringify(response)}`)
+            window.alert(`Erros ${JSON.stringify(response)}`)
           }
         }
       }
