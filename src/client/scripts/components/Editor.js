@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 // element modules
 // array modules
@@ -6,9 +6,9 @@ import React from 'react'
 
 function TextInputModule (props) {
   const getValue = value => value || ''
-  const [value, setValue] = React.useState(() => getValue(props.value))
+  const [value, setValue] = useState(() => getValue(props.value))
 
-  React.useEffect(() => {
+  useEffect(() => {
     setValue(getValue(props.value))
   }, [props.value])
 
@@ -24,7 +24,9 @@ function TextInputModule (props) {
 }
 
 function MoveableRowsModule (props) {
-  const [array, setArray] = React.useState(props.value)
+  const [array, setArray] = useState(props.value)
+  const [isMoving, setIsMoving] = useState(false)
+  const [originalPos, setOriginalPos] = useState(-1)
 
   function deleteRow (i) {
     return () => {
@@ -40,25 +42,50 @@ function MoveableRowsModule (props) {
     setArray(a => [...a, null])
   }
 
+  function clickMove (i) {
+    return () => {
+      console.log('clicked', i)
+      setIsMoving(true)
+      setOriginalPos(i)
+    }
+  }
+
+  function finishMove (i) {
+    return () => {
+      console.log(isMoving, i)
+      if (isMoving) {
+        setArray(a => {
+          const newA = [...a]
+          const removed = newA.splice(originalPos, 1)
+          newA.splice(i, 0, ...removed)
+          console.log(newA)
+          return newA
+        })
+      }
+    }
+  }
+
+  const components = array.map((element, i) => {
+    function passValue (value) {
+      setArray(a => {
+        const newA = [...a]
+        newA[i] = [value]
+        return newA
+      })
+    }
+
+    return (
+      <div key={i} onMouseUp={finishMove(i)}>
+        <props.component value={element} passValue={passValue} />
+        <button onMouseDown={clickMove(i)}> MOVE </button>
+        <button onClick={deleteRow(i)}> DELETE </button>
+      </div>
+    )
+  })
+
   return (
     <div>
-      {array.map((element, i) => {
-        function passValue (value) {
-          setArray(a => {
-            const newA = [...a]
-            newA[i] = [value]
-            return newA
-          })
-        }
-
-        return (
-          <div key={i}>
-            <props.component value={element} passValue={passValue} />
-            <button> MOVE </button>
-            <button onClick={deleteRow(i)}> DELETE </button>
-          </div>
-        )
-      })}
+      {components}
       <button onClick={addRow}>
         ADD
       </button>
@@ -67,7 +94,7 @@ function MoveableRowsModule (props) {
 }
 
 function TableModule (props) {
-  const [value, setValue] = React.useState(props.inputFunction)
+  const [value, setValue] = useState(props.inputFunction)
 
   const components = []
   props.declrs.forEach((declr, i) => {
@@ -108,7 +135,7 @@ function TableModule (props) {
 // }
 
 export default function Editor (props) {
-  const [value, setValue] = React.useState({
+  const [value, setValue] = useState({
     hello: [
       'lklkk',
       'oi',
