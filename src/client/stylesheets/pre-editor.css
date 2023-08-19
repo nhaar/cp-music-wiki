@@ -1,0 +1,20 @@
+.pre-editor--container {
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  row-gap: 5px;
+}
+
+.pre-editor--container button {
+  border: 0;
+}
+
+.edit-button {
+  background-color: green;
+}
+
+
+
+.del-button {
+  background-color: red;
+}

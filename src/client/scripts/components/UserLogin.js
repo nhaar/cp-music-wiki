@@ -42,7 +42,7 @@ export default function UserLogin () {
         <span>Password</span>
         <input type='password' placeholder='Enter your password' onChange={change('password')} />
       </div>
-      <button onClick={click}>
+      <button className='blue-button' onClick={click}>
         Log in
       </button>
     </div>

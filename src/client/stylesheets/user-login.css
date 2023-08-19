@@ -16,9 +16,4 @@
   border-radius: 2px;
   padding: 10px 0;
   color: white;
-  background-color: rgb(29, 88, 214);
-}
-
-.login > button:hover {
-  background-color: rgb(29, 122, 214);
 }

@@ -5,6 +5,7 @@ const path = require('path')
 
 const apiRouter = require('./api')
 const rev = require('../database/revisions')
+const bridge = require('../database/class-frontend')
 
 function getView (scriptName, vars) {
   let scriptTag = ''
@@ -63,8 +64,14 @@ router.get('/Special\\::value', async (req, res) => {
   } else if (value === 'Diff') {
     const { cur, old } = req.query
     const view = await getDiffView(cur, old)
-    console.log(view)
     res.status(200).send(view)
+  } else if (value === 'Editor') {
+    const { t, id } = req.query
+    if (!t) {
+      res.status(200).send(getView('pre-editor', { data: bridge.preeditorData }))
+    } else {
+      res.sendStatus(200)
+    }
   } else {
     res.sendStatus(404)
   }

@@ -76,5 +76,6 @@ module.exports = getModule(
   'main-page',
   'user-login',
   'recent-changes',
-  'diff'
+  'diff',
+  'pre-editor'
 )

@@ -68,7 +68,6 @@ export default function Diff (props) {
       diffChildren.push(
         <div key={key()} />
       )
-      console.log(group[1])
       createNewDiff(<div>{addSpan(group[1], -1, true)}</div>, type)
     } else if (type === 'removeadd' || type === 'addremove') {
       const types = type.match(/(remove|add)/g)

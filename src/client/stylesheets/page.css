@@ -25,6 +25,39 @@ button {
   border-radius: 2px;
 }
 
+
+.blue-button {
+  background-color: rgb(29, 88, 214);
+  color: white;
+}
+
+.blue-button:hover {
+  background-color: rgb(29, 122, 214);
+}
+
+.green-button {
+  background-color: rgb(43, 185, 53);
+  color: white;
+}
+
+.green-button:hover {
+  background-color: rgb(51, 214, 29);
+}
+
+.red-button {
+  background-color: rgb(176, 43, 43);
+  color: white;
+}
+
+.red-button:hover {
+  background-color: rgb(244, 65, 65);
+}
+
+select {
+  min-height: 32px;
+  cursor: pointer;
+}
+
 button:hover {
   background-color: white;
 }
