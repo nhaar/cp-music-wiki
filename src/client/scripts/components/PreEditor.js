@@ -39,7 +39,7 @@ function DeleteButton (props) {
 
 function CreateButton (props) {
   function handleClick () {
-    window.location.href = `/Special:Editor&t=${props.info.t}`
+    window.location.href = `/Special:Editor?t=${props.info.t}`
   }
   return <button className='green-button' onClick={handleClick}> CREATE NEW </button>
 }

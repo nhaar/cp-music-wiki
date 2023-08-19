@@ -6,6 +6,7 @@ const path = require('path')
 const apiRouter = require('./api')
 const rev = require('../database/revisions')
 const bridge = require('../database/class-frontend')
+const clsys = require('../database/class-system')
 
 function getView (scriptName, vars) {
   let scriptTag = ''
@@ -70,7 +71,15 @@ router.get('/Special\\::value', async (req, res) => {
     if (!t) {
       res.status(200).send(getView('pre-editor', { data: bridge.preeditorData }))
     } else {
-      res.sendStatus(200)
+      let row
+      const cls = bridge.preeditorData[t].cls
+      if (id === undefined) {
+        data = await clsys.getDefault(cls)
+        row = { data }
+      } else {
+        row = await clsys.getItem(cls, id)
+      }
+      res.status(200).send(getView('editor', { editorData: bridge.editorData[t], row }))
     }
   } else {
     res.sendStatus(404)
