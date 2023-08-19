@@ -1,10 +1,9 @@
 import React from 'react'
 
-import { postAndGetJSON, selectElements } from '../utils'
+import { postAndGetJSON } from '../utils'
 import '../../stylesheets/query.css'
 
 export default function QueryInput (props) {
-  const [id, setId] = React.useState('')
   const [text, setText] = React.useState('')
   const [isHovering, setIsHovering] = React.useState(false)
   const [options, setOptions] = React.useState([])
@@ -24,7 +23,7 @@ export default function QueryInput (props) {
     for (const id in data) {
       const name = data[id]
       function clickOption () {
-        setId(id)
+        props.updateFunction(id)
         setOptions([])
         setIsHovering(false)
         setText(name)
@@ -55,7 +54,7 @@ export default function QueryInput (props) {
   function queryType (e) {
     updateQuery(e)
     setText(e.target.value)
-    setId('')
+    props.updateFunction('')
   }
 
   return (
