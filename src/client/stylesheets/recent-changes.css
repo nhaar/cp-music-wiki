@@ -1,3 +1,28 @@
+.diff-number::before {
+  content: "(";
+}
+
+.diff-number::after {
+  content: ")";
+}
+
+.positive-diff {
+  color: green;
+}
+
+.negative-diff {
+  color: red;
+}
+
+
+.positive-diff::before {
+  content: "(+";
+}
+
+.zero-diff {
+  color: gray;
+}
+
 ul {
   padding-left: 0;
   margin-left: 50px;

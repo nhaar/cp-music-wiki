@@ -47,6 +47,8 @@ router.get('/Special\\::value', (req, res) => {
   const value = req.params.value
   if (value === 'UserLogin') {
     res.status(200).send(getView('user-login'))
+  } else if (value === 'RecentChanges') {
+    res.status(200).send(getView('recent-changes'))
   } else {
     res.sendStatus(404)
   }

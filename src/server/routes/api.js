@@ -156,7 +156,7 @@ router.post('/login', async (req, res) => {
 })
 
 router.get('/recent-changes', async (req, res) => {
-  const latest = await bridge.getLastRevisions(1)
+  const latest = await bridge.getLastRevisions(7)
   res.status(200).send(latest)
   // get revisions from last day, later add frontend give options
 })

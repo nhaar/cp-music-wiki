@@ -122,16 +122,13 @@ class FrontendBridge {
 
   async getLastRevisions (days) {
     // days is converted to ms
-    const timestamp = Date.now() - days * 86400000
+    const timestamp = Date.now() - (days) * 86400000
     const rows = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
     const classes = clsys.getMajorClasses()
     const latest = []
-    let curDate
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
-      const cls = row.class
-      const name = await clsys.getQueryNameById(cls, row.item_id)
       const next = await rev.getNextRev(row.id)
       if (next) {
         const sizes = [row.id, next]
@@ -140,45 +137,28 @@ class FrontendBridge {
           const encoder = new TextEncoder()
           sizes[i] = encoder.encode(text).length
         }
+        const cls = row.class
         const delta = sizes[1] - sizes[0]
-        const diffLength = delta > 0
-          ? `<span style="color:green;"> +${delta} </span>`
-          : `<span style="color:red;">  ${delta} </span>`
-
+        const name = await clsys.getQueryNameById(cls, row.item_id)
         const timestamp = (await sql.selectId('revisions', next, 'timestamp')).timestamp
-        const date = new Date(Number(timestamp))
-        const hours = date.getHours().toString().padStart(2, '0')
-        const minutes = date.getMinutes().toString().padStart(2, '0')
-        const time = `${hours}:${minutes}`
-
-        const day = `${date.getDate()} ${getMonthName(date.getMonth())} ${date.getFullYear()}`
-        let dayText = ''
-
-        if (curDate !== day) {
-          const prefix = curDate
-            ? '</ul>'
-            : ''
-          dayText = `${prefix}<h3>${day}</h3><ul>`
-          curDate = day
-        }
-
-        const diff = `<a href="Diff?old=${row.id}&cur=${next}">diff</a>`
         const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
-        latest.push(
-          `${dayText}<li>(${diff} | hist) . . <a href="editor?t=${this.getClassT(cls)}&id=${row.item_id}">${classes[cls].name} | ${name}</a>; ${time} . . (${diffLength}) . . ${user}</li>`
-        )
+
+        latest.push({
+          delta,
+          timestamp,
+          t: this.getClassT(cls),
+          cls: classes[cls].name,
+          name,
+          old: row.id,
+          cur: next,
+          user,
+          id: row.item_id
+        })
       }
     }
 
-    return latest.join('') + '</ul>'
+    return latest
   }
-}
-
-function getMonthName (month) {
-  return [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ][month - 1]
 }
 
 /**

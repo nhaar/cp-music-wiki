@@ -61,7 +61,7 @@ function getModule (...names) {
         apply: compiler => {
           compiler.hooks.afterEmit.tap('AfterEmitPlugin', compilation => {
             exec('npx standard --fix', (err, stdout, stderr) => {
-              if (err) throw err
+              if (err) console.error(err)
               if (stdout) process.stdout.write(stdout)
               if (stderr) process.stderr.write(stderr)
             })
@@ -74,5 +74,6 @@ function getModule (...names) {
 
 module.exports = getModule(
   'main-page',
-  'user-login'
+  'user-login',
+  'recent-changes'
 )

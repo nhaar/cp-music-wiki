@@ -107,6 +107,12 @@ export async function postAndGetJSON (route, object) {
   return data
 }
 
+export async function getJSON (route) {
+  return (
+    await (await fetch(route)).json()
+  )
+}
+
 /**
  * Checks inside an array of object each object until it finds one where the named property is equal to the given value, and returns the object and index
  * @param {object[]} object - Array of objects
@@ -190,4 +196,11 @@ export function paramsToObject () {
     params[array[0]] = array[1]
   })
   return params
+}
+
+export function getMonthName (month) {
+  return [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ][month - 1]
 }
