@@ -4,6 +4,7 @@ const router = express.Router()
 const path = require('path')
 
 const apiRouter = require('./api')
+const rev = require('../database/revisions')
 
 function getView (scriptName, vars) {
   let scriptTag = ''
@@ -12,7 +13,11 @@ function getView (scriptName, vars) {
     <script>
     ${
       Object.entries(vars).map(entry => {
-        return `var ${entry[0]} = "${entry[1]}";`
+        let value = entry[1]
+        const type = typeof value
+        if (type === 'object') value = JSON.stringify(value)
+        else if (type === 'string') value = `"${value}"`
+        return `var ${entry[0]} = ${value};`
       })
         .join('\n')
     }
@@ -26,9 +31,7 @@ function getView (scriptName, vars) {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <script defer src="/${scriptName}.bundle.js">
-          var test = "Hello World!";
-        </script>
+        <script defer src="/${scriptName}.bundle.js"></script>
       </head>
         <body>
           <div id="root"></div>
@@ -43,12 +46,25 @@ router.get('/', (req, res) => {
   res.send(getView('main-page'))
 })
 
-router.get('/Special\\::value', (req, res) => {
+async function getDiffView (cur, old) {
+  const curData = await rev.getRevisionData(Number(cur))
+  const oldData = await rev.getRevisionData(Number(old))
+  const diff = rev.getRevDiff(oldData, curData)
+
+  return getView('diff', { diff })
+}
+
+router.get('/Special\\::value', async (req, res) => {
   const value = req.params.value
   if (value === 'UserLogin') {
     res.status(200).send(getView('user-login'))
   } else if (value === 'RecentChanges') {
     res.status(200).send(getView('recent-changes'))
+  } else if (value === 'Diff') {
+    const { cur, old } = req.query
+    const view = await getDiffView(cur, old)
+    console.log(view)
+    res.status(200).send(view)
   } else {
     res.sendStatus(404)
   }

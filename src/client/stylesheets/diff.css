@@ -3,16 +3,34 @@
   --remove-color: #f7e4a6;
 }
 
-.diff-viewer {
+
+.diff--container {
   display: grid;
   column-gap: 5px;
   row-gap: 10px;
   grid-template-columns: 50% 50%;
 }
 
-.diff-container {
+.diff--text-parent {
+  padding: 10px;
+  border-width: 1px;
+  border-left-width: 3px;
+  border-radius: 5px;
+  border-style: solid;
+  flex-grow: 1;
+}
+
+.diff--text-parent > div {
   display: flex;
-  flex-direction: row;
+}
+
+.diff--change-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.diff--container > div {
+  display: flex;
   align-items: center;
 }
 
@@ -23,14 +41,6 @@
   padding: 5px;
 }
 
-.add-diff, .remove-diff {
-  padding: 10px;
-  border-width: 1px;
-  border-left-width: 3px;
-  border-radius: 5px;
-  border-style: solid;
-  flex-grow: 1;
-}
 
 .remove-diff {
   border-color: var(--remove-color);  
@@ -40,12 +50,14 @@
   font-weight: bold;
 }
 
-.remove-span {
+.remove-span > div > span {
   background-color: var(--remove-color);
+  display: inline-block;
 }
 
-.add-span {
+.add-span > div > span {
   background-color: var(--add-color);
+  display: inline-block;
 }
 
 .add-diff {

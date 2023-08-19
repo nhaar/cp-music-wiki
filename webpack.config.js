@@ -75,5 +75,6 @@ function getModule (...names) {
 module.exports = getModule(
   'main-page',
   'user-login',
-  'recent-changes'
+  'recent-changes',
+  'diff'
 )
