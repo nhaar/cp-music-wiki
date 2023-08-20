@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 
+import '../../stylesheets/editor.css'
+
 // element modules
 // array modules
 // editor module
@@ -226,7 +228,7 @@ function MoveableRowsModule (props) {
   })
 
   return (
-    <div>
+    <div className='moveable-module'>
       {components}
       <button onClick={addRow}>
         ADD
@@ -251,7 +253,7 @@ function TableModule (props) {
     }
 
     components.push(
-      <div key={i}>
+      <div key={i} className='table-row'>
         <div> {declr.header} </div>
         <declr.Component value={value[declr.property]} passValue={passValue} component={declr.component} declrs={declr.declrs} />
       </div>
@@ -259,7 +261,7 @@ function TableModule (props) {
   })
 
   return (
-    <div>
+    <div className='table-module'>
       {components}
     </div>
   )
@@ -325,6 +327,6 @@ export default function Editor (props) {
   console.log(declrs)
 
   return (
-    <TableModule declrs={declrs} value={data} passValue={setData} />
+    <TableModule className='editor' declrs={declrs} value={data} passValue={setData} />
   )
 }

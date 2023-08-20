@@ -17,10 +17,6 @@
   display: flex;
 }
 
-.grid-module {
-  display: grid;
-}
-
 button {
   cursor: pointer;
   background-color: rgb(248, 249, 250);
