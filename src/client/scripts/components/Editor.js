@@ -1,28 +1,45 @@
 import React, { useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
+import QueryInput from './QueryInput'
 
 // element modules
 // array modules
 // editor module
 
-function TextInputModule (props) {
-  const getValue = value => value || ''
-  const [value, setValue] = useState(() => getValue(props.value))
+function getSimpleTextModule (Tag, type) {
+  return function (props) {
+    const getValue = value => value || ''
+    const [value, setValue] = useState(() => getValue(props.value))
 
-  useEffect(() => {
-    setValue(getValue(props.value))
-  }, [props.value])
+    useEffect(() => {
+      setValue(getValue(props.value))
+    }, [props.value])
 
-  function updateValue (e) {
-    const { value } = e.target
-    setValue(value)
-    props.passValue(value || null)
+    function updateValue (e) {
+      const { value } = e.target
+      setValue(value)
+      props.passValue(value || null)
+    }
+
+    return (
+      <Tag value={value} type={type} onChange={updateValue} />
+    )
   }
+}
 
-  return (
-    <input value={value} type='text' onChange={updateValue} />
-  )
+const TextInputModule = getSimpleTextModule('input', 'text')
+const TextAreaModule = getSimpleTextModule('textarea')
+const NumberInputModule = getSimpleTextModule('input', 'number')
+
+function getSearchQueryModule (type) {
+  return function (props) {
+    const [value, setValue] = useState(props.value || '')
+
+    return (
+      <QueryInput cls={type} passInfo={setValue} id={value} />
+    )
+  }
 }
 
 function GridRowModule (props) {
@@ -258,8 +275,6 @@ function TableModule (props) {
       })
     }
 
-    console.log(value, declr.property)
-
     components.push(
       <div key={i} className='table-row'>
         <div> {declr.header} </div>
@@ -298,8 +313,10 @@ export default function Editor (props) {
     for (const property in obj) {
       const declr = {}
       const [fullType, header, desc, args] = obj[property]
+      console.log(args)
       declr.property = property
       declr.header = header
+
       let type = fullType
       let arrayModule
       if (Array.isArray(type)) {
@@ -315,7 +332,11 @@ export default function Editor (props) {
         declr.Component = TableModule
         declr.declrs = iterate(type)
       } else {
-        declr.Component = TextInputModule
+        declr.Component = {
+          TEXTLONG: TextAreaModule,
+          INT: NumberInputModule,
+          ID: getSearchQueryModule(args)
+        }[type] || TextInputModule
       }
 
       if (arrayModule) {
@@ -330,6 +351,7 @@ export default function Editor (props) {
   }
 
   // props.args.editorData.main
+  console.log(props.args.editorData.main)
   const declrs = iterate(props.args.editorData.main)
 
   return (
