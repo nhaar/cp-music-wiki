@@ -364,22 +364,31 @@ function MoveableRowsModule (props) {
 function getDefault (props) {
   const defaultValue = {}
   props.declrs.forEach(declr => {
-    defaultValue[declr.property] = null
+    let value = null
+    if (declr.declrs) {
+      value = getDefault(declr)
+    }
+    defaultValue[declr.property] = value
   })
   return defaultValue
 }
 
 function TableModule (props) {
-  const [value] = useState(() => props.value || getDefault(props))
+  const [value] = useState(() => props.value)
 
   const components = []
   props.declrs.forEach((declr, i) => {
     const path = [...props.path, declr.property]
 
+    let childValue = value[declr.property]
+    if (!childValue && declr.declrs) {
+      childValue = getDefault(declr)
+    }
+
     components.push(
       <div key={i} className='table-row'>
         <div> {declr.header} </div>
-        <declr.Component value={value[declr.property]} component={declr.component} declrs={declr.declrs} path={path} />
+        <declr.Component value={childValue} component={declr.component} declrs={declr.declrs} path={path} />
       </div>
     )
   })
