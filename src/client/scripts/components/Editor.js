@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
 import { getCookies, postAndGetJSON, postJSON } from '../utils'
+import { ItemContext } from '../contexts/ItemContext'
 
 // element modules
 // array modules
@@ -12,6 +13,7 @@ function getSimpleTextModule (Tag, type) {
   return function (props) {
     const getValue = value => value || ''
     const [value, setValue] = useState(() => getValue(props.value))
+    const updateData = useContext(ItemContext)
 
     useEffect(() => {
       setValue(getValue(props.value))
@@ -20,7 +22,7 @@ function getSimpleTextModule (Tag, type) {
     function updateValue (e) {
       const { value } = e.target
       setValue(value)
-      props.passValue(value || null)
+      updateData(props.path, value || null)
     }
 
     return (
@@ -37,10 +39,11 @@ const DateInputModule = getSimpleTextModule('input', 'date')
 function getSearchQueryModule (type) {
   return function (props) {
     const [value, setValue] = useState(props.value || '')
+    const updateData = useContext(ItemContext)
 
     function updateValue (id) {
       setValue(id)
-      props.passValue(id)
+      updateData(props.path, Number(id))
     }
 
     return (
@@ -52,6 +55,7 @@ function getSearchQueryModule (type) {
 function getOptionSelectModule (args) {
   return function (props) {
     const [value, setValue] = useState(props.values)
+    const updateData = useContext(ItemContext)
 
     const options = args.map((arg, i) => {
       const value = arg.match(/(?<=\[\s*)\w+/)[0]
@@ -62,7 +66,7 @@ function getOptionSelectModule (args) {
     function handleChange (e) {
       const { value } = e.target
       setValue(value)
-      props.passValue(value || null)
+      updateData(props.path, value || null)
     }
 
     return (
@@ -76,11 +80,12 @@ function getOptionSelectModule (args) {
 
 function CheckboxModule (props) {
   const [value, setValue] = useState(typeof props.value === 'boolean' ? props.value : null)
+  const updateData = useContext(ItemContext)
 
   function handleChange (e) {
     const { checked } = e.target
     setValue(checked)
-    props.passValue(checked)
+    updateData(props.path, checked)
   }
 
   return (
@@ -89,7 +94,7 @@ function CheckboxModule (props) {
 }
 
 function MusicFileModule (props) {
-  const [value, setValue] = useState(props.value || '')
+  const [value] = useState(props.value || '')
   const [filenames, setFilenames] = useState('')
 
   useEffect(() => {
@@ -97,14 +102,11 @@ function MusicFileModule (props) {
       (async () => {
         if (value !== '') {
           const names = (await postAndGetJSON('api/get', { id: Number(value), cls: 'file' })).data
+          setFilenames(names)
         }
       })()
     }
   }, [value])
-
-  function passValue (id) {
-    setValue(id)
-  }
 
   const SearchQuery = getSearchQueryModule('file')
 
@@ -144,7 +146,7 @@ function MusicFileModule (props) {
 
   return (
     <div>
-      <SearchQuery value={value} passValue={passValue} />
+      <SearchQuery value={value} path={props.path} />
       <MusicFile />
     </div>
   )
@@ -250,19 +252,10 @@ function GridRowModule (props) {
   }
 
   const components = values.map((element, k) => {
-    function passValue (value) {
-      const [i, j] = getCoords(k)
-      setGrid(g => {
-        const newG = [...g]
-        newG[i][j] = value
-        return newG
-      })
-    }
-
     return (
       <div key={k}>
         <div onMouseUp={stopMoving(k)}>
-          <props.component passValue={passValue} value={element} declrs={props.declrs} />
+          <props.component value={element} declrs={props.declrs} />
           <button onMouseDown={startMoving(k)}> Move </button>
         </div>
       </div>
@@ -299,10 +292,17 @@ function MoveableRowsModule (props) {
   const [array, setArray] = useState(props.value || [])
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
+  const updateData = useContext(ItemContext)
+
+  function setData (callback) {
+    const newA = callback(array)
+    updateData(props.path, newA)
+    setArray(newA)
+  }
 
   function deleteRow (i) {
     return () => {
-      setArray(a => {
+      setData(a => {
         const newA = [...a]
         newA.splice(i, 1)
         return newA
@@ -311,7 +311,12 @@ function MoveableRowsModule (props) {
   }
 
   function addRow () {
-    setArray(a => [...a, null])
+    let newValue = null
+    if (props.declrs) {
+      newValue = getDefault(props)
+    }
+
+    setData(a => [...a, newValue])
   }
 
   function clickMove (i) {
@@ -324,7 +329,7 @@ function MoveableRowsModule (props) {
   function finishMove (i) {
     return () => {
       if (isMoving) {
-        setArray(a => {
+        setData(a => {
           const newA = [...a]
           const removed = newA.splice(originalPos, 1)
           newA.splice(i, 0, ...removed)
@@ -335,17 +340,11 @@ function MoveableRowsModule (props) {
   }
 
   const components = array.map((element, i) => {
-    function passValue (value) {
-      setArray(a => {
-        const newA = [...a]
-        newA[i] = [value]
-        return newA
-      })
-    }
+    const path = [...props.path, i]
 
     return (
       <div key={i} onMouseUp={finishMove(i)}>
-        <props.component value={element} passValue={passValue} declrs={props.declrs} />
+        <props.component value={element} declrs={props.declrs} path={path} />
         <button onMouseDown={clickMove(i)}> MOVE </button>
         <button onClick={deleteRow(i)}> DELETE </button>
       </div>
@@ -362,31 +361,25 @@ function MoveableRowsModule (props) {
   )
 }
 
+function getDefault (props) {
+  const defaultValue = {}
+  props.declrs.forEach(declr => {
+    defaultValue[declr.property] = null
+  })
+  return defaultValue
+}
+
 function TableModule (props) {
-  function getDefault () {
-    const defaultValue = {}
-    props.declrs.forEach(declr => {
-      defaultValue[declr.property] = null
-    })
-    return defaultValue
-  }
-  const [value, setValue] = useState(() => props.value || getDefault())
+  const [value] = useState(() => props.value || getDefault(props))
 
   const components = []
   props.declrs.forEach((declr, i) => {
-    function passValue (value) {
-      setValue(v => {
-        const newV = { ...v }
-        newV[declr.property] = value
-        props.passValue(newV)
-        return newV
-      })
-    }
+    const path = [...props.path, declr.property]
 
     components.push(
       <div key={i} className='table-row'>
         <div> {declr.header} </div>
-        <declr.Component value={value[declr.property]} passValue={passValue} component={declr.component} declrs={declr.declrs} />
+        <declr.Component value={value[declr.property]} component={declr.component} declrs={declr.declrs} path={path} />
       </div>
     )
   })
@@ -487,9 +480,25 @@ export default function Editor (props) {
     }
   }
 
+  function updateData (path, value) {
+    const root = { ...data }
+    let obj = root
+    path.forEach((step, i) => {
+      if (i === path.length - 1) {
+        obj[step] = value
+      } else {
+        obj = obj[step]
+      }
+    })
+
+    setData(root)
+  }
+
   return (
     <div className='editor--container'>
-      <TableModule className='editor' declrs={declrs} value={data} passValue={setData} />
+      <ItemContext.Provider value={updateData}>
+        <TableModule className='editor' declrs={declrs} value={data} path={[]} />
+      </ItemContext.Provider>
       <div className='submit--container'>
         <button className='blue-button' onClick={submitData}>
           SUBMIT
