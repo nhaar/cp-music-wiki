@@ -11,7 +11,7 @@ export default function QueryInput (props) {
   React.useEffect(() => {
     (async () => {
       if (props.id) {
-        const name = await postAndGetJSON('api/get-name', { cls: props.cls, id: Number(props.id) })
+        const { name } = await postAndGetJSON('api/get-name', { cls: props.cls, id: Number(props.id) })
         setText(name)
       }
     })()
