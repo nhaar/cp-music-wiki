@@ -27,3 +27,17 @@
   flex-direction: column;
   row-gap: 20px;
 }
+
+.submit--container {
+  margin-top: 10px;
+  display: flex;
+}
+
+.submit--container > button {
+  width: 100%;
+}
+
+.editor--container {
+  display: flex;
+  flex-direction: column;
+}

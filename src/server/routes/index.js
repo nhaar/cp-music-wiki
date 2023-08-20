@@ -74,7 +74,7 @@ router.get('/Special\\::value', async (req, res) => {
       let row
       const cls = bridge.preeditorData[t].cls
       if (id === undefined) {
-        data = await clsys.getDefault(cls)
+        const data = await clsys.getDefault(cls)
         row = { data }
       } else {
         row = await clsys.getItem(cls, id)

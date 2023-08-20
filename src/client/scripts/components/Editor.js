@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
+import { getCookies, postJSON } from '../utils'
 
 // element modules
 // array modules
@@ -154,7 +155,7 @@ function GridRowModule (props) {
     return (
       <div key={k}>
         <div onMouseUp={stopMoving(k)}>
-          <props.component passValue={passValue} value={element} declrs={declrs} />
+          <props.component passValue={passValue} value={element} declrs={props.declrs} />
           <button onMouseDown={startMoving(k)}> Move </button>
         </div>
       </div>
@@ -354,7 +355,38 @@ export default function Editor (props) {
   console.log(props.args.editorData.main)
   const declrs = iterate(props.args.editorData.main)
 
+  async function submitData () {
+    if (window.confirm('Submit data?')) {
+      const row = { ...props.args.row }
+      row.data = data
+      const token = getCookies().session
+      const payload = {
+        cls: props.args.editorData.cls,
+        row,
+        token
+      }
+      const response = await postJSON('api/update', payload)
+      console.log(response)
+      if (response.status === 200) {
+        window.alert('Data submitted with success')
+        window.location.href = '/Special:Editor'
+      } else if (response.status === 400) {
+        const errors = (await response.json()).errors
+        window.alert(`There is a mistake in your submission\n${errors}`)
+      } else if (response.status === 403) {
+        window.alert("You don't have permission to do that")
+      }
+    }
+  }
+
   return (
-    <TableModule className='editor' declrs={declrs} value={data} passValue={setData} />
+    <div className='editor--container'>
+      <TableModule className='editor' declrs={declrs} value={data} passValue={setData} />
+      <div className='submit--container'>
+        <button className='blue-button' onClick={submitData}>
+          SUBMIT
+        </button>
+      </div>
+    </div>
   )
 }
