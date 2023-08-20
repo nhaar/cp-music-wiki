@@ -26,7 +26,7 @@ function TextInputModule (props) {
 }
 
 function GridRowModule (props) {
-  const [grid, setGrid] = useState(props.value)
+  const [grid, setGrid] = useState(props.value || [])
   const [rows, setRows] = useState(props.value.length || 0)
   const [columns, setColumns] = useState(() => {
     let columns = 0
@@ -171,7 +171,7 @@ function GridRowModule (props) {
 }
 
 function MoveableRowsModule (props) {
-  const [array, setArray] = useState(props.value)
+  const [array, setArray] = useState(props.value || [])
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
 
@@ -238,10 +238,16 @@ function MoveableRowsModule (props) {
 }
 
 function TableModule (props) {
-  const [value, setValue] = useState(props.value)
+  function getDefault () {
+    const defaultValue = {}
+    props.declrs.forEach(declr => {
+      defaultValue[declr.property] = null
+    })
+    return defaultValue
+  }
+  const [value, setValue] = useState(() => props.value || getDefault())
 
   const components = []
-  console.log(props.declrs)
   props.declrs.forEach((declr, i) => {
     function passValue (value) {
       setValue(v => {
@@ -251,6 +257,8 @@ function TableModule (props) {
         return newV
       })
     }
+
+    console.log(value, declr.property)
 
     components.push(
       <div key={i} className='table-row'>
@@ -323,8 +331,6 @@ export default function Editor (props) {
 
   // props.args.editorData.main
   const declrs = iterate(props.args.editorData.main)
-
-  console.log(declrs)
 
   return (
     <TableModule className='editor' declrs={declrs} value={data} passValue={setData} />
