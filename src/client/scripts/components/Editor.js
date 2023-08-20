@@ -135,7 +135,7 @@ function GridRowModule (props) {
     return (
       <div key={k}>
         <div onMouseUp={stopMoving(k)}>
-          <props.component passValue={passValue} value={element} />
+          <props.component passValue={passValue} value={element} declrs={declrs} />
           <button onMouseDown={startMoving(k)}> Move </button>
         </div>
       </div>
@@ -218,7 +218,7 @@ function MoveableRowsModule (props) {
 
     return (
       <div key={i} onMouseUp={finishMove(i)}>
-        <props.component value={element} passValue={passValue} />
+        <props.component value={element} passValue={passValue} declrs={props.declrs} />
         <button onMouseDown={clickMove(i)}> MOVE </button>
         <button onClick={deleteRow(i)}> DELETE </button>
       </div>
@@ -236,9 +236,10 @@ function MoveableRowsModule (props) {
 }
 
 function TableModule (props) {
-  const [value, setValue] = useState(props.inputFunction)
+  const [value, setValue] = useState(props.value)
 
   const components = []
+  console.log(props.declrs)
   props.declrs.forEach((declr, i) => {
     function passValue (value) {
       setValue(v => {
@@ -252,7 +253,7 @@ function TableModule (props) {
     components.push(
       <div key={i}>
         <div> {declr.header} </div>
-        <declr.Component value={value[declr.property]} passValue={passValue} component={declr.component} />
+        <declr.Component value={value[declr.property]} passValue={passValue} component={declr.component} declrs={declr.declrs} />
       </div>
     )
   })
@@ -278,39 +279,52 @@ function TableModule (props) {
 // }
 
 export default function Editor (props) {
-  const [value, setValue] = useState({
-    hello: [
-      ['a', 'b'],
-      ['c', 'd']
-    ],
-    'world!': null
-  })
-  // const EditorModule = constructEditorModule(props.args.row)
+  // props.args.row.data
+  const [data, setData] = useState(props.args.row.data)
 
-  const declrs = [
-    {
-      property: 'hello',
-      Component: GridRowModule,
-      header: 'world!',
-      component: TextInputModule
-    },
-    {
-      property: 'world!',
-      Component: TextInputModule,
-      header: 'hello!'
+  const iterate = (obj) => {
+    const declrs = []
+
+    for (const property in obj) {
+      const declr = {}
+      const [fullType, header, desc, args] = obj[property]
+      declr.property = property
+      declr.header = header
+      let type = fullType
+      let arrayModule
+      if (Array.isArray(type)) {
+        const dim = type[1]
+        type = type[0]
+        if (dim === 1) {
+          arrayModule = MoveableRowsModule
+        } else if (dim === 2) {
+          arrayModule = GridRowModule
+        }
+      }
+      if (typeof type === 'object') {
+        declr.Component = TableModule
+        declr.declrs = iterate(type)
+      } else {
+        declr.Component = TextInputModule
+      }
+
+      if (arrayModule) {
+        declr.component = declr.Component
+        declr.Component = arrayModule
+      }
+
+      declrs.push(declr)
     }
-  ]
 
-  function inputFunction () {
-    return value
+    return declrs
   }
 
-  function passValue (value) {
-    setValue(value)
-  }
+  // props.args.editorData.main
+  const declrs = iterate(props.args.editorData.main)
+
+  console.log(declrs)
 
   return (
-    <TableModule declrs={declrs} inputFunction={inputFunction} passValue={passValue} />
-
+    <TableModule declrs={declrs} value={data} passValue={setData} />
   )
 }
