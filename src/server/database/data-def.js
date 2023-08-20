@@ -263,7 +263,13 @@ const def = [{
     'Description of the project';
     songs {COMISSIONED_SONG}[]
     'The songs comissioned for this project';
-  `)
+  `),
+  file: new NameDef(
+    'File', `
+    originalname TEXTSHORT QUERY
+    filename TEXTSHORT
+    `
+  )
 }, {
   NAME: new ClassDef(`
     name TEXTSHORT QUERY

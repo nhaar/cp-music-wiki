@@ -81,6 +81,8 @@ router.get('/Special\\::value', async (req, res) => {
       }
       res.status(200).send(getView('editor', { editorData: bridge.editorData[t], row }))
     }
+  } else if (value === 'FileUpload') {
+    res.status(200).send(getView('file-upload'))
   } else {
     res.sendStatus(404)
   }

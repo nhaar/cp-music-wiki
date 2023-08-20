@@ -78,5 +78,6 @@ module.exports = getModule(
   'recent-changes',
   'diff',
   'pre-editor',
-  'editor'
+  'editor',
+  'file-upload'
 )

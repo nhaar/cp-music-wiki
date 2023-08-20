@@ -78,7 +78,7 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
 })
 
 // middleware for receiving the music file
-const upload = multer({ dest: path.join(__dirname, '../public/music/') })
+const upload = multer({ dest: path.join(__dirname, '../../client/music/') })
 
 async function checkAdmin (req, res, next) {
   let isAdmin = false
@@ -119,7 +119,10 @@ router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) 
     const { originalname, filename } = req.file
     if (!filename) error('Could not get file path')
     else if (!originalname) error('Could not get file name')
-    else res.status(200).send({ originalname, filename })
+    else {
+      clsys.updateItem('file', { data: { originalname, filename } })
+      res.sendStatus(200)
+    }
   }
 })
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
-import { getCookies, postJSON } from '../utils'
+import { getCookies, postAndGetJSON, postJSON } from '../utils'
 
 // element modules
 // array modules
@@ -32,15 +32,122 @@ function getSimpleTextModule (Tag, type) {
 const TextInputModule = getSimpleTextModule('input', 'text')
 const TextAreaModule = getSimpleTextModule('textarea')
 const NumberInputModule = getSimpleTextModule('input', 'number')
+const DateInputModule = getSimpleTextModule('input', 'date')
 
 function getSearchQueryModule (type) {
   return function (props) {
     const [value, setValue] = useState(props.value || '')
 
+    function updateValue (id) {
+      setValue(id)
+      props.passValue(id)
+    }
+
     return (
-      <QueryInput cls={type} passInfo={setValue} id={value} />
+      <QueryInput cls={type} passInfo={updateValue} id={value} />
     )
   }
+}
+
+function getOptionSelectModule (args) {
+  return function (props) {
+    const [value, setValue] = useState(props.values)
+
+    const options = args.map((arg, i) => {
+      const value = arg.match(/(?<=\[\s*)\w+/)[0]
+      const text = arg.match(/(?<=").*(?=")/)[0]
+      return <option key={i} value={value}>{text}</option>
+    })
+
+    function handleChange (e) {
+      const { value } = e.target
+      setValue(value)
+      props.passValue(value || null)
+    }
+
+    return (
+      <select value={value} onChange={handleChange}>
+        <option value='' />
+        {options}
+      </select>
+    )
+  }
+}
+
+function CheckboxModule (props) {
+  const [value, setValue] = useState(typeof props.value === 'boolean' ? props.value : null)
+
+  function handleChange (e) {
+    const { checked } = e.target
+    setValue(checked)
+    props.passValue(checked)
+  }
+
+  return (
+    <input type='checkbox' checked={value || false} onChange={handleChange} />
+  )
+}
+
+function MusicFileModule (props) {
+  const [value, setValue] = useState(props.value || '')
+  const [filenames, setFilenames] = useState('')
+
+  useEffect(() => {
+    if (!isNaN(value)) {
+      (async () => {
+        if (value !== '') {
+          const names = (await postAndGetJSON('api/get', { id: Number(value), cls: 'file' })).data
+        }
+      })()
+    }
+  }, [value])
+
+  function passValue (id) {
+    setValue(id)
+  }
+
+  const SearchQuery = getSearchQueryModule('file')
+
+  let MusicFile
+
+  if (!filenames) {
+    MusicFile = () => (
+      <div>
+        Pick a file in order to play it
+      </div>
+    )
+  } else {
+    let extension = filenames.originalname.match(/\.(.*?)$/)
+    // in case there is no match
+    if (extension) extension = extension[1]
+
+    const validExtensions = [
+      'mp3',
+      'wav',
+      'flac',
+      'm4a',
+      'ogg'
+    ]
+
+    if (extension && validExtensions.includes(extension)) {
+      MusicFile = () => (
+        <audio src={`/${filenames.filename}`} />
+      )
+    } else {
+      MusicFile = () => (
+        <div>
+          Unsupported audio format
+        </div>
+      )
+    }
+  }
+
+  return (
+    <div>
+      <SearchQuery value={value} passValue={passValue} />
+      <MusicFile />
+    </div>
+  )
 }
 
 function GridRowModule (props) {
@@ -314,7 +421,6 @@ export default function Editor (props) {
     for (const property in obj) {
       const declr = {}
       const [fullType, header, desc, args] = obj[property]
-      console.log(args)
       declr.property = property
       declr.header = header
 
@@ -336,7 +442,11 @@ export default function Editor (props) {
         declr.Component = {
           TEXTLONG: TextAreaModule,
           INT: NumberInputModule,
-          ID: getSearchQueryModule(args)
+          ID: getSearchQueryModule(args),
+          SELECT: getOptionSelectModule(args),
+          DATE: DateInputModule,
+          BOOLEAN: CheckboxModule,
+          FILE: MusicFileModule
         }[type] || TextInputModule
       }
 
@@ -352,7 +462,6 @@ export default function Editor (props) {
   }
 
   // props.args.editorData.main
-  console.log(props.args.editorData.main)
   const declrs = iterate(props.args.editorData.main)
 
   async function submitData () {
@@ -366,7 +475,6 @@ export default function Editor (props) {
         token
       }
       const response = await postJSON('api/update', payload)
-      console.log(response)
       if (response.status === 200) {
         window.alert('Data submitted with success')
         window.location.href = '/Special:Editor'
