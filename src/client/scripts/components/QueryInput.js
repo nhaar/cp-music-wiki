@@ -15,7 +15,7 @@ export default function QueryInput (props) {
         setText(name)
       }
     })()
-  })
+  }, [text])
 
   async function updateQuery (e) {
     const data = await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: e.target.value })
@@ -52,9 +52,9 @@ export default function QueryInput (props) {
   }
 
   function queryType (e) {
+    ('?')
     updateQuery(e)
     setText(e.target.value)
-    props.passInfo()
   }
 
   return (

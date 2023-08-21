@@ -94,19 +94,16 @@ function CheckboxModule (props) {
 }
 
 function MusicFileModule (props) {
-  const [value] = useState(props.value || '')
   const [filenames, setFilenames] = useState('')
 
   useEffect(() => {
-    if (!isNaN(value)) {
+    if (props.value !== null) {
       (async () => {
-        if (value !== '') {
-          const names = (await postAndGetJSON('api/get', { id: Number(value), cls: 'file' })).data
-          setFilenames(names)
-        }
+        const names = (await postAndGetJSON('api/get', { id: Number(props.value), cls: 'file' })).data
+        if (names.filename !== filenames.filename) setFilenames(names)
       })()
     }
-  }, [value])
+  })
 
   const SearchQuery = getSearchQueryModule('file')
 
@@ -146,7 +143,7 @@ function MusicFileModule (props) {
 
   return (
     <div>
-      <SearchQuery value={value} path={props.path} />
+      <SearchQuery value={props.value} path={props.path} />
       <MusicFile />
     </div>
   )
