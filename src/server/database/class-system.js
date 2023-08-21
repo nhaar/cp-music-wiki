@@ -745,15 +745,6 @@ function removeArgs (type) {
 }
 
 /**
- * Check if value is a string
- * @param {any} value - Value
- * @returns {boolean} True if is a string
- */
-function isString (value) {
-  return typeof value === 'string'
-}
-
-/**
  * Check if a string belongs to the keys of an object
  * @param {object} obj - Object to check
  * @param {string} key - String to find

@@ -9,8 +9,8 @@ const bridge = require('../database/class-frontend')
 const user = require('../database/user')
 const rev = require('../database/revisions')
 const clsys = require('../database/class-system')
-const Gen = require('../misc/lists')
-const gen = new Gen()
+// const Gen = require('../misc/lists')
+// const gen = new Gen()
 
 const checkClass = checkValid(body => clsys.isStaticClass(body.cls) || clsys.isMainClass(body.cls), 'Invalid type provided')
 
