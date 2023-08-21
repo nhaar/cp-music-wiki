@@ -30,6 +30,14 @@ export default function EditorHeader (props) {
     />
   ))
 
+  if (props.isStatic) {
+    // if static
+    components.splice(3, 2)
+  } else if (!props.id) {
+    // creating page
+    components.splice(1, 5)
+  }
+
   return (
     <div className='editor--header-container'>
       <div className='editor--header-options'>

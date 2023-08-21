@@ -549,7 +549,7 @@ export default function Editor (props) {
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={0} />
+      <EditorHeader cur={0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} />
       <ItemContext.Provider value={updateData}>
         <TableModule className='editor' declrs={declrs} value={data} path={[]} />
       </ItemContext.Provider>
