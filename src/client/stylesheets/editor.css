@@ -85,3 +85,17 @@
   display: flex;
   flex-direction: column;
 }
+
+.header--container {
+  display: flex;
+}
+
+.header--title {
+  margin-right: auto;
+}
+
+.question-mark {
+  width: 20px;
+  height: 20px;
+  padding-right: 5px;
+}

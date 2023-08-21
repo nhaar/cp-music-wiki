@@ -4,6 +4,7 @@ import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
 import { getCookies, postAndGetJSON, postJSON } from '../utils'
 import { ItemContext } from '../contexts/ItemContext'
+import QuestionMark from '../../images/question-mark.png'
 
 // element modules
 // array modules
@@ -424,7 +425,10 @@ function TableModule (props) {
 
     components.push(
       <div key={i} className='table-row'>
-        <div> {declr.header} </div>
+        <div className='header--container'>
+          <div className='header--title'>{declr.header}</div>
+          <img src={QuestionMark} className='question-mark' title={declr.desc} />
+        </div>
         <declr.Component value={childValue} component={declr.component} declrs={declr.declrs} path={path} />
       </div>
     )
@@ -454,6 +458,7 @@ export default function Editor (props) {
       const [fullType, header, desc, args] = obj[property]
       declr.property = property
       declr.header = header
+      declr.desc = desc
 
       let type = fullType
       let arrayModule
