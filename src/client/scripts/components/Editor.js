@@ -22,7 +22,7 @@ function getSimpleTextModule (Tag, type) {
     function updateValue (e) {
       const { value } = e.target
       setValue(value)
-      updateData(props.path, value || null)
+      updateData(props.path, type !== 'number' ? value : Number(value) || null)
     }
 
     return (
@@ -54,7 +54,7 @@ function getSearchQueryModule (type) {
 
 function getOptionSelectModule (args) {
   return function (props) {
-    const [value, setValue] = useState(props.values)
+    const [value, setValue] = useState(props.value || '')
     const updateData = useContext(ItemContext)
 
     const options = args.map((arg, i) => {
@@ -286,14 +286,23 @@ function GridRowModule (props) {
 }
 
 function MoveableRowsModule (props) {
-  const [array, setArray] = useState(props.value || [])
+  const [array, setArray] = useState(() => {
+    if (props.value) {
+      return props.value.map((element, i) => ({ id: i, value: element }))
+    } else {
+      return []
+    }
+  })
+  const [seq, setSeq] = useState(() => props.value ? props.value.length : 0)
+
+  const [keysPhase, setKeysPhase] = useState(1)
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
   const updateData = useContext(ItemContext)
 
   function setData (callback) {
     const newA = callback(array)
-    updateData(props.path, newA)
+    updateData(props.path, newA.map(item => item.value))
     setArray(newA)
   }
 
@@ -313,7 +322,9 @@ function MoveableRowsModule (props) {
       newValue = getDefault(props)
     }
 
-    setData(a => [...a, newValue])
+    const nextSeq = seq + 1
+    setSeq(nextSeq)
+    setData(a => [...a, { id: seq, value: newValue }])
   }
 
   function clickMove (i) {
@@ -327,9 +338,13 @@ function MoveableRowsModule (props) {
     return () => {
       if (isMoving) {
         setData(a => {
+          console.log(a)
           const newA = [...a]
           const removed = newA.splice(originalPos, 1)
           newA.splice(i, 0, ...removed)
+          console.log(newA)
+          // setKeysPhase(k => k + newA.length + 1)
+          setIsMoving(false)
           return newA
         })
       }
@@ -338,10 +353,11 @@ function MoveableRowsModule (props) {
 
   const components = array.map((element, i) => {
     const path = [...props.path, i]
+    console.log(element, i)
 
     return (
-      <div key={i} onMouseUp={finishMove(i)}>
-        <props.component value={element} declrs={props.declrs} path={path} />
+      <div key={element.id} onMouseUp={finishMove(i)}>
+        <props.component value={element.value} declrs={props.declrs} path={path} />
         <button onMouseDown={clickMove(i)}> MOVE </button>
         <button onClick={deleteRow(i)}> DELETE </button>
       </div>

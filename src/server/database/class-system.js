@@ -326,7 +326,7 @@ class ClassSystem {
                 if (typeof value !== 'string') {
                   errorMsg('a text string')
                 }
-              } else if (['ID', 'INT'].includes(type)) {
+              } else if (['ID', 'INT', 'FILE'].includes(type)) {
                 if (!Number.isInteger(value)) {
                   errorMsg('an integer number')
                 }
@@ -337,11 +337,6 @@ class ClassSystem {
               } else if (type === 'DATE') {
                 if (!value.match(/\d+-\d{2}-\d{2}/)) {
                   errorMsg('a valid date string (YYYY-MM-DD)')
-                }
-              } else if (type === 'FILE') {
-                const { originalname, filename } = value
-                if (!isString(originalname) || !isString(filename)) {
-                  errorMsg('a valid file object')
                 }
               }
             }
