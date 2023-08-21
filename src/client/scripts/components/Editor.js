@@ -533,9 +533,35 @@ export default function Editor (props) {
         <TableModule className='editor' declrs={declrs} value={data} path={[]} />
       </ItemContext.Provider>
       <div className='submit--container'>
-        <button className='blue-button' onClick={submitData}>
-          SUBMIT
-        </button>
+        <div className='submit--summary'>
+          <span>Summary:</span>
+          <input type='text' />
+        </div>
+
+        <div className='submit--options'>
+          <input type='checkbox' />
+          <span>This is a minor edit</span>
+          <input type='checkbox' />
+          <span>Watch this page</span>
+          <select>
+            <option>Permanent</option>
+            <option>1 week</option>
+            <option>1 month</option>
+            <option>3 months</option>
+            <option>6 months</option>
+          </select>
+        </div>
+        <div className='submit--buttons'>
+          <button className='blue-button' onClick={submitData}>
+            Save changes
+          </button>
+          <button>
+            Show changes
+          </button>
+          <button className='cancel-button'>
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   )

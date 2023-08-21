@@ -29,12 +29,56 @@
 }
 
 .submit--container {
-  margin-top: 10px;
+  background-color: rgb(234, 236, 240);
+  border: 1px solid gray;
+  padding: 10px;
   display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  row-gap: 10px;
+}
+
+
+.submit--summary {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+}
+
+.submit--options {
+  display: flex;
+  align-items: center;
+  column-gap: 10px;
+}
+
+.submit--options > input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
 }
 
 .submit--container > button {
   width: 100%;
+}
+
+.submit--buttons {
+  display: flex;
+  column-gap: 10px;
+}
+
+.submit--buttons button {
+  font-weight: bold;
+}
+
+.cancel-button {
+  background-color: rgba(0,0,0,0);
+  border: none;
+  color: #d33;
+}
+
+.cancel-button:hover {
+  color: #ff4242;
+  background-color: rgba(0,24,73,0.03);
 }
 
 .editor--container {
