@@ -5,6 +5,7 @@ import QueryInput from './QueryInput'
 import { getCookies, postAndGetJSON, postJSON } from '../utils'
 import { ItemContext } from '../contexts/ItemContext'
 import QuestionMark from '../../images/question-mark.png'
+import EditorHeader from './EditorHeader'
 
 // element modules
 // array modules
@@ -548,6 +549,7 @@ export default function Editor (props) {
 
   return (
     <div className='editor--container'>
+      <EditorHeader cur={0} />
       <ItemContext.Provider value={updateData}>
         <TableModule className='editor' declrs={declrs} value={data} path={[]} />
       </ItemContext.Provider>

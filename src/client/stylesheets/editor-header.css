@@ -1,0 +1,45 @@
+.editor--header-options {
+  display: flex;
+  column-gap: 20px;
+  position: relative;
+}
+
+.editor--header-options > * {
+  padding-bottom: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.header-setting-cur {
+  z-index: 100;
+  border-bottom: 1px solid black;
+}
+
+.header-setting-link {
+  color: #3366cc;
+}
+
+.header-setting-link:hover {
+  border-bottom: 1px solid #3366cc;
+  z-index: 100;
+}
+
+.header-line {
+  position: absolute;
+  border-top: 1px solid rgb(236, 236, 236);
+  height: 10px;
+  width: 10px;
+  top: calc(100% - 1px);
+  width: 100%;
+}
+
+.editor--header-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.star-img {
+  padding-top: 2px;
+  width: 15px;
+  height: 15px;
+}
