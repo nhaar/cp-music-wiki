@@ -169,7 +169,7 @@ function GridRowModule (props) {
       })
     }
 
-    return columns || 1
+    return columns
   })
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
@@ -246,30 +246,38 @@ function GridRowModule (props) {
   }
 
   function addRow () {
+    const curCol = columns || 1
+    if (columns === 0) {
+      setColumns(1)
+    }
     const row = []
-    for (let i = 0; i < columns; i++) {
+    for (let i = 0; i < curCol; i++) {
       row.push({ id: seq + i, value: getDefaultValue() })
     }
     setData(g => {
       const newG = [...g]
       newG.push(row)
       setRows(r => r + 1)
-      setSeq(s => s + columns)
+      setSeq(s => s + curCol)
       return newG
     })
   }
 
   function addColumn () {
-    setData(g => {
-      const newG = [...g]
-      for (let i = 0; i < rows; i++) {
-        newG[i].push({ id: seq + i, value: getDefaultValue() })
-      }
+    if (rows === 0) {
+      addRow()
+    } else {
+      setData(g => {
+        const newG = [...g]
+        for (let i = 0; i < rows; i++) {
+          newG[i].push({ id: seq + i, value: getDefaultValue() })
+        }
 
-      setColumns(c => c + 1)
-      setSeq(s => s + rows)
-      return newG
-    })
+        setColumns(c => c + 1)
+        setSeq(s => s + rows)
+        return newG
+      })
+    }
   }
 
   function getCoords (k) {
