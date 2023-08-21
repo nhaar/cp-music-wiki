@@ -440,6 +440,11 @@ function TableModule (props) {
 export default function Editor (props) {
   // props.args.row.data
   const [data, setData] = useState(props.args.row.data)
+  const [isMinor, setIsMinor] = useState(false)
+
+  function handleMinorChange (e) {
+    setIsMinor(e.target.checked)
+  }
 
   const iterate = (obj) => {
     const declrs = []
@@ -498,7 +503,8 @@ export default function Editor (props) {
       const payload = {
         cls: props.args.editorData.cls,
         row,
-        token
+        token,
+        isMinor
       }
       const response = await postJSON('api/update', payload)
       if (response.status === 200) {
@@ -539,7 +545,7 @@ export default function Editor (props) {
         </div>
 
         <div className='submit--options'>
-          <input type='checkbox' />
+          <input type='checkbox' checked={isMinor} onChange={handleMinorChange} />
           <span>This is a minor edit</span>
           <input type='checkbox' />
           <span>Watch this page</span>

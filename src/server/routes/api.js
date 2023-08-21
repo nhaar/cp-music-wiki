@@ -54,7 +54,7 @@ function getToken (req) {
 
 // update a data type
 router.post('/update', checkAdmin, checkClass, async (req, res) => {
-  const { cls, row } = req.body
+  const { cls, row, isMinor } = req.body
   const error = msg => sendBadReq(res, msg)
 
   const token = getToken(req)
@@ -68,7 +68,7 @@ router.post('/update', checkAdmin, checkClass, async (req, res) => {
     else {
       const validationErrors = clsys.validate(cls, data)
       if (validationErrors.length === 0) {
-        await rev.addChange(cls, row, token)
+        await rev.addChange(cls, row, token, isMinor)
         clsys.updateItem(cls, row)
         // gen.updateLists()
         res.sendStatus(200)

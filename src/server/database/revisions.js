@@ -28,7 +28,7 @@ class RevisionHandler {
    * @param {Row} row - Row for the data being changed
    * @param {string} token - Session token for the user submitting the revision
    */
-  async addChange (cls, row, token) {
+  async addChange (cls, row, token, isMinor) {
     let oldRow = await clsys.getItem(cls, row.id)
     let id = row.id
     if (!oldRow) {
@@ -41,7 +41,7 @@ class RevisionHandler {
     const userId = await user.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
-    await this.insertRev(cls, id, userId, delta)
+    await this.insertRev(cls, id, userId, delta, isMinor)
   }
 
   /**
@@ -62,12 +62,12 @@ class RevisionHandler {
    * @param {string} user - Id of the user submitting the revision
    * @param {jsondiffpatch.DiffPatcher} patch - The patch of the revision, if it is not a deletion
    */
-  async insertRev (cls, itemId, user, patch = null) {
+  async insertRev (cls, itemId, user, patch = null, isMinor = false) {
     if (patch) patch = JSON.stringify(patch)
     await sql.insert(
       'revisions',
-      'class, item_id, wiki_user, timestamp, patch',
-      [cls, itemId, user, Date.now(), patch]
+      'class, item_id, wiki_user, timestamp, patch, minor_edit',
+      [cls, itemId, user, Date.now(), patch, Number(isMinor)]
     )
   }
 
