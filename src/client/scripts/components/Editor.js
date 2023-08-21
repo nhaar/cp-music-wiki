@@ -150,7 +150,15 @@ function MusicFileModule (props) {
 }
 
 function GridRowModule (props) {
-  const [grid, setGrid] = useState(props.value || [])
+  const [grid, setGrid] = useState(() => {
+    if (props.value) {
+      let k = 0
+      return props.value.map(row => row.map(cell => {
+        k++
+        return { id: k, value: cell }
+      }))
+    } else return []
+  })
   const [rows, setRows] = useState(props.value.length || 0)
   const [columns, setColumns] = useState(() => {
     let columns = 0
@@ -164,6 +172,8 @@ function GridRowModule (props) {
   })
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
+  const [seq, setSeq] = useState(columns * rows + 1)
+  const updateData = useContext(ItemContext)
 
   const values = []
   grid.forEach(col => {
@@ -179,13 +189,20 @@ function GridRowModule (props) {
     }
   }
 
+  function setData (callback) {
+    const newG = callback(grid)
+
+    updateData(props.path, newG.map(row => row.map(element => element.value)))
+    setGrid(newG)
+  }
+
   function stopMoving (k) {
     return () => {
       if (isMoving) {
         const [x, y] = getCoords(k)
         const valueInPos = grid[x][y]
         const [i, j] = getCoords(originalPos)
-        setGrid(g => {
+        setData(g => {
           const newG = [...g]
           newG[x][y] = newG[i][j]
           newG[i][j] = valueInPos
@@ -197,7 +214,7 @@ function GridRowModule (props) {
 
   function removeRow () {
     if (rows > 0) {
-      setGrid(g => {
+      setData(g => {
         const newG = [...g]
         newG.splice(newG.length - 1, 1)
         setRows(r => r - 1)
@@ -208,7 +225,7 @@ function GridRowModule (props) {
 
   function removeColumn () {
     if (columns > 1) {
-      setGrid(g => {
+      setData(g => {
         const newG = [...g]
         newG.forEach(row => {
           row.splice(row.length - 1, 1)
@@ -219,27 +236,37 @@ function GridRowModule (props) {
     }
   }
 
+  function getDefaultValue () {
+    let value = null
+    if (props.declrs) {
+      value = getDefault(props)
+    }
+    return value
+  }
+
   function addRow () {
     const row = []
     for (let i = 0; i < columns; i++) {
-      row.push(null)
+      row.push({ id: seq + i, value: getDefaultValue() })
     }
-    setGrid(g => {
+    setData(g => {
       const newG = [...g]
       newG.push(row)
       setRows(r => r + 1)
+      setSeq(s => s + columns)
       return newG
     })
   }
 
   function addColumn () {
-    setGrid(g => {
+    setData(g => {
       const newG = [...g]
       for (let i = 0; i < rows; i++) {
-        newG[i].push(null)
+        newG[i].push({ id: seq + i, value: getDefaultValue() })
       }
 
       setColumns(c => c + 1)
+      setSeq(s => s + rows)
       return newG
     })
   }
@@ -249,10 +276,12 @@ function GridRowModule (props) {
   }
 
   const components = values.map((element, k) => {
+    const [i, j] = getCoords(k)
+    const path = [...props.path, i, j]
     return (
-      <div key={k}>
+      <div key={element.id}>
         <div onMouseUp={stopMoving(k)}>
-          <props.component value={element} declrs={props.declrs} />
+          <props.component value={element.value} declrs={props.declrs} path={path} />
           <button onMouseDown={startMoving(k)}> Move </button>
         </div>
       </div>
@@ -295,7 +324,6 @@ function MoveableRowsModule (props) {
   })
   const [seq, setSeq] = useState(() => props.value ? props.value.length : 0)
 
-  const [keysPhase, setKeysPhase] = useState(1)
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
   const updateData = useContext(ItemContext)
@@ -338,12 +366,9 @@ function MoveableRowsModule (props) {
     return () => {
       if (isMoving) {
         setData(a => {
-          console.log(a)
           const newA = [...a]
           const removed = newA.splice(originalPos, 1)
           newA.splice(i, 0, ...removed)
-          console.log(newA)
-          // setKeysPhase(k => k + newA.length + 1)
           setIsMoving(false)
           return newA
         })
@@ -353,7 +378,6 @@ function MoveableRowsModule (props) {
 
   const components = array.map((element, i) => {
     const path = [...props.path, i]
-    console.log(element, i)
 
     return (
       <div key={element.id} onMouseUp={finishMove(i)}>

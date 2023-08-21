@@ -335,9 +335,15 @@ class ClassSystem {
                   errorMsg('a boolean value')
                 }
               } else if (type === 'DATE') {
-                if (!value.match(/\d+-\d{2}-\d{2}/)) {
-                  errorMsg('a valid date string (YYYY-MM-DD)')
+                let validDate = true
+                try {
+                  if (!value.match(/\d+-\d{2}-\d{2}/)) {
+                    validDate = false
+                  }
+                } catch {
+                  validDate = false
                 }
+                if (!validDate) errorMsg('a valid date string (YYYY-MM-DD)')
               }
             }
           }
