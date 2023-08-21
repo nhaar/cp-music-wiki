@@ -397,19 +397,6 @@ function TableModule (props) {
   )
 }
 
-// function getModule (children, inputFunction, outputFunction) {
-//   return () => {
-
-//     return (
-//       <div>
-//         {children.map(Child => {
-//           return <Child />
-//         })}
-//       </div>
-//     )
-//   }
-// }
-
 export default function Editor (props) {
   // props.args.row.data
   const [data, setData] = useState(props.args.row.data)
