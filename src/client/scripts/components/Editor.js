@@ -547,9 +547,11 @@ export default function Editor (props) {
     setData(root)
   }
 
+  const name = props.args.row.querywords && props.args.row.querywords.match('^.*(&|$)')[0]
+
   return (
     <div className='editor--container'>
-      <EditorHeader cur={0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} />
+      <EditorHeader cur={0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} />
       <ItemContext.Provider value={updateData}>
         <TableModule className='editor' declrs={declrs} value={data} path={[]} />
       </ItemContext.Provider>

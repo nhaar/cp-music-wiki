@@ -15,28 +15,6 @@ function EditButton (props) {
   return <button className='blue-button' onClick={handleClick}> EDIT </button>
 }
 
-function DeleteButton (props) {
-  async function handleClick () {
-    if (isNaN(props.info.id)) {
-      window.alert('No item selected!')
-    } else {
-      const confirm = window.confirm(`Are you sure you want to delete "${props.info.name} - ${props.info.item}"`)
-      if (confirm) {
-        const doubleCheck = window.confirm('REALLY ERASE?')
-        if (doubleCheck) {
-          const response = await postAndGetJSON('api/delete', { cls: props.info.cls, id: Number(props.info.id) })
-          if (response.length === 0) {
-            window.alert('Deleted')
-          } else {
-            window.alert(`Erros ${JSON.stringify(response)}`)
-          }
-        }
-      }
-    }
-  }
-  return <button className='red-button' onClick={handleClick}> DELETE </button>
-}
-
 function CreateButton (props) {
   function handleClick () {
     window.location.href = `/Special:Editor?t=${props.info.t}`
@@ -85,8 +63,7 @@ export default function PreEditor (props) {
       children = [
         <QueryInput key={0} cls={clsInfo.cls} passInfo={passInfo} />,
         <EditButton key={1} info={buttonInfo} />,
-        <CreateButton key={2} info={clsInfo} />,
-        <DeleteButton key={3} info={buttonInfo} />
+        <CreateButton key={2} info={clsInfo} />
       ]
     }
   }
