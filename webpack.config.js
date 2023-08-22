@@ -81,5 +81,6 @@ module.exports = getModule(
   'editor',
   'file-upload',
   'delete',
-  'undelete'
+  'undelete',
+  'read-item'
 )

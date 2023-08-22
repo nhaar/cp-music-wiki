@@ -67,7 +67,7 @@ router.get('/Special\\::value', async (req, res) => {
     const { cur, old } = req.query
     const view = await getDiffView(cur, old)
     res.status(200).send(view)
-  } else if (value === 'Editor') {
+  } else if (value === 'Editor' || value === 'Read') {
     const { t, id } = req.query
     if (!t) {
       res.status(200).send(getView('pre-editor', { data: bridge.preeditorData }))
@@ -85,7 +85,7 @@ router.get('/Special\\::value', async (req, res) => {
         // redirect to delete page
         res.redirect(`/Special:Undelete?t=${t}&id=${id}`)
       } else {
-        res.status(200).send(getView('editor', { editorData: bridge.editorData[t], row }))
+        res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row }))
       }
     }
   } else if (value === 'FileUpload') {

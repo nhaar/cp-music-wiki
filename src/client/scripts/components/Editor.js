@@ -4,10 +4,10 @@ import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
 import { getCookies, postAndGetJSON, postJSON } from '../client-utils'
 import { ItemContext } from '../contexts/ItemContext'
+import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
 import EditorHeader from './EditorHeader'
 import { getName } from '../../../server/misc/common-utils'
-
 // element modules
 // array modules
 // editor module
@@ -17,6 +17,7 @@ function getSimpleTextModule (Tag, type) {
     const getValue = value => value || ''
     const [value, setValue] = useState(() => getValue(props.value))
     const updateData = useContext(ItemContext)
+    const isEditor = useContext(EditorContext)
 
     useEffect(() => {
       setValue(getValue(props.value))
@@ -29,7 +30,7 @@ function getSimpleTextModule (Tag, type) {
     }
 
     return (
-      <Tag value={value} type={type} onChange={updateValue} />
+      <Tag value={value} type={type} onChange={updateValue} readOnly={!isEditor} />
     )
   }
 }
@@ -43,6 +44,7 @@ function getSearchQueryModule (type) {
   return function (props) {
     const [value, setValue] = useState(props.value || '')
     const updateData = useContext(ItemContext)
+    const isEditor = useContext(EditorContext)
 
     function updateValue (id) {
       setValue(id)
@@ -50,7 +52,7 @@ function getSearchQueryModule (type) {
     }
 
     return (
-      <QueryInput cls={type} passInfo={updateValue} id={value} />
+      <QueryInput cls={type} passInfo={updateValue} id={value} readonly={!isEditor} />
     )
   }
 }
@@ -59,6 +61,7 @@ function getOptionSelectModule (args) {
   return function (props) {
     const [value, setValue] = useState(props.value || '')
     const updateData = useContext(ItemContext)
+    const isEditor = useContext(EditorContext)
 
     const options = args.map((arg, i) => {
       const value = arg.match(/(?<=\[\s*)\w+/)[0]
@@ -73,7 +76,7 @@ function getOptionSelectModule (args) {
     }
 
     return (
-      <select value={value} onChange={handleChange}>
+      <select value={value} onChange={isEditor && handleChange}>
         <option value='' />
         {options}
       </select>
@@ -84,6 +87,7 @@ function getOptionSelectModule (args) {
 function CheckboxModule (props) {
   const [value, setValue] = useState(typeof props.value === 'boolean' ? props.value : null)
   const updateData = useContext(ItemContext)
+  const isEditor = useContext(EditorContext)
 
   function handleChange (e) {
     const { checked } = e.target
@@ -92,7 +96,7 @@ function CheckboxModule (props) {
   }
 
   return (
-    <input type='checkbox' checked={value || false} onChange={handleChange} />
+    <input type='checkbox' checked={value || false} onChange={handleChange} readOnly={!isEditor} />
   )
 }
 
@@ -177,6 +181,7 @@ function GridRowModule (props) {
   const [originalPos, setOriginalPos] = useState(-1)
   const [seq, setSeq] = useState(columns * rows + 1)
   const updateData = useContext(ItemContext)
+  const isEditor = useContext(EditorContext)
 
   const values = []
   grid.forEach(col => {
@@ -293,7 +298,7 @@ function GridRowModule (props) {
       <div key={element.id}>
         <div onMouseUp={stopMoving(k)}>
           <props.component value={element.value} declrs={props.declrs} path={path} />
-          <button onMouseDown={startMoving(k)}> Move </button>
+          {isEditor && <button onMouseDown={startMoving(k)}> Move </button>}
         </div>
       </div>
     )
@@ -338,6 +343,7 @@ function MoveableRowsModule (props) {
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
   const updateData = useContext(ItemContext)
+  const isEditor = useContext(EditorContext)
 
   function setData (callback) {
     const newA = callback(array)
@@ -393,8 +399,8 @@ function MoveableRowsModule (props) {
     return (
       <div key={element.id} onMouseUp={finishMove(i)}>
         <props.component value={element.value} declrs={props.declrs} path={path} />
-        <button onMouseDown={clickMove(i)}> MOVE </button>
-        <button onClick={deleteRow(i)}> DELETE </button>
+        {isEditor && <button onMouseDown={clickMove(i)}> MOVE </button>}
+        {isEditor && <button onClick={deleteRow(i)}> DELETE </button>}
       </div>
     )
   })
@@ -402,9 +408,11 @@ function MoveableRowsModule (props) {
   return (
     <div className='moveable-module'>
       {components}
-      <button onClick={addRow}>
-        ADD
-      </button>
+      {isEditor && (
+        <button onClick={addRow}>
+          ADD
+        </button>
+      )}
     </div>
   )
 }
@@ -553,9 +561,11 @@ export default function Editor (props) {
   return (
     <div className='editor--container'>
       <EditorHeader cur={0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} />
-      <ItemContext.Provider value={updateData}>
-        <TableModule className='editor' declrs={declrs} value={data} path={[]} />
-      </ItemContext.Provider>
+      <EditorContext.Provider value={props.args.editor}>
+        <ItemContext.Provider value={updateData}>
+          <TableModule className='editor' declrs={declrs} value={data} path={[]} />
+        </ItemContext.Provider>
+      </EditorContext.Provider>
       <div className='submit--container'>
         <div className='submit--summary'>
           <span>Summary:</span>

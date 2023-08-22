@@ -21,16 +21,17 @@ createDirectoryIfNotExists(path.join(__dirname, '../client/music'))
 
 app.use(express.json())
 
-app.use(express.static(path.join(__dirname, '../client/dist')))
-
-app.use(
-  webpackDevMiddleware(compiler, {
-    publicPath: config.output.publicPath,
-    stats: 'minimal'
-  })
-)
-
-app.use(require('webpack-hot-middleware')(compiler))
+if (process.env.NODE_ENV === 'hot') {
+  app.use(
+    webpackDevMiddleware(compiler, {
+      publicPath: config.output.publicPath,
+      stats: 'minimal'
+    })
+  )
+  app.use(require('webpack-hot-middleware')(compiler))
+} else {
+  app.use(express.static(path.join(__dirname, '../client/dist')))
+}
 
 app.use('/', indexRouter)
 

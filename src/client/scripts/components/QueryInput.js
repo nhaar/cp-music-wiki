@@ -18,23 +18,25 @@ export default function QueryInput (props) {
   }, [text])
 
   async function updateQuery (e) {
-    const data = await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: e.target.value, withDeleted: props.withDeleted })
-    const elements = []
-    for (const id in data) {
-      const name = data[id]
-      function clickOption () {
-        props.passInfo(id, name)
-        setOptions([])
-        setIsHovering(false)
-        setText(name)
+    if (!props.readonly) {
+      const data = await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: e.target.value, withDeleted: props.withDeleted })
+      const elements = []
+      for (const id in data) {
+        const name = data[id]
+        function clickOption () {
+          props.passInfo(id, name)
+          setOptions([])
+          setIsHovering(false)
+          setText(name)
+        }
+        elements.push(
+          <div key={name} onClick={clickOption}>
+            {name}
+          </div>
+        )
       }
-      elements.push(
-        <div key={name} onClick={clickOption}>
-          {name}
-        </div>
-      )
+      setOptions(elements)
     }
-    setOptions(elements)
   }
 
   function mouseOver () {
@@ -52,14 +54,13 @@ export default function QueryInput (props) {
   }
 
   function queryType (e) {
-    ('?')
     updateQuery(e)
     setText(e.target.value)
   }
 
   return (
     <div className='query--parent'>
-      <input value={text} onClick={updateQuery} onBlur={blur} onChange={queryType} />
+      <input value={text} onClick={updateQuery} onBlur={blur} onChange={queryType} readOnly={props.readonly} />
       <div className='query--options' onMouseOver={mouseOver} onMouseOut={mouseOut}>
         {options}
       </div>
