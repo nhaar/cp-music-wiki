@@ -18,7 +18,7 @@ export default function QueryInput (props) {
   }, [text])
 
   async function updateQuery (e) {
-    const data = await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: e.target.value })
+    const data = await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: e.target.value, withDeleted: props.withDeleted })
     const elements = []
     for (const id in data) {
       const name = data[id]

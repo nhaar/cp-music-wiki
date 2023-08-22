@@ -1,0 +1,19 @@
+.undelete-box {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+  border: 1px solid gray;
+  border-radius: 2px;
+  padding: 15px;
+}
+
+.undelete-box > button {
+  width: 150px;
+}
+
+
+.undelete--reason-box {
+  display: flex;
+  row-gap: 5px;
+  flex-direction: column;
+}

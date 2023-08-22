@@ -3,6 +3,7 @@ const sql = require('./sql-handler')
 const crypto = require('crypto')
 
 const { SALT, ITERATIONS, KEYLEN, DIGEST } = require('../../../config')
+const { formatCookies } = require('../misc/common-utils')
 
 class UserHandler {
   constructor () {
@@ -36,6 +37,10 @@ class UserHandler {
     // currently every user is admin so just check for existence of account
     const account = (await sql.selectWithColumn('wiki_users', 'session_token', session))[0]
     return Boolean(account)
+  }
+
+  getToken (req) {
+    return formatCookies(req.headers.cookie).session
   }
 
   /**

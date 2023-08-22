@@ -7,6 +7,7 @@ const apiRouter = require('./api')
 const rev = require('../database/revisions')
 const bridge = require('../database/class-frontend')
 const clsys = require('../database/class-system')
+const user = require('../database/user')
 
 function getView (scriptName, vars) {
   let scriptTag = ''
@@ -79,7 +80,13 @@ router.get('/Special\\::value', async (req, res) => {
       } else {
         row = await clsys.getItem(cls, id)
       }
-      res.status(200).send(getView('editor', { editorData: bridge.editorData[t], row }))
+      if (!row) {
+        // user asked for deleted item
+        // redirect to delete page
+        res.redirect(`/Special:Undelete?t=${t}&id=${id}`)
+      } else {
+        res.status(200).send(getView('editor', { editorData: bridge.editorData[t], row }))
+      }
     }
   } else if (value === 'FileUpload') {
     res.status(200).send(getView('file-upload'))
@@ -87,6 +94,13 @@ router.get('/Special\\::value', async (req, res) => {
     const { t, id } = req.query
     const row = await clsys.getItem(bridge.preeditorData[t].cls, id)
     res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
+  } else if (value === 'Undelete') {
+    const { t, id } = req.query
+    if (await user.isAdmin(user.getToken(req))) {
+      res.send(getView('undelete', { cls: bridge.editorData[t].cls, id }))
+    } else {
+      res.sendStatus(403)
+    }
   } else {
     res.sendStatus(404)
   }

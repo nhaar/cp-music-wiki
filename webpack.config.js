@@ -80,5 +80,6 @@ module.exports = getModule(
   'pre-editor',
   'editor',
   'file-upload',
-  'delete'
+  'delete',
+  'undelete'
 )

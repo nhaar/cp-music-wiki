@@ -101,7 +101,6 @@ async function checkAdmin (req, res, next) {
 
 router.post('/delete', checkAdmin, async (req, res) => {
   const { cls, id, token, reason, otherReason } = req.body
-  console.log(cls, id)
 
   // check any references
   const refs = await clsys.checkReferences(cls, id)
@@ -112,6 +111,11 @@ router.post('/delete', checkAdmin, async (req, res) => {
   } else {
     res.sendStatus(401)
   }
+})
+
+router.post('/undelete', checkAdmin, async (req, res) => {
+  const { cls, id, reason } = req.body
+  del.undeleteItem(cls, id, reason, user.getToken(req))
 })
 
 // receive music files
@@ -132,10 +136,17 @@ router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) 
 
 // get filtering by a name
 router.post('/get-by-name', checkClass, async (req, res) => {
-  const { keyword, cls } = req.body
+  const { keyword, cls, withDeleted } = req.body
+  const isAdmin = await user.isAdmin(user.getToken(req))
   if (typeof keyword !== 'string') sendBadReq(res, 'Invalid keyword')
   else {
-    const results = await clsys.getByName(cls, keyword)
+    let results
+    const deletedArg = keyword.match(/(?<=^Deleted:).*/)
+    if (withDeleted && deletedArg && isAdmin) {
+      results = await del.getByName(cls, deletedArg[0])
+    } else {
+      results = await clsys.getByName(cls, keyword)
+    }
     res.status(200).send(results)
   }
 })

@@ -61,7 +61,7 @@ export default function PreEditor (props) {
       ]
     } else {
       children = [
-        <QueryInput key={0} cls={clsInfo.cls} passInfo={passInfo} />,
+        <QueryInput key={0} cls={clsInfo.cls} passInfo={passInfo} withDeleted />,
         <EditButton key={1} info={buttonInfo} />,
         <CreateButton key={2} info={clsInfo} />
       ]

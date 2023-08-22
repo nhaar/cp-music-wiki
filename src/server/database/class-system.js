@@ -594,16 +594,9 @@ class ClassSystem {
     return results.join('&&')
   }
 
-  /**
-   * Get all rows that match a searcy query result in a given class
-   * @param {ClassName} cls - Class to search in
-   * @param {string} keyword - Word to match the search result
-   * @returns {object} Object that maps ids into pharses/names for the rows
-   */
-  async getByName (cls, keyword) {
-    const response = await handler.selectLike(cls, 'querywords', [keyword])
+  getNameWithRows (rows, keyword) {
     const results = {}
-    response.forEach(row => {
+    rows.forEach(row => {
       const { id, querywords } = row
       const phrases = querywords.split('&&')
       for (let i = 0; i < phrases.length; i++) {
@@ -615,6 +608,17 @@ class ClassSystem {
       }
     })
     return results
+  }
+
+  /**
+   * Get all rows that match a searcy query result in a given class
+   * @param {ClassName} cls - Class to search in
+   * @param {string} keyword - Word to match the search result
+   * @returns {object} Object that maps ids into pharses/names for the rows
+   */
+  async getByName (cls, keyword) {
+    const response = await handler.selectLike(cls, 'querywords', [keyword])
+    return this.getNameWithRows(response, keyword)
   }
 
   /**

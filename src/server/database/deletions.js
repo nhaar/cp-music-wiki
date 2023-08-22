@@ -9,7 +9,8 @@ class DeletionHandler {
       id SERIAL PRIMARY KEY,
       class TEXT,
       item_id INT,
-      data JSONB
+      data JSONB,
+      querywords TEXT
     )
   `)
 
@@ -20,8 +21,9 @@ class DeletionHandler {
       item_id INT,
       wiki_user INT,
       timestamp NUMERIC,
-      deletion_reason INT,
-      additional_reason TEXT
+      reason INT,
+      additional_reason TEXT,
+      is_deletion INT
     )
   `)
   }
@@ -29,12 +31,30 @@ class DeletionHandler {
   async deleteItem (cls, id, token, reason, otherReason) {
     const row = await clsys.getItem(cls, id)
     sql.delete(cls, 'id', id)
-    sql.insert('deleted_items', 'class, item_id, data', [cls, id, JSON.stringify(row.data)])
-    sql.insert(
+    sql.insert('deleted_items', 'class, item_id, data, querywords', [cls, id, JSON.stringify(row.data), row.querywords])
+    this.insertDeletion(cls, id, token, reason, otherReason, true)
+  }
+
+  async undeleteItem (cls, id, reason, token) {
+    const row = (await sql.selectAndEquals('deleted_items', 'class, item_id', [cls, id]))[0]
+    sql.delete('deleted_items', 'id', row.id)
+    sql.insert(cls, 'id, data, querywords', [id, row.data, row.querywords])
+    this.insertDeletion(cls, id, token, null, reason, false)
+  }
+
+  async insertDeletion (cls, id, token, reason, other, isDeletion) {
+    await sql.insert(
       'deletion_log',
-      'class, item_id, wiki_user, timestamp, deletion_reason, additional_reason',
-      [cls, id, (await user.getUserId(token)), Date.now(), reason, otherReason]
+      'class, item_id, wiki_user, timestamp, reason, additional_reason, is_deletion',
+      [cls, id, (await user.getUserId(token)), Date.now(), reason, other, Number(isDeletion)]
     )
+  }
+
+  async getByName (cls, keyword) {
+    const rows = await sql.selectLike('deleted_items', 'querywords', keyword)
+    return clsys.getNameWithRows(rows.filter(row => row.class === cls).map(row => {
+      return { id: row.item_id, querywords: row.querywords }
+    }), keyword)
   }
 }
 

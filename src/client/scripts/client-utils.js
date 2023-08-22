@@ -1,3 +1,5 @@
+import { formatCookies } from '../../server/misc/common-utils'
+
 /**
  * Asynchronously posts with JSON as content
  * @param {string} route - Route to post to
@@ -78,16 +80,7 @@ export function findIndexInObject (object, property, value) {
 export function deepcopy (obj) { return JSON.parse(JSON.stringify(obj)) }
 
 export function getCookies () {
-  const matches = document.cookie.match(/\w+=\w+(?=($|;))/g)
-  const cookies = {}
-  if (matches) {
-    matches.forEach(match => {
-      const words = match.match(/\w+/g)
-      cookies[words[0]] = words[1]
-    })
-  }
-
-  return cookies
+  return formatCookies(document.cookie)
 }
 
 export function getMonthName (month) {
