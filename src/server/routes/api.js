@@ -9,6 +9,8 @@ const bridge = require('../database/class-frontend')
 const user = require('../database/user')
 const rev = require('../database/revisions')
 const clsys = require('../database/class-system')
+const del = require('../database/deletions')
+
 // const Gen = require('../misc/lists')
 // const gen = new Gen()
 
@@ -97,17 +99,18 @@ async function checkAdmin (req, res, next) {
   }
 }
 
-router.post('/delete', async (req, res) => {
-  const { cls, id } = req.body
+router.post('/delete', checkAdmin, async (req, res) => {
+  const { cls, id, token, reason, otherReason } = req.body
   console.log(cls, id)
 
   // check any references
   const refs = await clsys.checkReferences(cls, id)
   if (refs.length === 0) {
     // delete
-    res.status(200).send(refs)
+    del.deleteItem(cls, id, token, reason, otherReason)
+    res.sendStatus(200)
   } else {
-    res.status(401).send(refs)
+    res.sendStatus(401)
   }
 })
 

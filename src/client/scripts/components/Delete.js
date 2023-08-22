@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import '../../stylesheets/delete.css'
-import { postAndGetJSON } from '../client-utils'
+import { getCookies, postAndGetJSON, postJSON } from '../client-utils'
 import { getName } from '../../../server/misc/common-utils'
 
 function ReferenceWarning (props) {
@@ -24,7 +24,6 @@ function ReferenceWarning (props) {
 }
 
 export default function Delete (props) {
-  console.log(props)
   const [reason, setReason] = useState(0)
   const [other, setOther] = useState('')
 
@@ -37,13 +36,10 @@ export default function Delete (props) {
   }
 
   async function clickDelete () {
-    const response = await postAndGetJSON('api/delete', { cls: props.args.editorData.cls, id: Number(props.args.row.id) })
-    if (response.length === 0) {
-      window.alert('Item deleted')
-      window.location.href = '/Special:Editor'
-    } else {
-      window.alert("The item can't be deleted while other items reference it")
-    }
+    const token = getCookies().session
+    await postJSON('api/delete', { cls: props.args.editorData.cls, id: Number(props.args.row.id), token, reason, otherReason: other })
+    window.alert('Item deleted')
+    window.location.href = '/Special:Editor'
   }
 
   if (props.args.editorData.refs.length !== 0) {
