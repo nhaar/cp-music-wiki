@@ -30,25 +30,24 @@ export default function EditorHeader (props) {
   }
 
   const components = [
-    <div>Edit</div>,
-    <div>View history</div>,
+    <div key={0}>Edit</div>,
+    <div key={1}>View history</div>,
     <img
       key={-1}
       onMouseOver={fillStar}
       onMouseLeave={emptyStar}
       src={isEmpty ? StarEmpty : StarFull}
     />,
-    <div onClick={deleteItem}>Delete</div>,
-    <div>Move</div>,
-    <div>Purge</div>
+    <div key={2} onClick={deleteItem}>Delete</div>,
+    <div key={3}>Move</div>,
+    <div key={4}>Purge</div>
   ].map((component, i) => {
     const className = component.type === 'img'
       ? 'star-img'
       : i === props.cur ? 'header-setting-cur' : 'header-setting-link'
 
     return cloneElement(component, {
-      className,
-      key: i
+      className
     })
   })
 
