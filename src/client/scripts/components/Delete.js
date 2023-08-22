@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import '../../stylesheets/delete.css'
-import { getCookies, postAndGetJSON, postJSON } from '../client-utils'
+import { getCookies, postJSON } from '../client-utils'
 import { getName } from '../../../server/misc/common-utils'
 
 function ReferenceWarning (props) {
