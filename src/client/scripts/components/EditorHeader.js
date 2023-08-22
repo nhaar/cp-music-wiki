@@ -19,8 +19,13 @@ export default function EditorHeader (props) {
     }
   }
 
+  const paramsSuffix = `?t=${props.t}&id=${props.id}`
+  const specialUrl = word => `/Special:${word}${paramsSuffix}`
+  const specialRedirect = word => redirect(specialUrl(word))
+
   const components = [
-    <div key={0}>Edit</div>,
+    <div key={-2} onClick={specialRedirect('Read')}>Read</div>,
+    <div key={0} onClick={specialRedirect('Editor')}>Edit</div>,
     <div key={1}>View history</div>,
     <img
       key={-1}

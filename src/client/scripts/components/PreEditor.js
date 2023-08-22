@@ -9,17 +9,17 @@ function EditButton (props) {
       window.alert('No item selected!')
     } else {
       const id = props.info.isStatic ? 0 : props.info.id
-      window.location.href = `/Special:Editor?t=${props.info.t}&id=${id}`
+      window.location.href = `/Special:Read?t=${props.info.t}&id=${id}`
     }
   }
-  return <button className='blue-button' onClick={handleClick}> EDIT </button>
+  return <button className='blue-button' onClick={handleClick}> View </button>
 }
 
 function CreateButton (props) {
   function handleClick () {
     window.location.href = `/Special:Editor?t=${props.info.t}`
   }
-  return <button className='green-button' onClick={handleClick}> CREATE NEW </button>
+  return <button className='blue-button' onClick={handleClick}> CREATE NEW </button>
 }
 
 export default function PreEditor (props) {
@@ -71,7 +71,7 @@ export default function PreEditor (props) {
   return (
     <div className='pre-editor--container'>
       <select defaultValue={-1} onChange={updateChildren}>
-        <option value={-1} disabled> [CHOSE WHAT TO EDIT] </option>
+        <option value={-1} disabled> [CHOSE WHAT TO VIEW] </option>
         {options}
       </select>
       {children}

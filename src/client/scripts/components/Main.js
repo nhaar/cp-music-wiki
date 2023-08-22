@@ -64,6 +64,7 @@ function Sidebar (props) {
     <div className={`sidebar ${props.sidebar ? '' : 'hidden'}`}>
       <a href='/'> Main Page </a>
       <a href='/Special:RecentChanges'> Recent Changes </a>
+      <a href='/Special:Items'> Item browser </a>
     </div>
   )
 }

@@ -77,7 +77,7 @@ module.exports = getModule(
   'user-login',
   'recent-changes',
   'diff',
-  'pre-editor',
+  'item-browser',
   'editor',
   'file-upload',
   'delete',

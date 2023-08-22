@@ -462,11 +462,6 @@ function TableModule (props) {
 export default function Editor (props) {
   // props.args.row.data
   const [data, setData] = useState(props.args.row.data)
-  const [isMinor, setIsMinor] = useState(false)
-
-  function handleMinorChange (e) {
-    setIsMinor(e.target.checked)
-  }
 
   const iterate = (obj) => {
     const declrs = []
@@ -518,30 +513,6 @@ export default function Editor (props) {
   // props.args.editorData.main
   const declrs = iterate(props.args.editorData.main)
 
-  async function submitData () {
-    if (window.confirm('Submit data?')) {
-      const row = { ...props.args.row }
-      row.data = data
-      const token = getCookies().session
-      const payload = {
-        cls: props.args.editorData.cls,
-        row,
-        token,
-        isMinor
-      }
-      const response = await postJSON('api/update', payload)
-      if (response.status === 200) {
-        window.alert('Data submitted with success')
-        window.location.href = '/Special:Editor'
-      } else if (response.status === 400) {
-        const errors = (await response.json()).errors
-        window.alert(`There is a mistake in your submission\n${errors}`)
-      } else if (response.status === 403) {
-        window.alert("You don't have permission to do that")
-      }
-    }
-  }
-
   function updateData (path, value) {
     const root = { ...data }
     let obj = root
@@ -560,42 +531,79 @@ export default function Editor (props) {
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} />
+      <EditorHeader cur={props.args.editor ? 1 : 0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} />
       <EditorContext.Provider value={props.args.editor}>
         <ItemContext.Provider value={updateData}>
           <TableModule className='editor' declrs={declrs} value={data} path={[]} />
         </ItemContext.Provider>
       </EditorContext.Provider>
-      <div className='submit--container'>
-        <div className='submit--summary'>
-          <span>Summary:</span>
-          <input type='text' />
-        </div>
+      {props.args.editor && <SubmitOptions row={props.args.row} cls={props.args.editorData.cls} data={data} />}
+    </div>
+  )
+}
 
-        <div className='submit--options'>
-          <input type='checkbox' checked={isMinor} onChange={handleMinorChange} />
-          <span>This is a minor edit</span>
-          <input type='checkbox' />
-          <span>Watch this page</span>
-          <select>
-            <option>Permanent</option>
-            <option>1 week</option>
-            <option>1 month</option>
-            <option>3 months</option>
-            <option>6 months</option>
-          </select>
-        </div>
-        <div className='submit--buttons'>
-          <button className='blue-button' onClick={submitData}>
-            Save changes
-          </button>
-          <button>
-            Show changes
-          </button>
-          <button className='cancel-button'>
-            Cancel
-          </button>
-        </div>
+function SubmitOptions (props) {
+  const [isMinor, setIsMinor] = useState(false)
+
+  function handleMinorChange (e) {
+    setIsMinor(e.target.checked)
+  }
+
+  async function submitData () {
+    if (window.confirm('Submit data?')) {
+      const row = { ...props.row }
+      row.data = props.data
+      const token = getCookies().session
+      const payload = {
+        cls: props.cls,
+        row,
+        token,
+        isMinor
+      }
+      const response = await postJSON('api/update', payload)
+      if (response.status === 200) {
+        window.alert('Data submitted with success')
+        window.location.href = '/Special:Editor'
+      } else if (response.status === 400) {
+        const errors = (await response.json()).errors
+        window.alert(`There is a mistake in your submission\n${errors}`)
+      } else if (response.status === 403) {
+        window.alert("You don't have permission to do that")
+      }
+    }
+  }
+
+  return (
+
+    <div className='submit--container'>
+      <div className='submit--summary'>
+        <span>Summary:</span>
+        <input type='text' />
+      </div>
+
+      <div className='submit--options'>
+        <input type='checkbox' checked={isMinor} onChange={handleMinorChange} />
+        <span>This is a minor edit</span>
+        <input type='checkbox' />
+        <span>Watch this page</span>
+        <select>
+          <option>Permanent</option>
+          <option>1 week</option>
+          <option>1 month</option>
+          <option>3 months</option>
+          <option>6 months</option>
+        </select>
+      </div>
+      <div className='submit--buttons'>
+        <button className='blue-button' onClick={submitData}>
+          Save changes
+        </button>
+        <button>
+          Show changes
+        </button>
+        <button className='cancel-button'>
+          Cancel
+        </button>
       </div>
     </div>
   )

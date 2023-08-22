@@ -67,11 +67,11 @@ router.get('/Special\\::value', async (req, res) => {
     const { cur, old } = req.query
     const view = await getDiffView(cur, old)
     res.status(200).send(view)
+  } else if (value === 'Items') {
+    res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
   } else if (value === 'Editor' || value === 'Read') {
     const { t, id } = req.query
-    if (!t) {
-      res.status(200).send(getView('pre-editor', { data: bridge.preeditorData }))
-    } else {
+    if (t) {
       let row
       const cls = bridge.preeditorData[t].cls
       if (id === undefined) {
