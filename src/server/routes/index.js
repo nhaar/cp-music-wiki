@@ -83,6 +83,12 @@ router.get('/Special\\::value', async (req, res) => {
     }
   } else if (value === 'FileUpload') {
     res.status(200).send(getView('file-upload'))
+  } else if (value === 'Delete') {
+    const { t, id } = req.query
+    if (!t && !id) {
+
+    }
+    res.status(200).send(getView('delete'))
   } else {
     res.sendStatus(404)
   }

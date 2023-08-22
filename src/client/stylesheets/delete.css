@@ -1,0 +1,50 @@
+* {
+  font-size: 14px;
+}
+
+
+
+.delete--explanation {
+  margin-top: 20px;
+}
+
+.delete--box {
+  margin-top: 20px;
+  padding: 15px;
+  padding-right: 200px;
+  border: 1px solid gray;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+}
+
+.delete--delete {
+  font-size: 16px;
+}
+
+.delete--reason {
+  display: flex;
+  flex-direction: column;
+  row-gap: 10px;
+}
+
+.delete--watch {
+  display: flex;
+  column-gap: 10px;
+  align-items: center;
+}
+
+.delete--watch > input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.delete--button {
+  width: 120px;
+}
+
+.deletion-log {
+  margin-top: 60px;
+}

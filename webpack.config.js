@@ -79,5 +79,6 @@ module.exports = getModule(
   'diff',
   'pre-editor',
   'editor',
-  'file-upload'
+  'file-upload',
+  'delete'
 )
