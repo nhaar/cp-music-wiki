@@ -1,7 +1,7 @@
 import React from 'react'
 import '../../stylesheets/pre-editor.css'
 import QueryInput from './QueryInput'
-import { findIndexInObject } from '../utils'
+import { findIndexInObject } from '../client-utils'
 
 function EditButton (props) {
   function handleClick () {

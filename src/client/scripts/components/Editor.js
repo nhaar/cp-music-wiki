@@ -2,10 +2,11 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
-import { getCookies, postAndGetJSON, postJSON } from '../utils'
+import { getCookies, postAndGetJSON, postJSON } from '../client-utils'
 import { ItemContext } from '../contexts/ItemContext'
 import QuestionMark from '../../images/question-mark.png'
 import EditorHeader from './EditorHeader'
+import { getName } from '../../../server/misc/common-utils'
 
 // element modules
 // array modules
@@ -547,11 +548,11 @@ export default function Editor (props) {
     setData(root)
   }
 
-  const name = props.args.row.querywords && props.args.row.querywords.match('^.*(&|$)')[0]
+  const name = getName(props.args.row.querywords)
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} />
+      <EditorHeader cur={0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} />
       <ItemContext.Provider value={updateData}>
         <TableModule className='editor' declrs={declrs} value={data} path={[]} />
       </ItemContext.Provider>

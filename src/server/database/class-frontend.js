@@ -1,7 +1,7 @@
 const clsys = require('./class-system')
 const sql = require('./sql-handler')
 const rev = require('./revisions')
-const { capitalize, matchInside } = require('../misc/utils')
+const { capitalize, matchInside, deepcopy } = require('../misc/server-utils')
 
 class FrontendBridge {
   constructor () {
@@ -100,12 +100,18 @@ class FrontendBridge {
   createEditorData () {
     const modelObjects = this.createEditorModels()
     this.editorData = []
-    this.preeditorData.forEach((data) => {
+    this.preeditorData.forEach((data, t) => {
       const { cls } = data
       this.editorData.push(
-        { main: modelObjects[cls], cls, isStatic: clsys.isStaticClass(cls) }
+        { main: modelObjects[cls], cls, isStatic: clsys.isStaticClass(cls), t }
       )
     })
+  }
+
+  async getDeleteData (t, id) {
+    const deleteData = deepcopy(this.editorData[t])
+    deleteData.refs = await clsys.checkReferences(deleteData.cls, id)
+    return deleteData
   }
 
   /**

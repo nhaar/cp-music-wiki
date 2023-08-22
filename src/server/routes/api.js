@@ -99,6 +99,7 @@ async function checkAdmin (req, res, next) {
 
 router.post('/delete', async (req, res) => {
   const { cls, id } = req.body
+  console.log(cls, id)
 
   // check any references
   const refs = await clsys.checkReferences(cls, id)

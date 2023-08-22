@@ -85,7 +85,8 @@ router.get('/Special\\::value', async (req, res) => {
     res.status(200).send(getView('file-upload'))
   } else if (value === 'Delete') {
     const { t, id } = req.query
-    res.status(200).send(getView('delete'))
+    const row = await clsys.getItem(bridge.preeditorData[t].cls, id)
+    res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
   } else {
     res.sendStatus(404)
   }

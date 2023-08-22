@@ -2,7 +2,6 @@ import React, { cloneElement, useState } from 'react'
 import '../../stylesheets/editor-header.css'
 import StarEmpty from '../../images/star-empty.png'
 import StarFull from '../../images/star-full.png'
-import { postAndGetJSON } from '../utils'
 
 export default function EditorHeader (props) {
   const [isEmpty, setIsEmpty] = useState(true)
@@ -14,18 +13,9 @@ export default function EditorHeader (props) {
     setIsEmpty(true)
   }
 
-  async function deleteItem () {
-    const confirm = window.confirm(`Are you sure you want to delete "${props.name}"`)
-    if (confirm) {
-      const doubleCheck = window.confirm('REALLY ERASE?')
-      if (doubleCheck) {
-        const response = await postAndGetJSON('api/delete', { cls: props.cls, id: Number(props.id) })
-        if (response.length === 0) {
-          window.alert('Deleted')
-        } else {
-          window.alert(`Erros ${JSON.stringify(response)}`)
-        }
-      }
+  function redirect (page) {
+    return () => {
+      window.location.href = page
     }
   }
 
@@ -38,9 +28,7 @@ export default function EditorHeader (props) {
       onMouseLeave={emptyStar}
       src={isEmpty ? StarEmpty : StarFull}
     />,
-    <div key={2} onClick={deleteItem}>Delete</div>,
-    <div key={3}>Move</div>,
-    <div key={4}>Purge</div>
+    <div key={2} onClick={redirect(`/Special:Delete?t=${props.t}&id=${props.id}`)}>Delete</div>
   ].map((component, i) => {
     const className = component.type === 'img'
       ? 'star-img'

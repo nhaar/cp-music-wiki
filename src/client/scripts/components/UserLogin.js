@@ -1,6 +1,6 @@
 import React from 'react'
 import '../../stylesheets/user-login.css'
-import { postAndGetJSON } from '../utils.js'
+import { postAndGetJSON } from '../client-utils.js'
 
 export default function UserLogin () {
   const [values, setValues] = React.useState({

@@ -5,7 +5,7 @@ import Menu from '../../images/menu.png'
 import Arrow from '../../images/double-arrow.png'
 import Search from '../../images/search.png'
 import Ellipsis from '../../images/ellipsis-h.png'
-import { getCookies } from '../utils'
+import { getCookies } from '../client-utils'
 
 function HeaderAside (props) {
   const imgPath = props.props.sidebar ? Arrow : Menu

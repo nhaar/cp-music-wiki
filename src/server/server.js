@@ -12,7 +12,7 @@ const { port } = require('../../config')
 const SERVER_PORT = port
 
 const indexRouter = require('./routes/index')
-const { createDirectoryIfNotExists } = require('./misc/utils')
+const { createDirectoryIfNotExists } = require('./misc/server-utils')
 
 const path = require('path')
 

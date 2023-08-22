@@ -48,3 +48,12 @@
 .deletion-log {
   margin-top: 60px;
 }
+
+.reference-warning {
+  padding: 15px;
+  background-color: rgb(241, 103, 103);
+  color: white;
+  margin-bottom: 20px;
+  border-radius: 2px;
+}
+

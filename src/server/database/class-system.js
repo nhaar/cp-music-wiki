@@ -1,6 +1,7 @@
-const { removeBraces, matchGroup, deepcopy, compareObjects } = require('../misc/utils')
+const { removeBraces, matchGroup, deepcopy, compareObjects } = require('../misc/server-utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
+const { getName } = require('../misc/common-utils')
 
 /**
  * An object that maps database class names to their
@@ -465,32 +466,34 @@ class ClassSystem {
   async checkReferences (cls, id) {
     const clsPaths = this.idPaths[cls]
     const encountered = []
+    const majorClasses = this.getMajorClasses()
     for (const cls in clsPaths) {
       const paths = clsPaths[cls]
       const allElements = await this.selectAllInClass(cls)
 
       paths.forEach(path => {
-        const pathTraveller = (obj, i) => {
-          if (i < path.length) {
-            const step = path[i]
-            i++
-            if (step === undefined) return
-            if (step === '[]') {
-              obj.forEach(next => {
-                pathTraveller(next, i)
-              })
+        allElements.forEach(element => {
+          let foundRef = false
+          const pathTraveller = (obj, i) => {
+            if (i < path.length) {
+              const step = path[i]
+              i++
+              if (step === undefined) return
+              if (step === '[]') {
+                obj.forEach(next => {
+                  pathTraveller(next, i)
+                })
+              } else {
+                pathTraveller(obj[step], i)
+              }
             } else {
-              pathTraveller(obj[step], i)
-            }
-          } else {
-            if (obj === id) {
-              encountered.push([cls, path])
+              if (obj === id) {
+                foundRef = true
+              }
             }
           }
-        }
-
-        allElements.forEach(element => {
           pathTraveller(element.data, 0)
+          if (foundRef) encountered.push([majorClasses[cls].name, getName(element.querywords)])
         })
       })
     }

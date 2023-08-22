@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { postAndGetJSON } from '../utils'
+import { postAndGetJSON } from '../client-utils'
 import '../../stylesheets/query.css'
 
 export default function QueryInput (props) {

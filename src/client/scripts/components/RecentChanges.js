@@ -1,5 +1,5 @@
 import React from 'react'
-import { getJSON, getMonthName } from '../utils'
+import { getJSON, getMonthName } from '../client-utils'
 import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
