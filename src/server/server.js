@@ -25,7 +25,8 @@ app.use(express.static(path.join(__dirname, '../client/dist')))
 
 app.use(
   webpackDevMiddleware(compiler, {
-    publicPath: config.output.publicPath
+    publicPath: config.output.publicPath,
+    stats: 'minimal'
   })
 )
 
