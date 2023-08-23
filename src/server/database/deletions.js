@@ -36,7 +36,7 @@ class DeletionHandler {
   }
 
   async undeleteItem (cls, id, reason, token) {
-    const row = (await sql.selectAndEquals('deleted_items', 'class, item_id', [cls, id]))[0]
+    const row = await this.getDeletedRow(cls, id)
     sql.delete('deleted_items', 'id', row.id)
     sql.insert(cls, 'id, data, querywords', [id, row.data, row.querywords])
     this.insertDeletion(cls, id, token, null, reason, false)
@@ -55,6 +55,11 @@ class DeletionHandler {
     return clsys.getNameWithRows(rows.filter(row => row.class === cls).map(row => {
       return { id: row.item_id, querywords: row.querywords }
     }), keyword)
+  }
+
+  async getDeletedRow (cls, id) {
+    const row = (await sql.selectAndEquals('deleted_items', 'class, item_id', [cls, id]))[0]
+    return row
   }
 }
 

@@ -531,7 +531,7 @@ export default function Editor (props) {
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={props.args.editor ? 1 : 0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} />
+      <EditorHeader cur={props.args.editor ? 1 : 0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} deleted={props.args.isDeleted} />
       <EditorContext.Provider value={props.args.editor}>
         <ItemContext.Provider value={updateData}>
           <TableModule className='editor' declrs={declrs} value={data} path={[]} />

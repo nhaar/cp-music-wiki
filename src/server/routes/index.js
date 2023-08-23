@@ -8,6 +8,7 @@ const rev = require('../database/revisions')
 const bridge = require('../database/class-frontend')
 const clsys = require('../database/class-system')
 const user = require('../database/user')
+const del = require('../database/deletions')
 
 function getView (scriptName, vars) {
   let scriptTag = ''
@@ -69,31 +70,27 @@ router.get('/Special\\::value', async (req, res) => {
     res.status(200).send(view)
   } else if (value === 'Items') {
     res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
-  } else if (value === 'Editor' || value === 'Read') {
+  } else if (value === 'Editor' || value === 'Read' || value === 'Delete') {
     const { t, id } = req.query
-    if (t) {
-      let row
-      const cls = bridge.preeditorData[t].cls
-      if (id === undefined) {
-        const data = await clsys.getDefault(cls)
-        row = { data }
-      } else {
-        row = await clsys.getItem(cls, id)
-      }
-      if (!row) {
-        // user asked for deleted item
-        // redirect to delete page
-        res.redirect(`/Special:Undelete?t=${t}&id=${id}`)
-      } else {
-        res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row }))
-      }
+    let row
+    const cls = bridge.preeditorData[t].cls
+    if (id === undefined) {
+      const data = await clsys.getDefault(cls)
+      row = { data }
+    } else {
+      row = await clsys.getItem(cls, id)
+    }
+    const isDeleted = !row
+    if (!row) {
+      row = await del.getDeletedRow(cls, id)
+    }
+    if (value === 'Delete') {
+      res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
+    } else {
+      res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row, isDeleted }))
     }
   } else if (value === 'FileUpload') {
     res.status(200).send(getView('file-upload'))
-  } else if (value === 'Delete') {
-    const { t, id } = req.query
-    const row = await clsys.getItem(bridge.preeditorData[t].cls, id)
-    res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
   } else if (value === 'Undelete') {
     const { t, id } = req.query
     if (await user.isAdmin(user.getToken(req))) {

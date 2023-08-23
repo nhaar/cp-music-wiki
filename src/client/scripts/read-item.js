@@ -4,4 +4,4 @@ import Editor from './components/Editor'
 
 import { createRoot } from 'react-dom/client'
 
-createRoot(document.getElementById('root')).render(<Main content={Editor} title='Read' args={{ editorData: window.editorData, row: window.row, editor: false }} />)
+createRoot(document.getElementById('root')).render(<Main content={Editor} title='Read' args={{ editorData: window.editorData, row: window.row, editor: false, isDeleted: window.isDeleted }} />)

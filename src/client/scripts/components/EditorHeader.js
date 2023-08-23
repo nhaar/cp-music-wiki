@@ -22,6 +22,7 @@ export default function EditorHeader (props) {
   const paramsSuffix = `?t=${props.t}&id=${props.id}`
   const specialUrl = word => `/Special:${word}${paramsSuffix}`
   const specialRedirect = word => redirect(specialUrl(word))
+  const deleteText = props.deleted ? 'Undelete' : 'Delete'
 
   const components = [
     <div key={-2} onClick={specialRedirect('Read')}>Read</div>,
@@ -33,7 +34,12 @@ export default function EditorHeader (props) {
       onMouseLeave={emptyStar}
       src={isEmpty ? StarEmpty : StarFull}
     />,
-    <div key={2} onClick={redirect(`/Special:Delete?t=${props.t}&id=${props.id}`)}>Delete</div>
+    (
+      <div key={2} onClick={redirect(`/Special:${deleteText}?t=${props.t}&id=${props.id}`)}>
+        {deleteText}
+      </div>
+    )
+
   ].map((component, i) => {
     const className = component.type === 'img'
       ? 'star-img'
@@ -44,12 +50,17 @@ export default function EditorHeader (props) {
     })
   })
 
+  console.log(props)
+
   if (props.isStatic) {
     // if static
     components.splice(3, 2)
   } else if (!props.id) {
     // creating page
     components.splice(1, 5)
+  } else if (props.deleted) {
+    console.log('hihihi')
+    components.splice(1, 1)
   }
 
   return (
