@@ -4,4 +4,4 @@ import Undelete from './components/Undelete.js'
 
 import { createRoot } from 'react-dom/client'
 
-createRoot(document.getElementById('root')).render(<Main content={Undelete} title='Undelete item' args={{ cls: window.cls, id: window.id }} />)
+createRoot(document.getElementById('root')).render(<Main content={Undelete} title='Undelete item' args={{ cls: window.cls, id: window.id, t: window.t }} />)

@@ -70,8 +70,9 @@ router.get('/Special\\::value', async (req, res) => {
     res.status(200).send(view)
   } else if (value === 'Items') {
     res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
-  } else if (value === 'Editor' || value === 'Read' || value === 'Delete') {
-    const { t, id } = req.query
+  } else if (value === 'Editor' || value === 'Read' || value === 'Delete' || value === 'Undelete') {
+    const { t } = req.query
+    const id = Number(req.query.id)
     let row
     const cls = bridge.preeditorData[t].cls
     if (id === undefined) {
@@ -83,8 +84,16 @@ router.get('/Special\\::value', async (req, res) => {
     const isDeleted = !row
     if (!row) {
       row = await del.getDeletedRow(cls, id)
+      // overwrite deleted item id with normal item id
+      row.id = id
     }
-    if (value === 'Delete') {
+    if (value === 'Undelete') {
+      if (await user.isAdmin(user.getToken(req))) {
+        res.send(getView('undelete', { cls, id, t }))
+      } else {
+        res.sendStatus(403)
+      }
+    } else if (value === 'Delete') {
       res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
     } else {
       res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row, isDeleted }))

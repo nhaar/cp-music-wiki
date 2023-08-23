@@ -50,8 +50,6 @@ export default function EditorHeader (props) {
     })
   })
 
-  console.log(props)
-
   if (props.isStatic) {
     // if static
     components.splice(3, 2)
@@ -59,7 +57,6 @@ export default function EditorHeader (props) {
     // creating page
     components.splice(1, 5)
   } else if (props.deleted) {
-    console.log('hihihi')
     components.splice(1, 1)
   }
 

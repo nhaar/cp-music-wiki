@@ -40,7 +40,7 @@ export default function Delete (props) {
     const token = getCookies().session
     await postJSON('api/delete', { cls: props.args.editorData.cls, id: Number(props.args.row.id), token, reason, otherReason: other })
     window.alert('Item deleted')
-    window.location.href = '/Special:Editor'
+    window.location.href = '/Special:Items'
   }
 
   if (props.args.editorData.refs.length !== 0) {

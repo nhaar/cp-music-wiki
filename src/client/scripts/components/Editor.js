@@ -563,7 +563,7 @@ function SubmitOptions (props) {
       const response = await postJSON('api/update', payload)
       if (response.status === 200) {
         window.alert('Data submitted with success')
-        window.location.href = '/Special:Editor'
+        window.location.href = '/Special:Items'
       } else if (response.status === 400) {
         const errors = (await response.json()).errors
         window.alert(`There is a mistake in your submission\n${errors}`)
