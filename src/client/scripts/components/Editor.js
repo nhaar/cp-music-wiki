@@ -8,6 +8,8 @@ import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
 import EditorHeader from './EditorHeader'
 import { getName } from '../../../server/misc/common-utils'
+import { FullscreenContext } from '../contexts/FullscreenContext'
+import FourArrows from '../../images/four-corner-arrows.png'
 // element modules
 // array modules
 // editor module
@@ -431,6 +433,7 @@ function getDefault (props) {
 
 function TableModule (props) {
   const [value] = useState(() => props.value)
+  const [fullscreenPath, setFullscreenPath] = useContext(FullscreenContext)
 
   const components = []
   props.declrs.forEach((declr, i) => {
@@ -441,16 +444,38 @@ function TableModule (props) {
       childValue = getDefault(declr)
     }
 
-    components.push(
-      <div key={i} className='table-row'>
-        <div className='header--container'>
-          <div className='header--title'>{declr.header}</div>
-          <img src={QuestionMark} className='question-mark' title={declr.desc} />
+    const mainComponent =
+      (<declr.Component value={childValue} component={declr.component} declrs={declr.declrs} path={path} />)
+    if (!fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)) {
+      components.push((
+        <div key={i} className='table-row'>
+          <div className='header--container' onClick={clickHeader}>
+            <div className='header--title'>{declr.header}</div>
+            <img src={FourArrows} className='four-arrows' onClick={clickHeader(path)} />
+            <img src={QuestionMark} className='question-mark' title={declr.desc} />
+          </div>
+          {mainComponent}
         </div>
-        <declr.Component value={childValue} component={declr.component} declrs={declr.declrs} path={path} />
-      </div>
-    )
+      ))
+    } else if ((fullscreenPath && pathIncludes(fullscreenPath, path))) {
+      components.push((
+        <div>
+          {mainComponent}
+
+        </div>
+      ))
+    }
   })
+
+  function clickHeader (path) {
+    return () => {
+      if (fullscreenPath) {
+        setFullscreenPath(undefined)
+      } else {
+        setFullscreenPath(path)
+      }
+    }
+  }
 
   return (
     <div className='table-module'>
@@ -462,6 +487,8 @@ function TableModule (props) {
 export default function Editor (props) {
   // props.args.row.data
   const [data, setData] = useState(props.args.row.data)
+  // const [isFullscreen, setIsFullscreen] = useState(false)
+  const [fullscreenPath, setFullscreenPath] = useState(undefined)
 
   const iterate = (obj) => {
     const declrs = []
@@ -532,11 +559,15 @@ export default function Editor (props) {
   return (
     <div className='editor--container'>
       <EditorHeader cur={props.args.editor ? 1 : 0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} deleted={props.args.isDeleted} />
-      <EditorContext.Provider value={props.args.editor}>
-        <ItemContext.Provider value={updateData}>
-          <TableModule className='editor' declrs={declrs} value={data} path={[]} />
-        </ItemContext.Provider>
-      </EditorContext.Provider>
+      <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
+        <EditorContext.Provider value={props.args.editor}>
+          <ItemContext.Provider value={updateData}>
+            <div className='editor'>
+              <TableModule declrs={declrs} value={data} path={[]} />
+            </div>
+          </ItemContext.Provider>
+        </EditorContext.Provider>
+      </FullscreenContext.Provider>
       {props.args.editor && <SubmitOptions row={props.args.row} cls={props.args.editorData.cls} data={data} />}
     </div>
   )
@@ -607,4 +638,17 @@ function SubmitOptions (props) {
       </div>
     </div>
   )
+}
+
+function pathIncludes (fullPath, curPath) {
+  console.log(fullPath, curPath)
+  for (let i = 0; i < Math.min(curPath.length, fullPath.length); i++) {
+    if (fullPath[i] !== curPath[i]) {
+      console.log(false)
+      return false
+    }
+  }
+
+  console.log(true)
+  return true
 }

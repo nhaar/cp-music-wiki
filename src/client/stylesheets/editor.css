@@ -13,14 +13,10 @@
   display: grid;
   grid-template-columns: 200px 1fr;
   border: 1px solid gray;
-  padding: 10px;
   margin-bottom: -1px;
-
+  padding: 10px;
 }
 
-.editor {
-  overflow: scroll;
-}
 
 .moveable-module {
   display: flex;
@@ -98,4 +94,11 @@
   width: 20px;
   height: 20px;
   padding-right: 5px;
+}
+
+.four-arrows {
+  width: 20px;
+  height: 20px;
+  margin-right: 5px;
+  cursor: pointer;
 }
