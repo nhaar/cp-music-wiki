@@ -87,16 +87,16 @@ router.get('/Special\\::value', async (req, res) => {
       // overwrite deleted item id with normal item id
       row.id = id
     }
-    if (value === 'Undelete') {
-      if (await user.isAdmin(user.getToken(req))) {
+    if (isDeleted && !(await user.isAdmin(user.getToken(req)))) {
+      res.sendStatus(403)
+    } else {
+      if (value === 'Undelete') {
         res.send(getView('undelete', { cls, id, t }))
-      } else {
-        res.sendStatus(403)
-      }
     } else if (value === 'Delete') {
       res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
     } else {
       res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row, isDeleted }))
+    }
     }
   } else if (value === 'FileUpload') {
     res.status(200).send(getView('file-upload'))
