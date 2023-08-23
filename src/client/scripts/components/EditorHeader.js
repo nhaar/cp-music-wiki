@@ -53,6 +53,9 @@ export default function EditorHeader (props) {
   if (props.isStatic) {
     // if static
     components.splice(3, 2)
+    components.splice(0, 0, (
+      <div key={-10} className='static-text' title="This item class is unique and you can't add or delete items">(static)</div>
+    ))
   } else if (!props.id) {
     // creating page
     components.splice(1, 5)
