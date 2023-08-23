@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import '../../stylesheets/delete.css'
 import { getCookies, postJSON } from '../client-utils'
 import { getName } from '../../../server/misc/common-utils'
+import EditorHeader from './EditorHeader'
 
 function ReferenceWarning (props) {
   const components = props.refs.map((ref, i) => {
@@ -44,7 +45,10 @@ export default function Delete (props) {
 
   if (props.args.editorData.refs.length !== 0) {
     return (
-      <ReferenceWarning refs={props.args.editorData.refs} />
+      <div>
+        <EditorHeader cur={4} isStatic={false} id={props.args.row.id} name={getName(props.args.row.querywords)} cls={props.args.editorData.cls} t={props.args.editorData.t} />
+        <ReferenceWarning refs={props.args.editorData.refs} />
+      </div>
     )
   } else {
     return (
