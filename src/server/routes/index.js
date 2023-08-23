@@ -71,8 +71,7 @@ router.get('/Special\\::value', async (req, res) => {
   } else if (value === 'Items') {
     res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
   } else if (value === 'Editor' || value === 'Read' || value === 'Delete' || value === 'Undelete') {
-    const { t } = req.query
-    const id = Number(req.query.id)
+    const { t, id } = req.query
     let row
     const cls = bridge.preeditorData[t].cls
     if (id === undefined) {
@@ -92,11 +91,11 @@ router.get('/Special\\::value', async (req, res) => {
     } else {
       if (value === 'Undelete') {
         res.send(getView('undelete', { cls, id, t }))
-    } else if (value === 'Delete') {
-      res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
-    } else {
-      res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row, isDeleted }))
-    }
+      } else if (value === 'Delete') {
+        res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
+      } else {
+        res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row, isDeleted }))
+      }
     }
   } else if (value === 'FileUpload') {
     res.status(200).send(getView('file-upload'))
