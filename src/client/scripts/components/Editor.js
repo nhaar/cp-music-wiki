@@ -485,10 +485,9 @@ function TableModule (props) {
 }
 
 export default function Editor (props) {
-  // props.args.row.data
   const [data, setData] = useState(props.args.row.data)
-  // const [isFullscreen, setIsFullscreen] = useState(false)
   const [fullscreenPath, setFullscreenPath] = useState(undefined)
+  const [hasUnsaved, setHasUnsaved] = useState(false)
 
   const iterate = (obj) => {
     const declrs = []
@@ -537,7 +536,6 @@ export default function Editor (props) {
     return declrs
   }
 
-  // props.args.editorData.main
   const declrs = iterate(props.args.editorData.main)
 
   function updateData (path, value) {
@@ -551,7 +549,13 @@ export default function Editor (props) {
       }
     })
 
+    if (hasUnsaved === false) setHasUnsaved(true)
     setData(root)
+  }
+
+  if (props.args.editor && hasUnsaved) {
+    setHasUnsaved(undefined)
+    window.onbeforeunload = () => ''
   }
 
   const name = getName(props.args.row.querywords)
