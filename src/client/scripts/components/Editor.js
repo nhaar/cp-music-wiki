@@ -485,9 +485,7 @@ function TableModule (props) {
 }
 
 export default function Editor (props) {
-  // props.args.row.data
   const [data, setData] = useState(props.args.row.data)
-  // const [isFullscreen, setIsFullscreen] = useState(false)
   const [fullscreenPath, setFullscreenPath] = useState(undefined)
 
   const iterate = (obj) => {
@@ -537,7 +535,6 @@ export default function Editor (props) {
     return declrs
   }
 
-  // props.args.editorData.main
   const declrs = iterate(props.args.editorData.main)
 
   function updateData (path, value) {
@@ -553,6 +550,10 @@ export default function Editor (props) {
 
     setData(root)
   }
+
+  useEffect(() => {
+    window.onbeforeunload = () => ''
+  }, [])
 
   const name = getName(props.args.row.querywords)
 
