@@ -43,16 +43,21 @@ export default function Delete (props) {
     window.location.href = '/Special:Items'
   }
 
+  const header = (
+    <EditorHeader cur={4} isStatic={false} id={props.args.row.id} name={getName(props.args.row.querywords)} cls={props.args.editorData.cls} t={props.args.editorData.t} />
+  )
+
   if (props.args.editorData.refs.length !== 0) {
     return (
       <div>
-        <EditorHeader cur={4} isStatic={false} id={props.args.row.id} name={getName(props.args.row.querywords)} cls={props.args.editorData.cls} t={props.args.editorData.t} />
+        {header}
         <ReferenceWarning refs={props.args.editorData.refs} />
       </div>
     )
   } else {
     return (
       <div>
+        {header}
         <div className='bold'> Warning: The item you are about to delete has a history with n revisions </div>
         <div className='delete--explanation'>
           You are about to delete "{getName(props.args.row.querywords)}", which will exclude the item from anything inside the wiki. This action can be undone at any time by an admin.
