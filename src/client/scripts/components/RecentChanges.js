@@ -137,7 +137,7 @@ function Changes () {
           <li key={i}>
             (<a href={`Diff?old=${change.old}&cur=${change.new}`}> diff </a> | hist )
             . .
-            <a href={`editor?t=${change.t}&id=${change.id}`}>
+            <a href={`editor?id=${change.id}`}>
               {change.cls} | {change.name}
             </a>; {time}
             . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}

@@ -22,9 +22,10 @@ class FrontendBridge {
       ['main', false],
       ['static', true]
     ].forEach(element => {
-      const classDefs = clsys.getDefObj(element[0])
+      const [category, isStatic] = element
+      const classDefs = clsys.getDefObj(category)
       for (const cls in classDefs) {
-        this.preeditorData.push({ cls, name: classDefs[cls].name, isStatic: element[1] })
+        this.preeditorData.push({ cls, name: classDefs[cls].name, isStatic })
       }
     })
   }
@@ -99,31 +100,22 @@ class FrontendBridge {
   /** Create the editor data object, which is used by the frontend */
   createEditorData () {
     const modelObjects = this.createEditorModels()
-    this.editorData = []
-    this.preeditorData.forEach((data, t) => {
-      const { cls } = data
-      this.editorData.push(
-        { main: modelObjects[cls], cls, isStatic: clsys.isStaticClass(cls), t }
-      )
+    this.editorData = {}
+    this.preeditorData.forEach(async data => {
+      const { cls, isStatic } = data
+      const staticId = isStatic
+        ? (await sql.selectWithColumn('items', 'cls', cls)).id
+        : undefined
+      this.editorData[cls] = { main: modelObjects[cls], staticId }
     })
   }
 
-  async getDeleteData (t, id) {
-    const deleteData = deepcopy(this.editorData[t])
-    deleteData.refs = await clsys.checkReferences(deleteData.cls, id)
-    return deleteData
-  }
+  async getDeleteData (id) {
+    const cls = (await clsys.getItem(id)).cls
 
-  /**
-   * Get what is the value of `t` (the index in the pre-editor data)
-   * of a class
-   * @param {import('./class-system').ClassName} cls - Name of the class
-   * @returns {number} The value of the index
-   */
-  getClassT (cls) {
-    for (let t = 0; t < this.preeditorData.length; t++) {
-      if (this.preeditorData[t].cls === cls) return t
-    }
+    const deleteData = deepcopy(this.editorData[cls])
+    deleteData.refs = await clsys.checkReferences(cls, id)
+    return deleteData
   }
 
   async getLastRevisions (days) {
@@ -143,16 +135,15 @@ class FrontendBridge {
           const encoder = new TextEncoder()
           sizes[i] = encoder.encode(text).length
         }
-        const cls = row.class
+        const { cls } = row
         const delta = sizes[1] - sizes[0]
-        const name = await clsys.getQueryNameById(cls, row.item_id)
+        const name = await clsys.getQueryNameById(row.item_id)
         const timestamp = (await sql.selectId('revisions', next, 'timestamp')).timestamp
         const user = (await sql.selectId('wiki_users', row.wiki_user)).display_name
 
         latest.push({
           delta,
           timestamp,
-          t: this.getClassT(cls),
           cls: classes[cls].name,
           name,
           old: row.id,

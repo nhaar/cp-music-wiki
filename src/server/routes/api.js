@@ -14,35 +14,28 @@ const del = require('../database/deletions')
 // const Gen = require('../misc/lists')
 // const gen = new Gen()
 
-const checkClass = checkValid(body => clsys.isStaticClass(body.cls) || clsys.isMainClass(body.cls), 'Invalid type provided')
+const checkClass = checkValid(body => clsys.isMajorClass(body.cls), 'Invalid item class provided')
+
+const checkItem = checkValid(body => {
+  const { row } = body
+  return clsys.isMajorClass(row.cls) && (row !== null && typeof row === 'object')
+}, 'Invalid item provided')
 
 const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an integer')
-
-// send data for a given editor class
-router.post('/editor-data', async (req, res) => {
-  const { t } = req.body
-  if (typeof t !== 'number' || t < 0 || t >= bridge.preeditorData.length) {
-    sendBadReq(res, 'Invalid class number provided')
-  } else {
-    res.status(200).send(bridge.editorData[t])
-  }
-})
 
 // get default data
 router.post('/default', checkClass, async (req, res) => {
   const { cls } = req.body
-
   const row = await clsys.getDefault(cls)
   res.status(200).send(row)
 })
 
 // get a data row
-router.post('/get', checkClass, checkId, async (req, res) => {
-  const { cls, id } = req.body
+router.post('/get', checkId, async (req, res) => {
+  const { id } = req.body
 
-  const row = await clsys.getItem(cls, id)
+  const row = await clsys.getItem(id)
   if (row) {
-    if (clsys.isStaticClass(cls)) row.id = 0
     res.status(200).send(row)
   } else {
     sendNotFound(res, 'Item not found in the database')
@@ -51,32 +44,24 @@ router.post('/get', checkClass, checkId, async (req, res) => {
 
 function getToken (req) {
   const { cookie } = req.headers
-  return cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)[0]
+  const match = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
+  return match && match[0]
 }
 
 // update a data type
-router.post('/update', checkAdmin, checkClass, async (req, res) => {
-  const { cls, row, isMinor } = req.body
-  const error = msg => sendBadReq(res, msg)
+router.post('/update', checkAdmin, checkItem, async (req, res) => {
+  const { row, isMinor } = req.body
 
   const token = getToken(req)
 
-  // validate data
-  if (clsys.isStaticClass(cls) && row.id !== 0) error('Invalid id for static class')
-  else if (typeof row !== 'object') error('Invalid row object')
-  else {
-    const { data } = row
-    if (typeof data !== 'object') error('Invalid data object')
-    else {
-      const validationErrors = clsys.validate(cls, data)
-      if (validationErrors.length === 0) {
-        await rev.addChange(cls, row, token, isMinor)
-        clsys.updateItem(cls, row)
-        // gen.updateLists()
-        res.sendStatus(200)
-      } else sendBadReqJSON(res, { errors: validationErrors })
-    }
-  }
+  const { data, cls } = row
+  const validationErrors = clsys.validate(cls, data)
+  if (validationErrors.length === 0) {
+    await rev.addChange(row, token, isMinor)
+    clsys.updateItem(row)
+    // gen.updateLists()
+    res.sendStatus(200)
+  } else sendBadReqJSON(res, { errors: validationErrors })
 })
 
 // middleware for receiving the music file
@@ -84,12 +69,9 @@ const upload = multer({ dest: path.join(__dirname, '../../client/music/') })
 
 async function checkAdmin (req, res, next) {
   let isAdmin = false
-  const cookie = req.headers.cookie
-  if (cookie) {
-    const session = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
-    if (session) {
-      isAdmin = await user.isAdmin(session[0])
-    }
+  const session = getToken(req)
+  if (session) {
+    isAdmin = await user.isAdmin(session)
   }
 
   if (isAdmin) {
@@ -100,13 +82,14 @@ async function checkAdmin (req, res, next) {
 }
 
 router.post('/delete', checkAdmin, async (req, res) => {
-  const { cls, id, token, reason, otherReason } = req.body
+  const { id, token, reason, otherReason } = req.body
 
   // check any references
+  const cls = (await clsys.getItem(id)).cls
   const refs = await clsys.checkReferences(cls, id)
   if (refs.length === 0) {
     // delete
-    del.deleteItem(cls, id, token, reason, otherReason)
+    del.deleteItem(id, token, reason, otherReason)
     res.sendStatus(200)
   } else {
     res.sendStatus(401)
@@ -114,8 +97,8 @@ router.post('/delete', checkAdmin, async (req, res) => {
 })
 
 router.post('/undelete', checkAdmin, async (req, res) => {
-  const { cls, id, reason } = req.body
-  del.undeleteItem(cls, id, reason, user.getToken(req))
+  const { id, reason } = req.body
+  del.undeleteItem(id, reason, user.getToken(req))
 })
 
 // receive music files
@@ -128,7 +111,7 @@ router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) 
     if (!filename) error('Could not get file path')
     else if (!originalname) error('Could not get file name')
     else {
-      clsys.updateItem('file', { data: { originalname, filename } })
+      clsys.updateItem({ cls: 'file', data: { originalname, filename } })
       res.sendStatus(200)
     }
   }
@@ -152,14 +135,10 @@ router.post('/get-by-name', checkClass, async (req, res) => {
 })
 
 // get name with id
-router.post('/get-name', checkClass, checkId, async (req, res) => {
-  const { cls, id } = req.body
-  const name = await clsys.getQueryNameById(cls, id)
+router.post('/get-name', checkId, async (req, res) => {
+  const { id } = req.body
+  const name = await clsys.getQueryNameById(id)
   res.status(200).send({ name })
-})
-
-router.get('/get-preeditor-data', async (req, res) => {
-  res.status(200).send(bridge.preeditorData)
 })
 
 router.post('/login', async (req, res) => {

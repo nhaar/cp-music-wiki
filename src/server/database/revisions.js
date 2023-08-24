@@ -11,7 +11,7 @@ class RevisionHandler {
     sql.create(`
       revisions (
         id SERIAL PRIMARY KEY,
-        class TEXT,
+        cls TEXT,
         item_id INT,
         patch JSONB,
         wiki_user INT,
@@ -28,20 +28,20 @@ class RevisionHandler {
    * @param {Row} row - Row for the data being changed
    * @param {string} token - Session token for the user submitting the revision
    */
-  async addChange (cls, row, token, isMinor) {
-    let oldRow = await clsys.getItem(cls, row.id)
+  async addChange (row, token, isMinor) {
+    let oldRow = await clsys.getItem(row.id)
     let id = row.id
     if (!oldRow) {
-      if (!clsys.isStaticClass(cls)) {
+      if (!clsys.isStaticClass(row.cls)) {
         // figure out id of new item by seeing biggest serial
-        id = (await sql.getBiggestSerial(cls))
+        id = (await sql.getBiggestSerial('items'))
       }
-      oldRow = { data: clsys.defaults[cls] }
+      oldRow = { data: clsys.getDefault(row.cls) }
     }
     const userId = await user.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
-    await this.insertRev(cls, id, userId, delta, isMinor)
+    await this.insertRev(row.cls, id, userId, delta, isMinor)
   }
 
   /**
@@ -66,7 +66,7 @@ class RevisionHandler {
     if (patch) patch = JSON.stringify(patch)
     await sql.insert(
       'revisions',
-      'class, item_id, wiki_user, timestamp, patch, minor_edit',
+      'cls, item_id, wiki_user, timestamp, patch, minor_edit',
       [cls, itemId, user, Date.now(), patch, Number(isMinor)]
     )
   }
@@ -78,12 +78,11 @@ class RevisionHandler {
    */
   async getRevisionData (revId) {
     const row = await sql.selectId('revisions', revId)
-    const cls = row.class
     const itemId = row.item_id
 
-    const revisions = await sql.selectGreaterAndEqual('revisions', 'id', revId, 'class, item_id', [cls, itemId])
+    const revisions = await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', [itemId])
 
-    const data = (await clsys.getMainItem(cls, itemId)).data
+    const data = (await clsys.getItem(itemId)).data
     for (let i = revisions.length - 1; i >= 0; i--) {
       jsondiffpatch.unpatch(data, revisions[i].patch)
     }
@@ -98,13 +97,13 @@ class RevisionHandler {
    */
   async getNextRev (revId) {
     const cur = await sql.selectId('revisions', revId)
-    const cls = cur.class
+    const cls = cur.cls
     const itemId = cur.item_id
 
     const previous = await sql.pool.query(`
     SELECT MIN(id)
     FROM revisions
-    WHERE id > ${revId} AND class = $1 AND item_id = $2
+    WHERE id > ${revId} AND cls = $1 AND item_id = $2
     `, [cls, itemId])
 
     return previous.rows[0].min
@@ -158,7 +157,7 @@ class RevisionHandler {
     return (
       await cls.selectAndEquals(
         'revisions',
-        'class, item_id',
+        'cls, item_id',
         [cls, id],
         column
       )

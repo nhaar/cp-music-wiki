@@ -1,7 +1,6 @@
 import React from 'react'
 import '../../stylesheets/pre-editor.css'
 import QueryInput from './QueryInput'
-import { findIndexInObject } from '../client-utils'
 
 function EditButton (props) {
   function handleClick () {
@@ -9,7 +8,7 @@ function EditButton (props) {
       window.alert('No item selected!')
     } else {
       const id = props.info.isStatic ? 0 : props.info.id
-      window.location.href = `/Special:Read?t=${props.info.t}&id=${id}`
+      window.location.href = `/Special:Read?id=${id}`
     }
   }
   return <button className='blue-button' onClick={handleClick}> View </button>
@@ -17,7 +16,7 @@ function EditButton (props) {
 
 function CreateButton (props) {
   function handleClick () {
-    window.location.href = `/Special:Editor?t=${props.info.t}`
+    window.location.href = `/Special:Editor?n=${props.info.n}`
   }
   return <button className='blue-button' onClick={handleClick}> CREATE NEW </button>
 }
@@ -42,11 +41,11 @@ export default function PreEditor (props) {
   }
 
   function updateChildren (e) {
-    const info = props.args[e.target.value]
-    const index = findIndexInObject(props.args, 'cls', info.cls)
-    const newInfo = { t: index, ...info }
-    if (info.isStatic) {
-      newInfo.id = 0
+    const index = Number(e.target.value)
+    const info = props.args[index]
+    const newInfo = { n: index, ...info }
+    if (newInfo.id !== undefined) {
+      newInfo.isStatic = true
       setButtonInfo(newInfo)
     }
 

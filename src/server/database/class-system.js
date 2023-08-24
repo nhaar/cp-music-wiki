@@ -1,4 +1,4 @@
-const { removeBraces, matchGroup, deepcopy, compareObjects } = require('../misc/server-utils')
+const { removeBraces, matchGroup, deepcopy } = require('../misc/server-utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
 const { getName } = require('../misc/common-utils')
@@ -70,23 +70,31 @@ class ClassSystem {
     this.assignDefaults()
     this.queryIndexing()
     this.findIdReferences()
+  }
 
-    // create table for each main class
-    for (const cls in this.mainClasses) {
-      this.createClass(cls)
-    }
+  async createTables () {
+    // create table for all items
+    await handler.create(`
+      items (
+        id SERIAL PRIMARY KEY,
+        cls TEXT,
+        data JSONB,
+        querywords TEXT
+      )
+    `)
 
-    // create static class table
-    handler.create(`
-      static (
-        class TEXT PRIMARY KEY,
-        data JSONB
-      )`
-    ).then(() => {
-      for (const cls in this.staticClasses) {
-        this.insertStatic(cls, JSON.stringify(this.defaults[cls]))
+    const rows = await handler.selectAll('items')
+    const allClasses = rows.map(row => row.cls)
+    // add static classes if they don't exist
+    for (const cls in this.staticClasses) {
+      if (!allClasses.includes(cls)) {
+        await this.insertItem(cls, this.defaults[cls])
       }
-    })
+    }
+  }
+
+  async insertItem (className, data, querywords = null) {
+    await handler.insert('items', 'cls, data, querywords', [className, JSON.stringify(data), querywords])
   }
 
   /**
@@ -155,33 +163,6 @@ class ClassSystem {
     }
   }
 
-  // /**
-  //  * Insert a static class if it doesn't exist yet
-  //  * @param {ClassName} cls - Name of the class
-  //  */
-  /**
-   * Insert a static class if it doesn't exist yet
-   * @param {ClassName} cls - Name of the class
-   * @param {ItemData} defaultData - Default item data object
-   */
-  insertStatic = async (cls, defaultData) => {
-    await handler.insert('static', 'class, data', [cls, defaultData], 'class')
-  }
-
-  /**
-   * Create the table for a main class
-   * @param {ClassName} cls - Class name
-   */
-  async createClass (cls) {
-    await handler.create(`
-    ${cls} (
-      id SERIAL PRIMARY KEY,
-      data JSONB,
-      querywords TEXT
-    )
-  `)
-  }
-
   /**
    * Iterate through every property declaration in a CPT code snippet and run a function for each declaration
    * @param {CPT} code - Code snippet
@@ -235,14 +216,6 @@ class ClassSystem {
    * @returns {boolean} True if it is the name of a main class
    */
   isMainClass = cls => keysInclude(this.mainClasses, cls)
-
-  /**
-   * Get the data in the database from a main class item given its id
-   * @param {ClassName} cls - Name of the main class
-   * @param {number} id - Id of the row to get
-   * @returns {Row} Data retrieved from the database
-   */
-  getMainItem = async (cls, id) => await handler.selectId(cls, id)
 
   /**
    * Check if a CPT type declaration represents a declaration of an array type
@@ -365,19 +338,14 @@ class ClassSystem {
 
   /**
    * Update an item in the database or add if it doesn't exist
-   * @param {ClassName} cls - Class of the item
    * @param {Row} row - Row object for the item
    */
-  async updateItem (cls, row) {
-    const { data } = row
-    if (this.isStaticClass(cls)) {
-      await handler.updateOneCondition('static', 'data', [JSON.stringify(data)], 'class', cls)
-    } else {
-      const { id } = row
-      const itemValues = [JSON.stringify(data), this.getQueryWords(cls, data)]
-      if (id === undefined) await this.insertData(cls, itemValues)
-      else await this.updateData(cls, id, itemValues)
-    }
+  async updateItem (row) {
+    const { data, id, cls } = row
+
+    const querywords = this.getQueryWords(cls, data)
+    if (id === undefined) this.insertItem(cls, data, querywords)
+    else await handler.updateOneCondition('items', 'data, querywords', [JSON.stringify(data), this.getQueryWords(cls, data)], 'id', id)
   }
 
   /**
@@ -386,10 +354,12 @@ class ClassSystem {
    * @param {number} id - Id of the item if not a static class
    * @returns {Row} Row data for the item
    */
-  async getItem (cls, id) {
-    return this.isStaticClass(cls)
-      ? await this.getStatic(cls)
-      : await this.getMainItem(cls, id)
+  async getItem (id) {
+    return (await handler.selectWithColumn('items', 'id', id))[0]
+  }
+
+  async getClass (id) {
+    return (await this.getItem(id)).cls
   }
 
   /**
@@ -398,20 +368,6 @@ class ClassSystem {
    * @returns {ItemData} Object representing the default structure
    */
   getDefault = cls => this.defaults[cls]
-
-  /**
-   * Get the row for a static class
-   * @param {ClassName} cls - Class to get
-   * @returns {Row} Fetched row
-   */
-  getStatic = async cls => (await handler.selectWithColumn('static', 'class', cls))[0]
-
-  /**
-   * Update the row for a static class
-   * @param {Row} row - Row to use to update
-   */
-  async updateStatic (cls, row) {
-  }
 
   /**
    * Find all the paths in every class definition
@@ -455,12 +411,8 @@ class ClassSystem {
     }
   }
 
-  selectAllInClass (cls) {
-    if (this.isStaticClass(cls)) {
-      return handler.selectWithColumn('static', 'class', cls)
-    } else {
-      return handler.selectAll(cls)
-    }
+  async selectAllInClass (cls) {
+    return handler.selectWithColumn('items', 'cls', cls)
   }
 
   async checkReferences (cls, id) {
@@ -502,53 +454,6 @@ class ClassSystem {
   }
 
   /**
-   * Search a path in an object and check if it matches a value,
-   * removing that value if it does and doing nothing otherwise
-   *
-   * The removal is done by setting the property to null, if it is a property
-   * or by splicing the element from the array, if it is the member of an array
-   * @param {object} data - The object to search
-   * @param {string[]} path - An array of property/indexes representing a path
-   * @param {any} value - The value to check at the end of the path
-   * @returns {data | null} If a deletion ocurred, returns the new object, otherwise returns null
-   */
-  removeFromPath (data, path, value) {
-    const original = deepcopy(data)
-    const iterate = (obj, i) => {
-      const step = path[i]
-      i++
-      if (i < path.length) {
-        if (step === '[]') {
-          obj.forEach(element => {
-            iterate(element, i)
-          })
-        } else {
-          iterate(obj[step], i)
-        }
-      } else {
-        if (step === '[]') {
-          obj.forEach((element, j) => {
-            if (element === value) {
-              obj.splice(j, 1)
-            }
-          })
-        } else {
-          if (obj[step] === value) {
-            obj[step] = null
-          }
-        }
-      }
-    }
-
-    iterate(data, 0)
-    if (!compareObjects(data, original)) {
-      return data
-    } else {
-      return null
-    }
-  }
-
-  /**
    * Create and save an object that maps each `ClassName` in the database
    * onto an array representing paths that lead to the search query properties
    *
@@ -571,6 +476,7 @@ class ClassSystem {
    * @returns {string} The useable expresions/words separated by "&&", the format stored in the database
    */
   getQueryWords (cls, data) {
+    if (this.isStaticClass(cls)) return null
     const results = []
     const paths = this.queryIndex[cls]
     const iterator = (value, path, current) => {
@@ -617,7 +523,7 @@ class ClassSystem {
    * @returns {object} Object that maps ids into pharses/names for the rows
    */
   async getByName (cls, keyword) {
-    const response = await handler.selectLike(cls, 'querywords', [keyword])
+    const response = await handler.selectLike('items', 'querywords', keyword, 'cls', cls)
     return this.getNameWithRows(response, keyword)
   }
 
@@ -638,26 +544,13 @@ class ClassSystem {
    * @param {number} id - Id of the row to get
    * @returns {string} First query word in the row
    */
-  getQueryNameById = async (cls, id) => {
+  getQueryNameById = async (id) => {
     try {
-      return (await handler.selectId(cls, id, 'querywords')).querywords.split('&&')[0]
+      return (await this.getItem(id)).querywords.split('&&')[0]
     } catch (error) {
       return ''
     }
   }
-
-  /**
-   * Find all paths that lead to a type `ID(class)` in every class
-   * @param {ClassName} cls - Class to find references of
-   * @returns {PathMap} Object with the paths
-   */
-  // findIdPaths (cls) {
-  //   const referencers = {}
-  //   this.findPaths(referencers, type => {
-  //     return type.includes(`ID(${cls})`)
-  //   })
-  //   return referencers
-  // }
 
   /**
    * Get the category of a class
@@ -688,23 +581,8 @@ class ClassSystem {
     return this[this.getDefName(cat)]
   }
 
-  /**
-   * Insert a row into a table associated with a main class
-   * @param {ClassName} cls - Name of the class
-   * @param {ItemValues} values - Values for the type
-   */
-  insertData = async (cls, values) => {
-    await handler.insert(cls, this.columns, values)
-  }
-
-  /**
-   * Update a row inside a table associated with a main class
-   * @param {ClassName} cls - Name of the main class
-   * @param {number} id - Id of the row to update
-   * @param {ItemValues} values - Values to update
-   */
-  async updateData (cls, id, values) {
-    await handler.updateById(cls, this.columns, values, id)
+  isMajorClass (cls) {
+    return this.isStaticClass(cls) || this.isMainClass(cls)
   }
 }
 

@@ -98,15 +98,8 @@ class SQLHandler {
     return await this.selectAndEquals(table, column, [value], selecting, column === 'id')
   }
 
-  /**
-   * Select all rows in a table where a column is like a certain value
-   * @param {string} table - Name of the table
-   * @param {string} column - Name of the column to match the value
-   * @param {string} matching - String to be matched
-   * @returns {object[]} All the rows that match
-   */
-  selectLike = async (table, column, matching) => {
-    return await this.select(table, `${column} ILIKE $1`, [`%${matching}%`])
+  selectLike = async (table, likeCol, likeVal, matchCol, matchVal) => {
+    return await this.select(table, `${likeCol} ILIKE $1 AND ${matchCol} = $2`, [`%${likeVal}%`, matchVal])
   }
 
   /**

@@ -71,18 +71,19 @@ router.get('/Special\\::value', async (req, res) => {
   } else if (value === 'Items') {
     res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
   } else if (value === 'Editor' || value === 'Read' || value === 'Delete' || value === 'Undelete') {
-    const { t, id } = req.query
+    const { id, n } = req.query
+    const cls = n && bridge.preeditorData[n].cls
     let row
-    const cls = bridge.preeditorData[t].cls
     if (id === undefined) {
       const data = await clsys.getDefault(cls)
       row = { data }
+      row.cls = cls
     } else {
-      row = await clsys.getItem(cls, id)
+      row = await clsys.getItem(id)
     }
     const isDeleted = !row
     if (!row) {
-      row = await del.getDeletedRow(cls, id)
+      row = await del.getDeletedRow(id)
       // overwrite deleted item id with normal item id
       row.id = id
     }
@@ -90,19 +91,20 @@ router.get('/Special\\::value', async (req, res) => {
       res.sendStatus(403)
     } else {
       if (value === 'Undelete') {
-        res.send(getView('undelete', { cls, id, t }))
+        res.send(getView('undelete', { id }))
       } else if (value === 'Delete') {
-        res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(t, Number(id))), row }))
+        res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(Number(id))), row }))
       } else {
-        res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[t], row, isDeleted }))
+        res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[row.cls], row, isDeleted }))
       }
     }
   } else if (value === 'FileUpload') {
     res.status(200).send(getView('file-upload'))
   } else if (value === 'Undelete') {
-    const { t, id } = req.query
+    const { id } = req.query
     if (await user.isAdmin(user.getToken(req))) {
-      res.send(getView('undelete', { cls: bridge.editorData[t].cls, id }))
+      const cls = (await clsys.getItem(id)).cls
+      res.send(getView('undelete', { cls, id }))
     } else {
       res.sendStatus(403)
     }

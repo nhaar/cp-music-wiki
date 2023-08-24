@@ -645,14 +645,11 @@ function SubmitOptions (props) {
 }
 
 function pathIncludes (fullPath, curPath) {
-  console.log(fullPath, curPath)
   for (let i = 0; i < Math.min(curPath.length, fullPath.length); i++) {
     if (fullPath[i] !== curPath[i]) {
-      console.log(false)
       return false
     }
   }
 
-  console.log(true)
   return true
 }

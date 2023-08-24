@@ -7,7 +7,7 @@ class DeletionHandler {
     sql.create(`
     deleted_items (
       id SERIAL PRIMARY KEY,
-      class TEXT,
+      cls TEXT,
       item_id INT,
       data JSONB,
       querywords TEXT
@@ -17,7 +17,7 @@ class DeletionHandler {
     sql.create(`
     deletion_log (
       id SERIAL PRIMARY KEY,
-      class TEXT,
+      cls TEXT,
       item_id INT,
       wiki_user INT,
       timestamp NUMERIC,
@@ -28,38 +28,37 @@ class DeletionHandler {
   `)
   }
 
-  async deleteItem (cls, id, token, reason, otherReason) {
-    const row = await clsys.getItem(cls, id)
-    sql.delete(cls, 'id', id)
-    sql.insert('deleted_items', 'class, item_id, data, querywords', [cls, id, JSON.stringify(row.data), row.querywords])
-    this.insertDeletion(cls, id, token, reason, otherReason, true)
+  async deleteItem (id, token, reason, otherReason) {
+    const row = await clsys.getItem(id)
+    sql.delete('items', 'id', id)
+    sql.insert('deleted_items', 'cls, item_id, data, querywords', [row.cls, id, JSON.stringify(row.data), row.querywords])
+    this.insertDeletion(row, token, reason, otherReason, true)
   }
 
-  async undeleteItem (cls, id, reason, token) {
-    const row = await this.getDeletedRow(cls, id)
+  async undeleteItem (id, reason, token) {
+    const row = await this.getDeletedRow(id)
     sql.delete('deleted_items', 'id', row.id)
-    sql.insert(cls, 'id, data, querywords', [id, row.data, row.querywords])
-    this.insertDeletion(cls, id, token, null, reason, false)
+    sql.insert('items', 'id, cls, data, querywords', [id, row.cls, row.data, row.querywords])
+    this.insertDeletion(id, token, null, reason, false)
   }
 
-  async insertDeletion (cls, id, token, reason, other, isDeletion) {
+  async insertDeletion (row, token, reason, other, isDeletion) {
     await sql.insert(
       'deletion_log',
-      'class, item_id, wiki_user, timestamp, reason, additional_reason, is_deletion',
-      [cls, id, (await user.getUserId(token)), Date.now(), reason, other, Number(isDeletion)]
+      'cls, item_id, wiki_user, timestamp, reason, additional_reason, is_deletion',
+      [row.cls, row.id, (await user.getUserId(token)), Date.now(), reason, other, Number(isDeletion)]
     )
   }
 
   async getByName (cls, keyword) {
-    const rows = await sql.selectLike('deleted_items', 'querywords', keyword)
-    return clsys.getNameWithRows(rows.filter(row => row.class === cls).map(row => {
+    const rows = await sql.selectLike('deleted_items', 'querywords', keyword, 'cls', cls)
+    return clsys.getNameWithRows(rows.map(row => {
       return { id: row.item_id, querywords: row.querywords }
     }), keyword)
   }
 
-  async getDeletedRow (cls, id) {
-    const row = (await sql.selectAndEquals('deleted_items', 'class, item_id', [cls, id]))[0]
-    return row
+  async getDeletedRow (id) {
+    return (await sql.selectWithColumn('deleted_items', 'item_id', id))[0]
   }
 }
 

@@ -19,7 +19,7 @@ export default function EditorHeader (props) {
     }
   }
 
-  const paramsSuffix = `?t=${props.t}&id=${props.id}`
+  const paramsSuffix = `?id=${props.id}`
   const specialUrl = word => `/Special:${word}${paramsSuffix}`
   const specialRedirect = word => redirect(specialUrl(word))
   const deleteText = props.deleted ? 'Undelete' : 'Delete'
@@ -35,7 +35,7 @@ export default function EditorHeader (props) {
       src={isEmpty ? StarEmpty : StarFull}
     />,
     (
-      <div key={2} onClick={redirect(`/Special:${deleteText}?t=${props.t}&id=${props.id}`)}>
+      <div key={2} onClick={redirect(`/Special:${deleteText}?id=${props.id}`)}>
         {deleteText}
       </div>
     )

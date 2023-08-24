@@ -11,10 +11,10 @@ const { port } = require('../../config')
 
 const SERVER_PORT = port
 
-const indexRouter = require('./routes/index')
 const { createDirectoryIfNotExists } = require('./misc/server-utils')
 
 const path = require('path')
+const clsys = require('../server/database/class-system')
 
 createDirectoryIfNotExists(path.join(__dirname, '../client/views/generated'))
 createDirectoryIfNotExists(path.join(__dirname, '../client/music'))
@@ -35,7 +35,10 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-app.use('/', indexRouter)
+// make sure tables are created before running router
+clsys.createTables().then(() => {
+  app.use('/', require('./routes/index'))
+})
 
 app.listen(SERVER_PORT, () => {
   console.log(`Listening on port ${SERVER_PORT}`)
