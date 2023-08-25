@@ -79,7 +79,8 @@ class ClassSystem {
         id SERIAL PRIMARY KEY,
         cls TEXT,
         data JSONB,
-        querywords TEXT
+        querywords TEXT,
+        predefined INT
       )
     `)
 
@@ -209,6 +210,10 @@ class ClassSystem {
    * @returns {boolean} True if it is the name of a static class
    */
   isStaticClass = cls => keysInclude(this.staticClasses, cls)
+
+  async isPredefined (id) {
+    return Boolean((await this.getItem(id)).predefined)
+  }
 
   /**
    * Check if a value is the name of a main class

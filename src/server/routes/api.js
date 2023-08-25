@@ -89,9 +89,13 @@ router.post('/delete', checkAdmin, async (req, res) => {
   const cls = (await clsys.getItem(id)).cls
   const refs = await clsys.checkReferences(cls, id)
   if (refs.length === 0) {
-    // delete
-    del.deleteItem(id, token, reason, otherReason)
-    res.sendStatus(200)
+    if (await clsys.isStaticClass(cls) || await clsys.isPredefined(id)) {
+      res.sendStatus(400)
+    } else {
+      // delete
+      del.deleteItem(id, token, reason, otherReason)
+      res.sendStatus(200)
+    }
   } else {
     res.sendStatus(401)
   }

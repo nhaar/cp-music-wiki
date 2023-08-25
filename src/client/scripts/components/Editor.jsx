@@ -560,10 +560,11 @@ export default function Editor (props) {
   }
 
   const name = getName(props.arg.row.querywords)
+  console.log(props.arg.row.predefined)
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.editorData.isStatic} id={props.arg.row.id} name={name} cls={props.arg.editorData.cls} t={props.arg.editorData.t} deleted={props.arg.isDeleted} />
+      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.editorData.isStatic} id={props.arg.row.id} name={name} cls={props.arg.editorData.cls} deleted={props.arg.isDeleted} predefined={props.arg.row.predefined} />
       <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
         <EditorContext.Provider value={isEditor}>
           <ItemContext.Provider value={updateData}>

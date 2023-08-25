@@ -17,7 +17,7 @@ export default function (props) {
 
   return (
     <div>
-      <EditorHeader cur={4} isStatic={false} cls={props.arg.cls} id={props.arg.id} t={props.arg.t} deleted />
+      <EditorHeader cur={4} isStatic={false} cls={props.arg.cls} id={props.arg.id} deleted />
       <div className='undelete-box'>
         <div className='bold'>Undelete item</div>
         <div className='undelete--reason-box'>

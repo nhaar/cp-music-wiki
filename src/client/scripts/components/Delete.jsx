@@ -44,7 +44,7 @@ export default function Delete (props) {
   }
 
   const header = (
-    <EditorHeader cur={4} isStatic={false} id={props.arg.row.id} name={getName(props.arg.row.querywords)} cls={props.arg.deleteData.cls} t={props.arg.deleteData.t} />
+    <EditorHeader cur={4} isStatic={false} id={props.arg.row.id} name={getName(props.arg.row.querywords)} cls={props.arg.deleteData.cls} />
   )
 
   if (props.arg.deleteData.refs.length !== 0) {
