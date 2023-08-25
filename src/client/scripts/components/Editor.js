@@ -485,9 +485,10 @@ function TableModule (props) {
 }
 
 export default function Editor (props) {
-  const [data, setData] = useState(props.args.row.data)
+  const [data, setData] = useState(props.arg.row.data)
   const [fullscreenPath, setFullscreenPath] = useState(undefined)
   const [hasUnsaved, setHasUnsaved] = useState(false)
+  const [isEditor] = useState(props.editor !== false)
 
   const iterate = (obj) => {
     const declrs = []
@@ -536,7 +537,7 @@ export default function Editor (props) {
     return declrs
   }
 
-  const declrs = iterate(props.args.editorData.main)
+  const declrs = iterate(props.arg.editorData.main)
 
   function updateData (path, value) {
     const root = { ...data }
@@ -553,18 +554,18 @@ export default function Editor (props) {
     setData(root)
   }
 
-  if (props.args.editor && hasUnsaved) {
+  if (isEditor && hasUnsaved) {
     setHasUnsaved(undefined)
     window.onbeforeunload = () => ''
   }
 
-  const name = getName(props.args.row.querywords)
+  const name = getName(props.arg.row.querywords)
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={props.args.editor ? 1 : 0} isStatic={props.args.editorData.isStatic} id={props.args.row.id} name={name} cls={props.args.editorData.cls} t={props.args.editorData.t} deleted={props.args.isDeleted} />
+      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.editorData.isStatic} id={props.arg.row.id} name={name} cls={props.arg.editorData.cls} t={props.arg.editorData.t} deleted={props.arg.isDeleted} />
       <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
-        <EditorContext.Provider value={props.args.editor}>
+        <EditorContext.Provider value={isEditor}>
           <ItemContext.Provider value={updateData}>
             <div className='editor'>
               <TableModule declrs={declrs} value={data} path={[]} />
@@ -572,7 +573,7 @@ export default function Editor (props) {
           </ItemContext.Provider>
         </EditorContext.Provider>
       </FullscreenContext.Provider>
-      {props.args.editor && <SubmitOptions row={props.args.row} cls={props.args.editorData.cls} data={data} />}
+      {isEditor && <SubmitOptions row={props.arg.row} cls={props.arg.editorData.cls} data={data} />}
     </div>
   )
 }

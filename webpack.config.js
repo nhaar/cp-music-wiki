@@ -6,7 +6,7 @@ const exec = require('child_process').exec
 function getEntry (...names) {
   const entry = {}
   names.forEach(name => {
-    entry[name] = ['webpack-hot-middleware/client?reload=true', path.join(__dirname, `src/client/scripts/${name}.js`)]
+    entry[name] = ['webpack-hot-middleware/client?reload=true', path.join(__dirname, `src/client/scripts/auto/${name}.js`)]
   })
   return entry
 }
@@ -59,7 +59,7 @@ function getModule (...names) {
       new webpack.HotModuleReplacementPlugin(),
       {
         apply: compiler => {
-          compiler.hooks.afterEmit.tap('AfterEmitPlugin', compilation => {
+          compiler.hooks.afterEmit.tap('AfterEmitPlugin', () => {
             exec('npx standard --fix', (err, stdout, stderr) => {
               if (err) console.error(err)
               if (stdout) process.stdout.write(stdout)
@@ -72,17 +72,4 @@ function getModule (...names) {
   }
 }
 
-module.exports = getModule(
-  'main-page',
-  'user-login',
-  'recent-changes',
-  'diff',
-  'item-browser',
-  'editor',
-  'file-upload',
-  'delete',
-  'undelete',
-  'read-item',
-  'song-gen',
-  'ost-gen'
-)
+module.exports = getModule(...require('./src/server/auto/hashed-list'))

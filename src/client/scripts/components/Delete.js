@@ -38,20 +38,20 @@ export default function Delete (props) {
 
   async function clickDelete () {
     const token = getCookies().session
-    await postJSON('api/delete', { cls: props.args.editorData.cls, id: Number(props.args.row.id), token, reason, otherReason: other })
+    await postJSON('api/delete', { cls: props.arg.deleteData.cls, id: Number(props.arg.row.id), token, reason, otherReason: other })
     window.alert('Item deleted')
     window.location.href = '/Special:Items'
   }
 
   const header = (
-    <EditorHeader cur={4} isStatic={false} id={props.args.row.id} name={getName(props.args.row.querywords)} cls={props.args.editorData.cls} t={props.args.editorData.t} />
+    <EditorHeader cur={4} isStatic={false} id={props.arg.row.id} name={getName(props.arg.row.querywords)} cls={props.arg.deleteData.cls} t={props.arg.deleteData.t} />
   )
 
-  if (props.args.editorData.refs.length !== 0) {
+  if (props.arg.deleteData.refs.length !== 0) {
     return (
       <div>
         {header}
-        <ReferenceWarning refs={props.args.editorData.refs} />
+        <ReferenceWarning refs={props.arg.deleteData.refs} />
       </div>
     )
   } else {
@@ -60,7 +60,7 @@ export default function Delete (props) {
         {header}
         <div className='bold'> Warning: The item you are about to delete has a history with n revisions </div>
         <div className='delete--explanation'>
-          You are about to delete "{getName(props.args.row.querywords)}", which will exclude the item from anything inside the wiki. This action can be undone at any time by an admin.
+          You are about to delete "{getName(props.arg.row.querywords)}", which will exclude the item from anything inside the wiki. This action can be undone at any time by an admin.
         </div>
         <div className='delete--box'>
           <div className='bold delete--delete'>Delete</div>

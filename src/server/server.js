@@ -1,8 +1,19 @@
 const express = require('express')
 const app = express()
-
 const webpack = require('webpack')
 const webpackDevMiddleware = require('webpack-dev-middleware')
+
+const path = require('path')
+
+const { createDirectoryIfNotExists } = require('./misc/server-utils');
+
+[
+  '../client/views/generated',
+  '../client/music',
+  '../client/scripts/auto'
+].forEach(dir => createDirectoryIfNotExists(path.join(__dirname, dir)))
+
+require('./auto/generate-auto')
 
 const config = require('../../webpack.config')
 const compiler = webpack(config)
@@ -11,13 +22,7 @@ const { port } = require('../../config')
 
 const SERVER_PORT = port
 
-const { createDirectoryIfNotExists } = require('./misc/server-utils')
-
-const path = require('path')
 const clsys = require('../server/database/class-system')
-
-createDirectoryIfNotExists(path.join(__dirname, '../client/views/generated'))
-createDirectoryIfNotExists(path.join(__dirname, '../client/music'))
 
 app.use(express.json())
 

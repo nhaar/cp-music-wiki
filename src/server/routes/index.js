@@ -11,24 +11,19 @@ const user = require('../database/user')
 const del = require('../database/deletions')
 const gens = require('../gens/gen-list')
 
-function getView (scriptName, vars) {
-  let scriptTag = ''
-  if (vars) {
-    scriptTag = `
+function getView (scriptName, title, arg) {
+  const scriptTag = `
     <script>
-    ${
-      Object.entries(vars).map(entry => {
+    ${[['title', title], ['arg', arg]].map(entry => {
         let value = entry[1]
         const type = typeof value
         if (type === 'object') value = JSON.stringify(value)
         else if (type === 'string') value = `"${value}"`
         return `var ${entry[0]} = ${value};`
       })
-        .join('\n')
-    }
+        .join('\n')}
     </script>
-    `
-  }
+  `
 
   return `
     <!DOCTYPE html>
@@ -36,7 +31,7 @@ function getView (scriptName, vars) {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <script defer src="/${scriptName}.bundle.js"></script>
+        <script defer src="/${require('../auto/hasher')(scriptName)}.bundle.js"></script>
       </head>
         <body>
           <div id="root"></div>
@@ -48,7 +43,7 @@ function getView (scriptName, vars) {
 
 // homepage
 router.get('/', (req, res) => {
-  res.send(getView('main-page'))
+  res.send(getView('MainPage'))
 })
 
 async function getDiffView (cur, old) {
@@ -56,7 +51,7 @@ async function getDiffView (cur, old) {
   const oldData = await rev.getRevisionData(Number(old))
   const diff = rev.getRevDiff(oldData, curData)
 
-  return getView('diff', { diff })
+  return getView('Diff', 'Difference between revisions', diff)
 }
 
 router.get('/:value', async (req, res) => {
@@ -66,15 +61,17 @@ router.get('/:value', async (req, res) => {
     value = specialMatch[0]
 
     if (value === 'UserLogin') {
-      res.status(200).send(getView('user-login'))
+      res.status(200).send(getView(value, 'Log In'))
     } else if (value === 'RecentChanges') {
-      res.status(200).send(getView('recent-changes'))
+      res.status(200).send(getView(value, 'Recent Changes'))
+    } else if (value === 'FileUpload') {
+      res.status(200).send(getView(value, 'Upload a file'))
     } else if (value === 'Diff') {
       const { cur, old } = req.query
       const view = await getDiffView(cur, old)
       res.status(200).send(view)
     } else if (value === 'Items') {
-      res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
+      res.status(200).send(getView('PreEditor', 'Item browser', bridge.preeditorData))
     } else if (value === 'Editor' || value === 'Read' || value === 'Delete' || value === 'Undelete') {
       const { id, n } = req.query
       const cls = n && bridge.preeditorData[n].cls
@@ -96,22 +93,15 @@ router.get('/:value', async (req, res) => {
         res.sendStatus(403)
       } else {
         if (value === 'Undelete') {
-          res.send(getView('undelete', { id }))
+          res.send(getView(value, 'Undelete item', id))
         } else if (value === 'Delete') {
-          res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(Number(id))), row }))
+          res.status(200).send(getView(value, 'Delete item', { deleteData: (await bridge.getDeleteData(Number(id))), row }))
         } else {
-          res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[row.cls], row, isDeleted }))
+          const args = value === 'Editor'
+            ? ['Editor', 'Editor']
+            : ['ReadItem', 'Read']
+          res.status(200).send(getView(...args, { editorData: bridge.editorData[row.cls], row, isDeleted }))
         }
-      }
-    } else if (value === 'FileUpload') {
-      res.status(200).send(getView('file-upload'))
-    } else if (value === 'Undelete') {
-      const { id } = req.query
-      if (await user.isAdmin(user.getToken(req))) {
-        const cls = (await clsys.getItem(id)).cls
-        res.send(getView('undelete', { cls, id }))
-      } else {
-        res.sendStatus(403)
       }
     } else {
       res.sendStatus(404)

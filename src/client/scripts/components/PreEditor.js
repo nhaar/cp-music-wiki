@@ -25,7 +25,7 @@ export default function PreEditor (props) {
   const [buttonInfo, setButtonInfo] = React.useState({})
   const [clsInfo, setClsInfo] = React.useState({})
   const options = []
-  props.args.forEach((info, i) => {
+  props.arg.forEach((info, i) => {
     options.push(
       <option key={i} value={i}>{info.name}</option>
     )
@@ -42,7 +42,7 @@ export default function PreEditor (props) {
 
   function updateChildren (e) {
     const index = Number(e.target.value)
-    const info = props.args[index]
+    const info = props.arg[index]
     const newInfo = { n: index, ...info }
     if (newInfo.id !== undefined) {
       newInfo.isStatic = true

@@ -62,7 +62,7 @@ export default function Diff (props) {
     return elements
   }
 
-  props.args.forEach(group => {
+  props.arg.forEach(group => {
     const type = group[0]
     if (type === 'remove' || type === 'add') {
       diffChildren.push(

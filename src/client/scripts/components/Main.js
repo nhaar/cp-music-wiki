@@ -90,7 +90,7 @@ function Middle (props) {
       <Sidebar sidebar={props.sidebar} />
       <div className='content--body'>
         <div className='page-title'> {props.title} </div>
-        <props.content args={props.args} />
+        <props.content arg={props.arg} />
       </div>
     </div>
   )
@@ -128,7 +128,7 @@ export default function Main (props) {
   return (
     <div>
       <Header swapSidebar={swapSidebar} sidebar={sidebar} />
-      <Middle content={props.content} args={props.args} sidebar={sidebar} title={props.title} />
+      <Middle content={props.content} arg={props.arg} sidebar={sidebar} title={props.title} />
       <Footer />
     </div>
   )

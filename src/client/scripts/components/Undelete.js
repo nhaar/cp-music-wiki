@@ -11,13 +11,13 @@ export default function (props) {
   }
 
   function handleClick () {
-    postJSON('api/undelete', Object.assign(props.args, { reason }))
+    postJSON('api/undelete', Object.assign(props.arg, { reason }))
     window.location.href = '/Special:Items'
   }
 
   return (
     <div>
-      <EditorHeader cur={4} isStatic={false} cls={props.args.cls} id={props.args.id} t={props.args.t} deleted />
+      <EditorHeader cur={4} isStatic={false} cls={props.arg.cls} id={props.arg.id} t={props.arg.t} deleted />
       <div className='undelete-box'>
         <div className='bold'>Undelete item</div>
         <div className='undelete--reason-box'>

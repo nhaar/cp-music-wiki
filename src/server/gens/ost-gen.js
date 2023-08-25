@@ -433,10 +433,8 @@ async function generateOSTList (media) {
           const altNames = (songData.names.slice(1)).map(name => name.name)
 
           const hqSources = []
-          console.log(songData.files)
           songData.files.forEach(file => {
             if (file.isHQ) {
-              console.log(file)
               const sourceName = findId(sources, file.source).data.name
 
               hqSources.push(sourceName)

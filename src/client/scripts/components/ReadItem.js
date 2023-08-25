@@ -1,9 +1,8 @@
 import React from 'react'
+import Editor from './Editor'
 
-export default function () {
+export default function ReadItem (props) {
   return (
-    <div>
-      Read
-    </div>
+    <Editor editor={false} {...props} />
   )
 }
