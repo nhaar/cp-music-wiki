@@ -1,6 +1,7 @@
 const { removeBraces, matchGroup, deepcopy } = require('../misc/server-utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
+const predef = require('./predefined')
 const { getName } = require('../misc/common-utils')
 
 /**
@@ -92,10 +93,16 @@ class ClassSystem {
         await this.insertItem(cls, this.defaults[cls])
       }
     }
+    for (let i = 0; i < predef.length; i++) {
+      const item = predef[i]
+      if ((await handler.selectWithColumn('items', 'predefined', item.id)).length === 0) {
+        await this.insertItem(item.cls, item.data, item.id)
+      }
+    }
   }
 
-  async insertItem (className, data, querywords = null) {
-    await handler.insert('items', 'cls, data, querywords', [className, JSON.stringify(data), querywords])
+  async insertItem (cls, data, predefined = null) {
+    await handler.insert('items', 'cls, data, querywords, predefined', [cls, JSON.stringify(data), this.getQueryWords(cls, data), predefined])
   }
 
   /**

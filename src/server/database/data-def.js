@@ -266,8 +266,13 @@ const def = [{
   `),
   file: new NameDef(
     'File', `
-    originalname TEXTSHORT QUERY
-    filename TEXTSHORT
+    originalname TEXTSHORT QUERY;
+    filename TEXTSHORT;
+    `
+  ),
+  category: new NameDef(
+    'Category', `
+    name TEXTSHORT QUERY;
     `
   )
 }, {
