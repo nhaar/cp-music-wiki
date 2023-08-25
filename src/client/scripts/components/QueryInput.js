@@ -3,67 +3,31 @@ import React from 'react'
 import { postAndGetJSON } from '../client-utils'
 import '../../stylesheets/query.css'
 
+import SearchQuery from './SearchQuery'
+
 export default function QueryInput (props) {
-  const [text, setText] = React.useState('')
-  const [isHovering, setIsHovering] = React.useState(false)
-  const [options, setOptions] = React.useState([])
+  async function setText () {
+    if (props.id) {
+      const { name } = await postAndGetJSON('api/get-name', { cls: props.cls, id: Number(props.id) })
+      return name
+    } else return ''
+  }
 
-  React.useEffect(() => {
-    (async () => {
-      if (props.id) {
-        const { name } = await postAndGetJSON('api/get-name', { cls: props.cls, id: Number(props.id) })
-        setText(name)
-      }
-    })()
-  }, [text])
-
-  async function updateQuery (e) {
-    if (!props.readonly) {
-      const data = await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: e.target.value, withDeleted: props.withDeleted })
-      const elements = []
-      for (const id in data) {
-        const name = data[id]
-        function clickOption () {
-          props.passInfo(id, name)
-          setOptions([])
-          setIsHovering(false)
-          setText(name)
-        }
-        elements.push(
-          <div key={name} onClick={clickOption}>
-            {name}
-          </div>
-        )
-      }
-      setOptions(elements)
+  function updateFunction (data, callback) {
+    for (const id in data) {
+      callback(data[id], Number(id))
     }
   }
 
-  function mouseOver () {
-    setIsHovering(true)
+  async function getter (value) {
+    return await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: value, withDeleted: props.withDeleted })
   }
 
-  function mouseOut () {
-    setIsHovering(false)
-  }
-
-  function blur () {
-    if (!isHovering) {
-      setOptions([])
-    }
-  }
-
-  function queryType (e) {
-    updateQuery(e)
-    setText(e.target.value)
+  function passInfo (name, id) {
+    props.passInfo(id, name)
   }
 
   return (
-    <div className='query--parent'>
-      <input value={text} onClick={updateQuery} onBlur={blur} onChange={queryType} readOnly={props.readonly} />
-      <div className='query--options' onMouseOver={mouseOver} onMouseOut={mouseOut}>
-        {options}
-      </div>
-    </div>
+    <SearchQuery text={setText} iterateData={updateFunction} getter={getter} passInfo={passInfo} />
   )
 }

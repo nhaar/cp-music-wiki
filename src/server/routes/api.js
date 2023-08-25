@@ -10,6 +10,7 @@ const user = require('../database/user')
 const rev = require('../database/revisions')
 const clsys = require('../database/class-system')
 const del = require('../database/deletions')
+const gen = require('../gens/gen-list')
 
 // const Gen = require('../misc/lists')
 // const gen = new Gen()
@@ -156,6 +157,15 @@ router.get('/recent-changes', async (req, res) => {
   const latest = await bridge.getLastRevisions(7)
   res.status(200).send(latest)
   // get revisions from last day, later add frontend give options
+})
+
+router.post('/get-page-names', async (req, res) => {
+  const { keyword } = req.body
+
+  res.status(200).send(
+    (await gen.getAllNames())
+      .filter(name => name.match(new RegExp(`${keyword}`, 'i')))
+  )
 })
 
 function sendStatusJSON (res, status, obj) {

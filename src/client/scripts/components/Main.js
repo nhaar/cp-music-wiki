@@ -1,11 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 import '../../stylesheets/page.css'
 import Menu from '../../images/menu.png'
 import Arrow from '../../images/double-arrow.png'
 import Search from '../../images/search.png'
 import Ellipsis from '../../images/ellipsis-h.png'
-import { getCookies } from '../client-utils'
+import { getCookies, postAndGetJSON } from '../client-utils'
+import SearchQuery from './SearchQuery'
 
 function HeaderAside (props) {
   const imgPath = props.props.sidebar ? Arrow : Menu
@@ -22,11 +23,25 @@ function HeaderAside (props) {
 }
 
 function Searchbar () {
+  const [query, setQuery] = useState('')
+
+  async function getter (value) {
+    return await postAndGetJSON('api/get-page-names', { keyword: value })
+  }
+
+  function updateFunction (data, callback) {
+    data.forEach(callback)
+  }
+
+  function handleSearchClick () {
+    window.location.href = `/${query}`
+  }
+
   return (
     <div className='searchbar'>
       <img src={Search} />
-      <input type='text' placeholder='Search Club Penguin Music' />
-      <button> Search </button>
+      <SearchQuery placeholder='Search Club Penguin Music' getter={getter} iterateData={updateFunction} passInfo={setQuery} />
+      <button onClick={handleSearchClick}> Search </button>
     </div>
   )
 }

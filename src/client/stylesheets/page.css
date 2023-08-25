@@ -159,6 +159,7 @@ body {
   height: 16px;
   margin-left: 10px;
   margin-right: 8px;
+  z-index: 1000;
 }
 
 input {
@@ -171,7 +172,7 @@ input {
   text-indent: 5px;
 }
 
-.searchbar > input {
+.searchbar input {
   border: none;
   width: 400px;
   text-indent: 35px;

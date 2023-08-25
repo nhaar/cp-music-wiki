@@ -6,6 +6,7 @@
   top: 100%;
   width: 100%;
   box-shadow: 1px 1px 5px gray;
+  font-size: 14px;
 
 }
 
@@ -23,6 +24,8 @@
 .query--options div:hover {
   cursor: pointer;
   background-color: rgb(216, 216, 216);
+  /* 100% for some reason leads to the box increasing in size */
+  width: 99%;
 }
 
 .query--parent {

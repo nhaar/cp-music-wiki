@@ -5,11 +5,18 @@ class ListGen {
     ]
   }
 
+  async getAllNames () {
+    const names = []
+    for (let i = 0; i < this.lists.length; i++) {
+      names.push(...(await this.lists[i].getter()))
+    }
+    return names
+  }
+
   async findName (name) {
     for (let i = 0; i < this.lists.length; i++) {
       const list = this.lists[i]
-      const names = await list.getter()
-      if (names.includes(name)) return list
+      if ((await list.getter()).includes(name)) return list
     }
   }
 }
