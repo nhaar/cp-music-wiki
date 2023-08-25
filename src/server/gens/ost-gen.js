@@ -1,8 +1,9 @@
-const fs = require('fs')
-const path = require('path')
-
-const handler = require('../database/sql-handler')
 const clsys = require('../database/class-system')
+
+const medias = {
+  'Series OST': 'series',
+  'Club Penguin OST': 'flash'
+}
 
 /**
  * Represents the use of a song in some media at some point in history
@@ -43,11 +44,11 @@ class Generator {
    *
    * @param  {...string} mediaList
    */
-  async OSTListGenerator (...mediaList) {
-    const songs = await handler.selectAll('song')
-    const authors = await handler.selectAll('author')
-    const sources = await handler.selectAll('source')
-    const plays = await handler.selectAll('stage_play')
+  async OSTListGenerator (media) {
+    const songs = await clsys.selectAllInClass('song')
+    const authors = await clsys.selectAllInClass('author')
+    const sources = await clsys.selectAllInClass('source')
+    const plays = await clsys.selectAllInClass('stage_play')
 
     // make an index of the priorities in case it gets used
     const priorityIndex = {}
@@ -374,11 +375,9 @@ class Generator {
     const getTables = async media => {
       tables = medias[media].tables
       for (let i = 0; i < tables.length; i++) {
-        if (clsys.isStaticClass(tables[i])) {
-          tables[i] = await clsys.getStatic(tables[i])
-        } else {
-          tables[i] = await handler.selectAll(tables[i])
-        }
+        const isStatic = clsys.isStaticClass(tables[i])
+        tables[i] = await clsys.selectAllInClass(tables[i])
+        if (isStatic) tables[i] = tables[i][0]
       }
     }
 
@@ -403,7 +402,7 @@ class Generator {
      * @param {string} dest - The name of the file
      * @param {boolean} isSeries - True if the list is for the series, false if for a media
      */
-    const outputList = (dest, isSeries) => {
+    const outputList = (isSeries) => {
       /** The 2d array for the HTML table that will get created */
       const list = []
 
@@ -439,41 +438,35 @@ class Generator {
             const altNames = (songData.names.slice(1)).map(name => name.name)
 
             const hqSources = []
+            console.log(songData.files)
             songData.files.forEach(file => {
               if (file.isHQ) {
+                console.log(file)
                 const sourceName = findId(sources, file.source).data.name
 
                 hqSources.push(sourceName)
               }
             })
             const date = instance.estimate
-              ? '?'
+              ? 'est'
               : instance.date
 
             const isOfficial = Boolean(songData.names[0])
             const name = isOfficial
-              ? `<span style="color: blue;">${songData.names[0].name}</span>`
-              : `<span style="color: red;">${songData.unofficialNames[0].name}</span>`
+              ? [songData.names[0].name, true]
+              : [songData.unofficialNames[0].name, false]
 
             const link = songData.link
-              ? `<a href="${songData.link}"> Link <a>`
-              : ''
 
-            const newLine = [
-              name,
-              authorsList.join(', '),
+            const newLine = {
+              nameInfo: name,
+              authors: authorsList,
               order,
               link,
-              instance.name,
-              altNames.join(', '),
-              hqSources.join(' + '),
-              date
-            ]
-
-            if (isSeries) {
-              const temp = newLine[4]
-              newLine[4] = newLine[6]
-              newLine[6] = temp
+              related: instance.name,
+              sources: hqSources,
+              date,
+              altNames
             }
 
             list.push(newLine)
@@ -484,63 +477,71 @@ class Generator {
         }
       })
 
-      const ost = this.generateHTML(list, isSeries)
-      fs.writeFileSync(path.join(__dirname, `../views/generated/${dest}.html`), ost)
+      return list
     }
 
-    /** Instances array but for the entire series */
-    const serieInstances = []
-
-    // go through every media to assemble series list
-    for (const mediaName in medias) {
-      const mediaInfo = medias[mediaName]
-      await getTables(mediaName)
+    async function getMediaInstances (media) {
+      await getTables(media)
       instances = []
-      mediaInfo.updateMethod()
+      medias[media].updateMethod()
+    }
 
-      // update specific one because it is included
-      if (mediaList.includes(mediaName)) {
-        sortInstances()
-        outputList(mediaInfo.dest)
-      }
+    async function getMediaOutput (media) {
+      await getMediaInstances(media)
+      sortInstances()
+      return outputList()
+    }
 
-      // create instances for the series
-      const mediaAddedSongs = {}
-      instances.forEach(instance => {
-        const { song } = instance
-        if (song) {
-          const dateInfo = {
-            date: instance.date,
-            isEstimate: instance.estimate
-          }
+    async function getSeriesOutput () {
+      /** Instances array but for the entire series */
+      const serieInstances = []
 
-          if (!Object.keys(mediaAddedSongs).includes(song + '')) {
-            mediaAddedSongs[song] = dateInfo
-          } else {
-            const dates = [
-              mediaAddedSongs[song].date,
-              instance.date
-            ].map(date => Date.parse(date))
+      // go through every media to assemble series list
+      for (const mediaName in medias) {
+        await getMediaInstances(mediaName)
 
-            if (dates[0] > dates[1]) {
+        // create instances for the series
+        const mediaAddedSongs = {}
+        instances.forEach(instance => {
+          const { song } = instance
+          if (song) {
+            const dateInfo = {
+              date: instance.date,
+              isEstimate: instance.estimate
+            }
+
+            if (!Object.keys(mediaAddedSongs).includes(song + '')) {
               mediaAddedSongs[song] = dateInfo
+            } else {
+              const dates = [
+                mediaAddedSongs[song].date,
+                instance.date
+              ].map(date => Date.parse(date))
+
+              if (dates[0] > dates[1]) {
+                mediaAddedSongs[song] = dateInfo
+              }
             }
           }
+        })
+
+        for (const song in mediaAddedSongs) {
+          serieInstances.push(new SongInstance(
+            medias[mediaName].name,
+            mediaAddedSongs[song],
+            song
+          ))
         }
-      })
-
-      for (const song in mediaAddedSongs) {
-        serieInstances.push(new SongInstance(
-          medias[mediaName].name,
-          mediaAddedSongs[song],
-          song
-        ))
       }
-    }
-    instances = serieInstances
+      instances = serieInstances
 
-    sortInstances()
-    outputList('series-ost', true)
+      sortInstances()
+      return outputList(true)
+    }
+
+    return media === 'series'
+      ? (await getSeriesOutput())
+      : (await getMediaOutput(media))
   }
 
   /**
@@ -613,4 +614,18 @@ function findId (array, id) {
   }
 }
 
-module.exports = Generator
+const gen = new Generator()
+
+module.exports = {
+  getter () {
+    return Object.keys(medias)
+  },
+  async parser (value) {
+    const name = medias[value]
+    return {
+      rows: await gen.OSTListGenerator(name),
+      isSeries: name === 'series'
+    }
+  },
+  file: 'ost-gen'
+}

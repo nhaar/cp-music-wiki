@@ -1,9 +1,0 @@
-.list-table tr {
-  display: grid;
-  grid-template-columns: 200px 200px 50px 50px 1fr 1fr 1fr 100px;
-}
-
-.list-table td, th {
-  border: solid 1px black;
-  border-collapse: collapse;
-}

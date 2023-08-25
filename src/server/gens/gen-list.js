@@ -1,7 +1,8 @@
 class ListGen {
   constructor () {
     this.lists = [
-      require('./song-gen')
+      require('./song-gen'),
+      require('./ost-gen')
     ]
   }
 

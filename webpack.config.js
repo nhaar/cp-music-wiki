@@ -83,5 +83,6 @@ module.exports = getModule(
   'delete',
   'undelete',
   'read-item',
-  'song-gen'
+  'song-gen',
+  'ost-gen'
 )
