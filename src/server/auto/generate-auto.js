@@ -6,8 +6,8 @@ const hashed = require('./hashed-list')
 list.forEach((component, i) => {
   fs.writeFileSync(path.join(__dirname, `../../client/scripts/auto/${hashed[i]}.js`), `
     import React from 'react'
-    import Main from '../components/Main.js'
-    import Content from '../components/${component}.js'
+    import Main from '../components/Main.jsx'
+    import Content from '../components/${component}.jsx'
 
     import { createRoot } from 'react-dom/client'
 
