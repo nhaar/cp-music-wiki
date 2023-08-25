@@ -195,6 +195,10 @@ class SQLHandler {
   async delete (table, column, value) {
     await this.pool.query(`DELETE FROM ${table} WHERE ${column} = $1`, [value])
   }
+
+  async selectRegex (table, column, pattern, matchCol, matchValue) {
+    return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} ~ $1 AND  ${matchCol} = $2`, [pattern, matchValue])).rows
+  }
 }
 
 /**

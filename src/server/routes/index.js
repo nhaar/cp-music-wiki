@@ -9,6 +9,7 @@ const bridge = require('../database/class-frontend')
 const clsys = require('../database/class-system')
 const user = require('../database/user')
 const del = require('../database/deletions')
+const gens = require('../gens/gen-list')
 
 function getView (scriptName, vars) {
   let scriptTag = ''
@@ -58,60 +59,78 @@ async function getDiffView (cur, old) {
   return getView('diff', { diff })
 }
 
-router.get('/Special\\::value', async (req, res) => {
-  const value = req.params.value
-  if (value === 'UserLogin') {
-    res.status(200).send(getView('user-login'))
-  } else if (value === 'RecentChanges') {
-    res.status(200).send(getView('recent-changes'))
-  } else if (value === 'Diff') {
-    const { cur, old } = req.query
-    const view = await getDiffView(cur, old)
-    res.status(200).send(view)
-  } else if (value === 'Items') {
-    res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
-  } else if (value === 'Editor' || value === 'Read' || value === 'Delete' || value === 'Undelete') {
-    const { id, n } = req.query
-    const cls = n && bridge.preeditorData[n].cls
-    let row
-    if (id === undefined) {
-      const data = await clsys.getDefault(cls)
-      row = { data }
-      row.cls = cls
-    } else {
-      row = await clsys.getItem(id)
-    }
-    const isDeleted = !row
-    if (!row) {
-      row = await del.getDeletedRow(id)
-      // overwrite deleted item id with normal item id
-      row.id = id
-    }
-    if (isDeleted && !(await user.isAdmin(user.getToken(req)))) {
-      res.sendStatus(403)
-    } else {
-      if (value === 'Undelete') {
-        res.send(getView('undelete', { id }))
-      } else if (value === 'Delete') {
-        res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(Number(id))), row }))
+router.get('/:value', async (req, res) => {
+  let value = req.params.value
+  const specialMatch = value.match(/(?<=(^Special:)).*/)
+  if (specialMatch) {
+    value = specialMatch[0]
+
+    if (value === 'UserLogin') {
+      res.status(200).send(getView('user-login'))
+    } else if (value === 'RecentChanges') {
+      res.status(200).send(getView('recent-changes'))
+    } else if (value === 'Diff') {
+      const { cur, old } = req.query
+      const view = await getDiffView(cur, old)
+      res.status(200).send(view)
+    } else if (value === 'Items') {
+      res.status(200).send(getView('item-browser', { data: bridge.preeditorData }))
+    } else if (value === 'Editor' || value === 'Read' || value === 'Delete' || value === 'Undelete') {
+      const { id, n } = req.query
+      const cls = n && bridge.preeditorData[n].cls
+      let row
+      if (id === undefined) {
+        const data = await clsys.getDefault(cls)
+        row = { data }
+        row.cls = cls
       } else {
-        res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[row.cls], row, isDeleted }))
+        row = await clsys.getItem(id)
       }
-    }
-  } else if (value === 'FileUpload') {
-    res.status(200).send(getView('file-upload'))
-  } else if (value === 'Undelete') {
-    const { id } = req.query
-    if (await user.isAdmin(user.getToken(req))) {
-      const cls = (await clsys.getItem(id)).cls
-      res.send(getView('undelete', { cls, id }))
+      const isDeleted = !row
+      if (!row) {
+        row = await del.getDeletedRow(id)
+        // overwrite deleted item id with normal item id
+        row.id = id
+      }
+      if (isDeleted && !(await user.isAdmin(user.getToken(req)))) {
+        res.sendStatus(403)
+      } else {
+        if (value === 'Undelete') {
+          res.send(getView('undelete', { id }))
+        } else if (value === 'Delete') {
+          res.status(200).send(getView('delete', { deleteData: (await bridge.getDeleteData(Number(id))), row }))
+        } else {
+          res.status(200).send(getView(value === 'Editor' ? 'editor' : 'read-item', { editorData: bridge.editorData[row.cls], row, isDeleted }))
+        }
+      }
+    } else if (value === 'FileUpload') {
+      res.status(200).send(getView('file-upload'))
+    } else if (value === 'Undelete') {
+      const { id } = req.query
+      if (await user.isAdmin(user.getToken(req))) {
+        const cls = (await clsys.getItem(id)).cls
+        res.send(getView('undelete', { cls, id }))
+      } else {
+        res.sendStatus(403)
+      }
     } else {
-      res.sendStatus(403)
+      res.sendStatus(404)
     }
   } else {
-    res.sendStatus(404)
+    value = converUrlToName(value)
+    const gen = await gens.findName(value)
+    if (gen) {
+      const data = await gen.parser(value)
+      res.status(200).send(getView(gen.file, { name: value, data }))
+    } else {
+      res.sendStatus(404)
+    }
   }
 })
+
+function converUrlToName (value) {
+  return value.replace(/_/g, ' ')
+}
 
 // editor selector
 router.get('/pre-editor', (req, res) => {

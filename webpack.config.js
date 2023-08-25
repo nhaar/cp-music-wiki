@@ -82,5 +82,6 @@ module.exports = getModule(
   'file-upload',
   'delete',
   'undelete',
-  'read-item'
+  'read-item',
+  'song-gen'
 )
