@@ -60,6 +60,15 @@ class DeletionHandler {
   async getDeletedRow (id) {
     return (await sql.selectWithColumn('deleted_items', 'item_id', id))[0]
   }
+
+  async getItemIncludeDeleted (id) {
+    let row = await clsys.getItem(id)
+    if (!row) {
+      row = await this.getDeletedRow(id)
+      row.id = row.item_id
+    }
+    return row
+  }
 }
 
 module.exports = new DeletionHandler()

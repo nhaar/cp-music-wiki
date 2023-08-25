@@ -1,6 +1,7 @@
 const sql = require('./sql-handler')
 const clsys = require('./class-system')
 const user = require('./user')
+const del = require('./deletions')
 
 const Diff = require('diff')
 const jsondiffpatch = require('jsondiffpatch')
@@ -82,7 +83,7 @@ class RevisionHandler {
 
     const revisions = await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', [itemId])
 
-    const data = (await clsys.getItem(itemId)).data
+    const data = (await del.getItemIncludeDeleted(itemId)).data
     for (let i = revisions.length - 1; i >= 0; i--) {
       jsondiffpatch.unpatch(data, revisions[i].patch)
     }
