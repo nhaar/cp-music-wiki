@@ -1,10 +1,8 @@
 import React from 'react'
+import MarkdownParser from './MarkdownParser'
 
-export default function () {
+export default function (props) {
   return (
-    <div className='column-flex'>
-      <a href='/Special:Items'> Go to the editor </a>
-      <a href='lists'> Go to the lists </a>
-    </div>
+    <MarkdownParser markdown={props.arg} />
   )
 }

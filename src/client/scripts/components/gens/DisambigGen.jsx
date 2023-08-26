@@ -2,7 +2,6 @@ import React from 'react'
 import '../../../stylesheets/disambig.css'
 
 export default function DisambigGen (props) {
-  console.log(props)
   return (
     <div>
       <div className='disambig--header'>

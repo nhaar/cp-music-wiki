@@ -18,7 +18,15 @@ function getView (scriptName, title, arg) {
         let value = entry[1]
         const type = typeof value
         if (type === 'object') value = JSON.stringify(value)
-        else if (type === 'string') value = `"${value}"`
+        else if (type === 'string') {
+          // escape quotes in string so that they don't cause problems
+          value = value.replace(/(?<=[^\\])"/g, '\\"')
+          // escape forward slashes to prevent code comments
+          value = value.replace(/\//g, '\\/')
+          // escape line breaks
+          value = value.replace(/\n/g, '\\n')
+          value = `"${value}"`
+        }
         return `var ${entry[0]} = ${value};`
       })
         .join('\n')}
@@ -42,8 +50,9 @@ function getView (scriptName, title, arg) {
 }
 
 // homepage
-router.get('/', (req, res) => {
-  res.send(getView('MainPage'))
+router.get('/', async (req, res) => {
+  const text = (await clsys.selectAllInClass('main_page'))[0].data.text
+  res.send(getView('MainPage', 'Main Page', text || ''))
 })
 
 async function getDiffView (cur, old) {

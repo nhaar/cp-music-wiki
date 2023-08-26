@@ -501,6 +501,11 @@ const def = [{
     'Club Penguin Island Igloo Music', `
     songs {CPI_IGLOO_SONG}[];
     `
+  ),
+  main_page: new NameDef(
+    'Main Page', `
+    text TEXTLONG;
+    `
   )
 }]
 
