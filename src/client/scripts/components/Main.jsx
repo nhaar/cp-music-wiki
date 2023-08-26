@@ -90,7 +90,25 @@ function Middle (props) {
       <Sidebar sidebar={props.sidebar} />
       <div className='content--body'>
         <div className='page-title'> {props.title} </div>
-        <props.content arg={props.arg} />
+        <div className='page-content-body'>
+          <props.content arg={props.arg} />
+        </div>
+        {!props.arg.data || props.arg.data.categoryNames.length === 0
+          ? <div />
+          : (
+            <div className='category--footer'>
+              <div>
+                Categories:
+              </div>
+              <div className='category--links'>
+                {props.arg.data.categoryNames.map((name, i) => (
+                  <a key={i} href={`/Category:${name}`}>
+                    {name}
+                  </a>
+                ))}
+              </div>
+            </div>
+            )}
       </div>
     </div>
   )

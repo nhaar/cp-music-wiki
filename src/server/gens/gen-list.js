@@ -37,6 +37,18 @@ class ListGen {
     return result.length && result[0].predefined
   }
 
+  async parseWithCategoryNames (callback, value) {
+    const data = await callback(value)
+    const categoryNames = []
+    for (let i = 0; i < data.categories.length; i++) {
+      categoryNames.push((await sql.selectAndEquals(
+        'items', 'cls, predefined', ['category', data.categories[i]]
+      ))[0].querywords)
+    }
+    data.categoryNames = categoryNames
+    return data
+  }
+
   async getPagesInCategory (category) {
     const id = await this.getCategoryId(category)
     return (await this.getAllParsed()).filter(page => page.categories.includes(id)).map(page => page.name)

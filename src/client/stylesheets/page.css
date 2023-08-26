@@ -193,6 +193,30 @@ input:focus {
   align-self: center;
 }
 
+.page-content-body {
+  margin-bottom: auto;
+}
+
+.category--footer {
+  display: flex;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border: 1px solid gray;
+  font-size: 14px;
+}
+
+.category--links {
+  display: flex;
+}
+
+.category--links > a {
+  border-left: 1px solid gray;
+}
+
+.category--links > a:first-child {
+  border: none;
+  margin-left: 14px;
+}
 
 .searchbar > button {
   border-radius: 0;
@@ -266,6 +290,11 @@ input:focus {
 
 .medium-size {
   font-size: 1.5em;
+}
+
+.content--body {
+  display: flex;
+  flex-direction: column;
 }
 
 .content--body:nth-child(2) {

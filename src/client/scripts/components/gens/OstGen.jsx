@@ -2,6 +2,7 @@ import React from 'react'
 import '../../../stylesheets/ost-list.css'
 
 export default function OstGen (props) {
+  console.log(props.arg)
   const grid = [
     <tr key={-1}>
       <th>Name</th>
