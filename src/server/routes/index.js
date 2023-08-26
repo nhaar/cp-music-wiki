@@ -57,6 +57,7 @@ async function getDiffView (cur, old) {
 router.get('/:value', async (req, res) => {
   let value = req.params.value
   const specialMatch = value.match(/(?<=(^Special:)).*/)
+  const categoryMatch = value.match(/(?<=(^Category:)).*(?=(\?|$))/)
   if (specialMatch) {
     value = specialMatch[0]
 
@@ -106,12 +107,17 @@ router.get('/:value', async (req, res) => {
     } else {
       res.sendStatus(404)
     }
+  } else if (categoryMatch) {
+    value = categoryMatch[0]
+    const cur = req.query.cur || 1
+    const pages = await gens.getPagesInCategory(value)
+    res.status(200).send(getView('Category', `Pages in category \\"${value}\\"`, { pages, cur, name: value }))
   } else {
     value = converUrlToName(value)
     const gen = await gens.findName(value)
     if (gen) {
       const data = await gen.parser(value)
-      res.status(200).send(getView(gen.file, { name: value, data }))
+      res.status(200).send(getView(`gens/${gen.file}`, { name: value, data }))
     } else {
       res.sendStatus(404)
     }

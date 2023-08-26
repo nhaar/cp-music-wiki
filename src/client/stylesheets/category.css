@@ -1,0 +1,29 @@
+.category-page {
+  font-size: 14px;
+}
+
+.page-changers {
+  display: flex;
+  column-gap: 5px;
+  margin-bottom: 10px;
+}
+
+.category-intro {
+  margin-bottom: 10px;
+}
+
+li::marker{
+  font-size: 16px;
+  color: black;
+  display: flex;
+  justify-content: center;
+}
+
+ul {
+  padding-left: 30px;
+}
+
+.page-list {
+  display: grid;
+  grid-template-columns: repeat(2, 50%);
+}

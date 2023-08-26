@@ -560,7 +560,6 @@ export default function Editor (props) {
   }
 
   const name = getName(props.arg.row.querywords)
-  console.log(props.arg.row.predefined)
 
   return (
     <div className='editor--container'>

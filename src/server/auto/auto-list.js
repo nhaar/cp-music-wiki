@@ -10,6 +10,7 @@ module.exports = [
   'RecentChanges',
   'Undelete',
   'UserLogin',
+  'Category',
   'gens/OstGen',
   'gens/SongGen'
 ]

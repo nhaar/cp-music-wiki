@@ -557,8 +557,10 @@ module.exports = {
     const name = medias[value]
     return {
       rows: await generateOSTList(name),
-      isSeries: name === 'series'
+      isSeries: name === 'series',
+      categories: [1],
+      name: value
     }
   },
-  file: 'ost-gen'
+  file: 'OstGen'
 }

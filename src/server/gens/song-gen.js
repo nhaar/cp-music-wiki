@@ -12,7 +12,8 @@ module.exports = {
     return names
   },
   async parser (name) {
-    return (await sql.selectRegex('items', 'querywords', `^${name}(&&|$)`, 'cls', 'song'))[0]
+    const row = (await sql.selectRegex('items', 'querywords', `^${name}(&&|$)`, 'cls', 'song'))[0]
+    return Object.assign(row, { categories: [], name })
   },
-  file: 'song-gen'
+  file: 'SongGen'
 }
