@@ -3,7 +3,7 @@ import '../../stylesheets/category.css'
 
 export default function Category (props) {
   const onDisplay = Math.max(0, props.arg.pages.length - props.arg.cur + 1)
-  const displayedPages = props.arg.pages.sort().splice(props.arg.cur - 1, onDisplay + 1)
+  const displayedPages = props.arg.pages.sort().slice(props.arg.cur - 1, onDisplay + 1)
   const normalLength = 200
 
   const columns = [[], []]
