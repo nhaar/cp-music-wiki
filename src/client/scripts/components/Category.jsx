@@ -14,9 +14,9 @@ export default function Category (props) {
     columns[Math.floor(i * 2 / normalLength)].push(component)
   }
 
-  function pushGroup (i) {
+  function pushGroup (i, isSecond) {
     pushComponent(i, (
-      <ul key={'-' + i}>
+      <ul key={`${isSecond ? '+' : '-'}` + i}>
         {group.map((name, i) => (
           <li key={i}>
             <a href={`/${name}`}>
@@ -35,7 +35,7 @@ export default function Category (props) {
       if (letter !== '') pushGroup(i)
       letter = firstLetter
       pushComponent(i, (
-        <h3>
+        <h3 key={i}>
           {firstLetter}
         </h3>
       ))
@@ -43,7 +43,7 @@ export default function Category (props) {
     group.push(page)
 
     if (i === Math.floor(normalLength / 2) - 1 || i === displayedPages.length - 1) {
-      pushGroup(i)
+      pushGroup(i, true)
     }
   })
 
