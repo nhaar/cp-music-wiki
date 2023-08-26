@@ -1,0 +1,7 @@
+.md-h * {
+  font-family: "Linux Libertine" !important;
+}
+
+.md-h {
+  border-bottom: 1px solid gray;
+}
