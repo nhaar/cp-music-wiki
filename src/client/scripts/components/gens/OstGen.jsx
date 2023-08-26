@@ -8,16 +8,16 @@ export default function OstGen (props) {
       <th>Author(s)</th>
       <th>Order</th>
       <th>Link</th>
-      <th>{props.args.isSeries ? 'HQ source(s)' : 'Related to'}</th>
+      <th>{props.arg.data.isSeries ? 'HQ source(s)' : 'Related to'}</th>
       <th>Alternate Names</th>
-      <th>{props.args.isSeries ? 'Medias' : 'HQ Source(s)'}</th>
+      <th>{props.arg.data.isSeries ? 'Medias' : 'HQ Source(s)'}</th>
       <th>Earliest Date</th>
     </tr>
-  ].concat(props.args.data.rows.map((row, i) => {
+  ].concat(props.arg.data.rows.map((row, i) => {
     const { nameInfo, authors, order, link, related, sources, date, altNames } = row
     const [name, isOfficial] = nameInfo
     const lastSwapper = [sources.length === 0 ? 'None' : sources.join(' + '), related || '?']
-    const seriesIndex = props.args.isSeries ? 0 : 1
+    const seriesIndex = props.arg.data.isSeries ? 0 : 1
 
     return (
       <tr key={i}>

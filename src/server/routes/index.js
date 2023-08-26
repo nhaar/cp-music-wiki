@@ -117,7 +117,7 @@ router.get('/:value', async (req, res) => {
     const gen = await gens.findName(value)
     if (gen) {
       const data = await gen.parser(value)
-      res.status(200).send(getView(`gens/${gen.file}`, { name: value, data }))
+      res.status(200).send(getView(`gens/${gen.file}`, value, { name: value, data }))
     } else {
       res.sendStatus(404)
     }
