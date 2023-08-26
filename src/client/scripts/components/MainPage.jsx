@@ -1,8 +1,8 @@
 import React from 'react'
-import MarkdownParser from './MarkdownParser'
+import MarkdownInterpreter from './MarkdownInterpreter'
 
 export default function (props) {
   return (
-    <MarkdownParser markdown={props.arg} />
+    <MarkdownInterpreter markdown={props.arg} />
   )
 }
