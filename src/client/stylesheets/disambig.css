@@ -1,0 +1,10 @@
+.disambig--header {
+  font-size: 24px;
+  font-family: "Linux Libertine";
+  font-style: italic;
+  margin-bottom: 20px;
+}
+
+span {
+  margin-left: 5px;
+}

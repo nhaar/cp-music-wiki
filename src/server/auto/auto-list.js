@@ -12,5 +12,6 @@ module.exports = [
   'UserLogin',
   'Category',
   'gens/OstGen',
-  'gens/SongGen'
+  'gens/SongGen',
+  'gens/DisambigGen'
 ]

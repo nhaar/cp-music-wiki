@@ -4,7 +4,8 @@ class ListGen {
   constructor () {
     this.lists = [
       require('./song-gen'),
-      require('./ost-gen')
+      require('./ost-gen'),
+      require('./disambig-gen')
     ]
   }
 

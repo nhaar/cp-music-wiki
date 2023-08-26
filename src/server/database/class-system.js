@@ -102,7 +102,7 @@ class ClassSystem {
   }
 
   async insertItem (cls, data, predefined = null) {
-    await handler.insert('items', 'cls, data, querywords, predefined', [cls, JSON.stringify(data), this.getQueryWords(cls, data), predefined])
+    await handler.insert('items', 'cls, data, querywords, predefined', [cls, JSON.stringify(data), await this.getQueryWords(cls, data), predefined])
   }
 
   /**
@@ -355,8 +355,7 @@ class ClassSystem {
   async updateItem (row) {
     const { data, id, cls } = row
 
-    const querywords = this.getQueryWords(cls, data)
-    if (id === undefined) this.insertItem(cls, data, querywords)
+    if (id === undefined) this.insertItem(cls, data)
     else await handler.updateOneCondition('items', 'data, querywords', [JSON.stringify(data), this.getQueryWords(cls, data)], 'id', id)
   }
 

@@ -93,7 +93,7 @@ function Middle (props) {
         <div className='page-content-body'>
           <props.content arg={props.arg} />
         </div>
-        {!props.arg.data || props.arg.data.categoryNames.length === 0
+        {!props.arg || !props.arg.data || props.arg.data.categoryNames.length === 0
           ? <div />
           : (
             <div className='category--footer'>

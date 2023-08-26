@@ -274,6 +274,13 @@ const def = [{
     'Category', `
     name TEXTSHORT QUERY;
     `
+  ),
+  disambiguation: new NameDef(
+    'Disambiguation', `
+    name TEXTSHORT QUERY;
+    explanation TEXTLONG;
+    links {DISAMBIGUATION_LINK}[];
+    `
   )
 }, {
   NAME: new ClassDef(`
@@ -469,6 +476,10 @@ const def = [{
   CPI_IGLOO_SONG: new ClassDef(`
     displayName TEXTSHORT;
     song ID(song);
+  `),
+  DISAMBIGUATION_LINK: new ClassDef(`
+  pageName TEXTSHORT;
+  pageExplanation TEXTLONG;
   `)
 }, {
   ds_ost: new NameDef(
