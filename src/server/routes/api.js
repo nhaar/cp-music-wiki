@@ -149,7 +149,7 @@ router.post('/get-name', checkId, async (req, res) => {
 router.post('/login', async (req, res) => {
   const { password, user: username } = req.body
   if (typeof username !== 'string' || typeof password !== 'string') sendBadReq(res, 'Invalid data')
-  const token = await user.checkCredentials(username, password)
+  const token = await user.checkCredentials(username, password, req.ip)
   if (token) {
     res.status(200).send({ token })
   } else {

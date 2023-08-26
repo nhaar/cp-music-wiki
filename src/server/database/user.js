@@ -17,6 +17,13 @@ class UserHandler {
         created_timestamp NUMERIC
       )
     `)
+
+    sql.create(`
+      user_ip (
+        user_id INT,
+        ip TEXT
+      )
+    `)
   }
 
   /**
@@ -67,7 +74,7 @@ class UserHandler {
    * @param {string} password - Password
    * @returns {string | undefined} The session token if the credentials are correct or undefined if they aren't
    */
-  async checkCredentials (user, password) {
+  async checkCredentials (user, password, ip) {
     const internalData = (await sql.selectWithColumn('wiki_users', 'name', user))[0]
     if (!internalData) return
 
@@ -76,6 +83,11 @@ class UserHandler {
     if (internalData.user_password === hash) {
       const sessionToken = this.generateToken()
       sql.updateById('wiki_users', 'session_token', [sessionToken], internalData.id)
+      const previousIps = (await sql.selectWithColumn('user_ip', 'user_id', internalData.id))
+        .map(row => row.ip)
+
+      console.log(previousIps)
+      if (!previousIps.includes(this.getHash(ip))) await this.insertIp(internalData.id, ip)
       return sessionToken
     }
   }
@@ -86,9 +98,15 @@ class UserHandler {
    * @param {string} password - Password of the account
    * @param {string} display - The display name of the account
    */
-  async createAccount (name, password, display) {
+  async createAccount (name, password, display, ip) {
     const hash = this.getHash(password)
-    sql.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
+    await sql.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
+    const id = await sql.getBiggestSerial('wiki_users')
+    await this.insertIp(id, ip)
+  }
+
+  async insertIp (user, ip) {
+    await sql.insert('user_ip', 'user_id, ip', [user, this.getHash(ip)])
   }
 }
 
