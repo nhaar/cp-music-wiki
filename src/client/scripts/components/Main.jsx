@@ -7,6 +7,8 @@ import Search from '../../images/search.png'
 import Ellipsis from '../../images/ellipsis-h.png'
 import UserIcon from '../../images/user-icon.png'
 import ArrowDown from '../../images/arrow-down.png'
+import Logout from '../../images/logout.png'
+import Login from '../../images/login.png'
 import { getCookies, postAndGetJSON } from '../client-utils'
 import SearchQuery from './SearchQuery'
 
@@ -49,20 +51,46 @@ function Searchbar () {
 }
 
 function UserArea (props) {
+  const [showOptions, setShowOptions] = useState(false)
+
+  function toggleOptions () {
+    setShowOptions(!showOptions)
+  }
+
   const Element = props.user
     ? (
       <div>
         <a href='/'> {props.user.user} </a>
-        <div className='user-imgs'>
+        <div className='user-imgs' onClick={toggleOptions}>
           <img src={UserIcon} className='user-icon' />
           <img src={ArrowDown} className='user-arrow' />
         </div>
+        {showOptions
+          ? (
+            <div className='user-options'>
+              <a href='/Special:UserLogout'>
+                <img src={Logout} className='logout-img' />
+                <span>Log out</span>
+              </a>
+            </div>
+            )
+          : undefined}
       </div>
       )
     : (
       <div>
         <a>Create an account</a>
-        <img className='ellipsis-img icon-img' src={Ellipsis} />
+        <img className='ellipsis-img icon-img' src={Ellipsis} onClick={toggleOptions} />
+        {showOptions
+          ? (
+            <div className='user-options'>
+              <a href='/Special:UserLogin'>
+                <img src={Login} className='login-img' />
+                <span>Log in</span>
+              </a>
+            </div>
+            )
+          : undefined}
       </div>
       )
 

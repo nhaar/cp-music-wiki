@@ -200,7 +200,44 @@ input:focus {
   display: flex;
   align-items: center;
   column-gap: 20px;
+  position: relative;
 }
+
+.user-options {
+  position: absolute;
+  top: 100%;
+  width: 200px;
+  padding: 10px 0;
+  right: 0px;
+  border: solid 1px gray;
+  box-shadow: 1px 1px 5px gray ;
+}
+
+.logout-img {
+  width: 15px;
+  height: 16.7px;
+}
+
+.login-img {
+  width: 15px;
+  height: 15px;
+}
+
+.user-options > a {
+  position: relative;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+}
+
+.user-options > a > img {
+  position: absolute;
+  left:10px;
+}
+
+.user-options > a > span {
+  padding-left: 40px;
+} 
 
 .page-content-body {
   margin-bottom: auto;
