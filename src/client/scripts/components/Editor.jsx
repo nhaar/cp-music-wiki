@@ -811,6 +811,8 @@ function SubmitOptions (props) {
       const response = await postJSON('api/update', payload)
       if (response.status === 200) {
         window.alert('Data submitted with success')
+        // remove unsaved changes blocker
+        window.onunload = undefined
         window.location.href = '/Special:Items'
       } else if (response.status === 400) {
         const errors = (await response.json()).errors
