@@ -7,8 +7,7 @@ function EditButton (props) {
     if (isNaN(props.info.id)) {
       window.alert('No item selected!')
     } else {
-      const id = props.info.isStatic ? 0 : props.info.id
-      window.location.href = `/Special:Read?id=${id}`
+      window.location.href = `/Special:Read?id=${props.info.id}`
     }
   }
   return <button className='blue-button' onClick={handleClick}> View </button>

@@ -6,8 +6,7 @@ const { capitalize, matchInside, deepcopy } = require('../misc/server-utils')
 class FrontendBridge {
   constructor () {
     // save variables that will be requested by the frontend
-    this.createPreeditorData()
-    this.createEditorData()
+    this.createPreeditorData().then(() => this.createEditorData())
   }
 
   /**
@@ -15,19 +14,25 @@ class FrontendBridge {
    * which consists of an array of objects where each object
    * contains the class name, the pretty name and if the class is static
    * */
-  createPreeditorData () {
-    this.preeditorData = [];
+  async createPreeditorData () {
+    this.preeditorData = []
 
-    [
+    const elements = [
       ['main', false],
       ['static', true]
-    ].forEach(element => {
-      const [category, isStatic] = element
+    ]
+    for (let i = 0; i < 2; i++) {
+      const [category, isStatic] = elements[i]
+
       const classDefs = clsys.getDefObj(category)
       for (const cls in classDefs) {
-        this.preeditorData.push({ cls, name: classDefs[cls].name, isStatic })
+        const data = { cls, name: classDefs[cls].name, isStatic }
+        if (isStatic) {
+          data.id = (await clsys.selectAllInClass(cls))[0].id
+        }
+        this.preeditorData.push(data)
       }
-    })
+    }
   }
 
   /**
@@ -101,12 +106,8 @@ class FrontendBridge {
   createEditorData () {
     const modelObjects = this.createEditorModels()
     this.editorData = {}
-    this.preeditorData.forEach(async data => {
-      const { cls, isStatic } = data
-      const staticId = isStatic
-        ? (await sql.selectWithColumn('items', 'cls', cls)).id
-        : undefined
-      this.editorData[cls] = { main: modelObjects[cls], staticId }
+    this.preeditorData.forEach(data => {
+      this.editorData[data.cls] = { main: modelObjects[data.cls] }
     })
   }
 
