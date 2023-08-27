@@ -102,3 +102,11 @@
   margin-right: 5px;
   cursor: pointer;
 }
+
+.blue-overlay {
+  background-color: rgba(0, 0, 255, 0.2)
+}
+
+.alternate-layer {
+  background-color: rgba(230, 230, 230);
+}

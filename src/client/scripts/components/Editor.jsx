@@ -14,6 +14,12 @@ import FourArrows from '../../images/four-corner-arrows.png'
 // array modules
 // editor module
 
+function getAlternatingClass (path) {
+  return path.filter(e => typeof e === 'string').length % 2 === 1
+    ? 'alternate-layer'
+    : 'white-bg'
+}
+
 function getSimpleTextModule (Tag, type) {
   return function (props) {
     const getValue = value => value || ''
@@ -98,7 +104,18 @@ function CheckboxModule (props) {
   }
 
   return (
-    <input type='checkbox' checked={value || false} onChange={handleChange} readOnly={!isEditor} />
+    <input
+      type='checkbox'
+      checked={value || false}
+      onChange={handleChange}
+      readOnly={!isEditor}
+      style={{
+        alignSelf: 'center',
+        height: '30px',
+        width: '30px',
+        cursor: 'pointer'
+      }}
+    />
   )
 }
 
@@ -341,8 +358,10 @@ function MoveableRowsModule (props) {
     }
   })
   const [seq, setSeq] = useState(() => props.value ? props.value.length : 0)
+  const [fullscreenPath] = useContext(FullscreenContext)
 
   const [isMoving, setIsMoving] = useState(false)
+  const [currentHover, setCurrentHover] = useState(-1)
   const [originalPos, setOriginalPos] = useState(-1)
   const updateData = useContext(ItemContext)
   const isEditor = useContext(EditorContext)
@@ -378,6 +397,7 @@ function MoveableRowsModule (props) {
     return () => {
       setIsMoving(true)
       setOriginalPos(i)
+      setCurrentHover(i)
     }
   }
 
@@ -395,14 +415,96 @@ function MoveableRowsModule (props) {
     }
   }
 
+  function hoverOver (i) {
+    return () => {
+      if (isMoving) setCurrentHover(i)
+    }
+  }
+
+  const showRowElements = !fullscreenPath || (pathIncludes(fullscreenPath, props.path) && fullscreenPath.length <= props.path.length)
+
   const components = array.map((element, i) => {
     const path = [...props.path, i]
 
     return (
-      <div key={element.id} onMouseUp={finishMove(i)}>
-        <props.component value={element.value} declrs={props.declrs} path={path} />
-        {isEditor && <button onMouseDown={clickMove(i)}> MOVE </button>}
-        {isEditor && <button onClick={deleteRow(i)}> DELETE </button>}
+      <div
+        key={i}
+        style={{
+          position: 'relative',
+          padding: '0 -2px'
+        }}
+        onMouseUp={finishMove(i)} onMouseOver={hoverOver(i)} onMouseOut={() => { setCurrentHover(-1) }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            left: '0',
+            top: '0',
+            zIndex: '100',
+            pointerEvents: 'none'
+          }}
+          className={currentHover === i && isMoving ? 'blue-overlay' : ''}
+        />
+        <div key={element.id}>
+          {showRowElements
+            ? (
+              <div
+                className={getAlternatingClass(props.path)} style={{
+                  border: '1px solid gray',
+                  borderBottom: '0',
+                  display: 'flex',
+                  columnGap: '2px',
+                  padding: '10px',
+                  alignItems: 'center'
+                }}
+              >
+                <span
+                  className='standard-border' style={{
+                    marginLeft: '30px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: 'black',
+                    color: 'white',
+                    padding: '5px',
+                    borderRadius: 0,
+                    boxSizing: 'border-box',
+                    cursor: 'default'
+                  }}
+                > Row #{i + 1}
+                </span>
+                {isEditor && (
+                  <button
+                    className={`blue-button ${isMoving ? 'cursor-grabbing' : 'cursor-grab'}`}
+                    onMouseDown={clickMove(i)}
+                    style={{
+                      borderRadius: '0'
+                    }}
+                  >
+                    MOVE
+                  </button>
+                )}
+
+                {isEditor && (
+                  <button
+                    onClick={deleteRow(i)} className='red-button' style={{
+                      borderRadius: '0'
+                    }}
+                  >
+                    DELETE
+                  </button>
+                )}
+              </div>
+              )
+            : (
+                undefined
+              )}
+
+          <props.component value={element.value} declrs={props.declrs} path={path} />
+
+        </div>
       </div>
     )
   })
@@ -410,8 +512,8 @@ function MoveableRowsModule (props) {
   return (
     <div className='moveable-module'>
       {components}
-      {isEditor && (
-        <button onClick={addRow}>
+      {isEditor && showRowElements && (
+        <button onClick={addRow} className='blue-button'>
           ADD
         </button>
       )}
@@ -444,12 +546,24 @@ function TableModule (props) {
       childValue = getDefault(declr)
     }
 
-    const mainComponent =
-      (<declr.Component value={childValue} component={declr.component} declrs={declr.declrs} path={path} />)
+    const mainComponent = (
+      <declr.Component
+        value={childValue}
+        component={declr.component}
+        declrs={declr.declrs}
+        path={path}
+      />
+    )
+
     if (!fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)) {
       components.push((
-        <div key={i} className='table-row'>
-          <div className='header--container' onClick={clickHeader}>
+        <div
+          key={i} className={`table-row ${getAlternatingClass(props.path)}`}
+        >
+          <div
+            className='header--container'
+            onClick={clickHeader}
+          >
             <div className='header--title'>{declr.header}</div>
             <img src={FourArrows} className='four-arrows' onClick={clickHeader(path)} />
             <img src={QuestionMark} className='question-mark' title={declr.desc} />
@@ -461,7 +575,6 @@ function TableModule (props) {
       components.push((
         <div>
           {mainComponent}
-
         </div>
       ))
     }

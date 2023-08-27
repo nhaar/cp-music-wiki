@@ -391,3 +391,20 @@ input:focus {
   color: black;
   text-align: right;
 }
+
+.standard-border {
+  border: 1px solid gray;
+  border-radius: 2px;
+}
+
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
+}
+
+.white-bg {
+  background-color: white;
+}
