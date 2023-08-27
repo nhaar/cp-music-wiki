@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import '../../stylesheets/page.css'
 import Menu from '../../images/menu.png'
@@ -56,6 +56,34 @@ function UserArea (props) {
   function toggleOptions () {
     setShowOptions(!showOptions)
   }
+
+  function isChild (posChild, posParent) {
+    let transverser = posChild
+    while (transverser.parentElement) {
+      console.log(transverser.parentElement, posParent)
+      if (transverser.parentElement === posParent) return true
+      transverser = transverser.parentElement
+    }
+    return false
+  }
+
+  useEffect(() => {
+    window.addEventListener('click', e => {
+      const parentSelectors = [
+        '.user-options',
+        '.user-imgs',
+        '.ellipsis-img'
+      ]
+
+      let valid = false
+      parentSelectors.forEach(selector => {
+        const element = document.querySelector(selector)
+        if (e.target === element || isChild(e.target, element)) valid = true
+      })
+
+      if (!valid) setShowOptions(false)
+    })
+  }, [])
 
   const Element = props.user
     ? (
