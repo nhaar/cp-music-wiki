@@ -18,7 +18,8 @@
     "nodemailer": "^6.9.4",
     "pg": "^8.11.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "validator": "^13.11.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.22.10",

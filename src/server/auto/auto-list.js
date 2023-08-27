@@ -11,6 +11,7 @@ module.exports = [
   'Undelete',
   'UserLogin',
   'Category',
+  'CreateAccount',
   'gens/OstGen',
   'gens/SongGen',
   'gens/DisambigGen'

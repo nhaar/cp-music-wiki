@@ -77,6 +77,8 @@ router.get('/:value', async (req, res) => {
     } else if (value === 'UserLogout') {
       await user.disconnectUser(getToken(req))
       res.status(302).redirect('/')
+    } else if (value === 'CreateAccount') {
+      res.status(200).send(await getView(req, value, 'Create an account'))
     } else if (value === 'RecentChanges') {
       res.status(200).send(await getView(req, value, 'Recent Changes'))
     } else if (value === 'FileUpload') {

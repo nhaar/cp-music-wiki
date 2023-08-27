@@ -60,7 +60,6 @@ function UserArea (props) {
   function isChild (posChild, posParent) {
     let transverser = posChild
     while (transverser.parentElement) {
-      console.log(transverser.parentElement, posParent)
       if (transverser.parentElement === posParent) return true
       transverser = transverser.parentElement
     }
@@ -107,7 +106,7 @@ function UserArea (props) {
       )
     : (
       <div>
-        <a>Create an account</a>
+        <a href='/Special:CreateAccount'>Create an account</a>
         <img className='ellipsis-img icon-img' src={Ellipsis} onClick={toggleOptions} />
         {showOptions
           ? (

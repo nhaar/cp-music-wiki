@@ -1,0 +1,24 @@
+.create--container {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+}
+
+.create--input-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.create--container > div {
+  margin-bottom: 30px;
+}
+
+.create--warnings {
+  display: flex;
+  flex-direction: column;
+}
+
+.create--warning {
+  font-size: 14px;
+  color: red;
+}

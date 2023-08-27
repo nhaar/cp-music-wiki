@@ -60,6 +60,20 @@ router.post('/update', checkAdmin, checkItem, async (req, res) => {
   } else sendBadReqJSON(res, { errors: validationErrors })
 })
 
+router.post('/check-username', async (req, res) => {
+  const { name } = req.body
+  res.status(200).send({ taken: await user.isNameTaken(name) })
+})
+
+router.post('/create-account', async (req, res) => {
+  const { name, password, email } = req.body
+  const isValid = await user.canCreate(name, password, email)
+  if (isValid) {
+    user.createAccount(name, password, email, req.ip)
+    res.sendStatus(200)
+  } else res.sendStatus(400)
+})
+
 // middleware for receiving the music file
 const upload = multer({ dest: path.join(__dirname, '../../client/music/') })
 

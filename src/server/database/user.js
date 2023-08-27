@@ -1,4 +1,6 @@
 const sql = require('./sql-handler')
+const validator = require('validator')
+const { MIN_PASSWORD_LENGTH } = require('../misc/common-utils')
 
 const crypto = require('crypto')
 
@@ -12,7 +14,7 @@ class UserHandler {
         id SERIAL PRIMARY KEY,
         name TEXT,
         user_password TEXT,
-        display_name TEXT,
+        email TEXT,
         session_token TEXT,
         created_timestamp NUMERIC,
         perms TEXT
@@ -97,9 +99,9 @@ class UserHandler {
    * @param {string} password - Password of the account
    * @param {string} display - The display name of the account
    */
-  async createAccount (name, password, display, ip) {
+  async createAccount (name, password, email, ip) {
     const hash = this.getHash(password)
-    await sql.insert('wiki_users', 'name, user_password, display_name, created_timestamp, perms', [name, hash, display, Date.now(), 'user'])
+    await sql.insert('wiki_users', 'name, user_password, email, created_timestamp, perms', [name, hash, email, Date.now(), 'user'])
     const id = await sql.getBiggestSerial('wiki_users')
     await this.insertIp(id, ip)
   }
@@ -122,6 +124,22 @@ class UserHandler {
   async disconnectUser (session) {
     const id = await this.getUserId(session)
     await sql.updateById('wiki_users', 'session_token', [''], id)
+  }
+
+  async isNameTaken (name) {
+    return (await sql.selectWithColumn('wiki_users', 'name', name)).length !== 0
+  }
+
+  async canCreate (name, password, email) {
+    return (
+      typeof name === 'string' &&
+      typeof password === 'string' &&
+      typeof email === 'string' &&
+      !await this.isNameTaken(name) &&
+      name !== '' &&
+      password.length >= MIN_PASSWORD_LENGTH &&
+      validator.isEmail(email)
+    )
   }
 }
 

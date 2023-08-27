@@ -15,4 +15,6 @@ function formatCookies (str) {
   return cookies
 }
 
-module.exports = { getName, formatCookies }
+const MIN_PASSWORD_LENGTH = 8
+
+module.exports = { getName, formatCookies, MIN_PASSWORD_LENGTH }
