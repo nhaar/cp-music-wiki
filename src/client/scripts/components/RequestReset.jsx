@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import '../../stylesheets/reset-pass.css'
 import { postJSON } from '../client-utils'
 
 export default function RequestReset () {
@@ -12,7 +11,12 @@ export default function RequestReset () {
   }
 
   return (
-    <div className='flex-column reset--container'>
+    <div
+      className='flex-column' style={{
+        width: '500px',
+        rowGap: '20px'
+      }}
+    >
       <div> We will send an email with the instructions to reset your password </div>
       <div className='flex-column'>
         <span>Account name</span>

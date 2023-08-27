@@ -144,6 +144,7 @@ function Sidebar (props) {
       <a href='/'> Main Page </a>
       <a href='/Special:RecentChanges'> Recent Changes </a>
       <a href='/Special:Items'> Item browser </a>
+      <a href='/Special:Random'> Random page </a>
     </div>
   )
 }

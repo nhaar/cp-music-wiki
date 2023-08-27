@@ -94,6 +94,9 @@ router.get('/:value', async (req, res) => {
       res.status(200).send(await getView(req, value, 'Recent Changes'))
     } else if (value === 'FileUpload') {
       res.status(200).send(await getView(req, value, 'Upload a file'))
+    } else if (value === 'Random') {
+      const name = await gens.getRandomName()
+      res.status(302).redirect(`/${name}`)
     } else if (value === 'Diff') {
       const { cur, old } = req.query
       const view = await getDiffView(cur, old, req)

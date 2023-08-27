@@ -76,5 +76,9 @@ module.exports = {
     const { cookie } = req.headers
     const match = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
     return match && match[0]
+  },
+
+  getRandomInt (a, b) {
+    return Math.floor(Math.random() * (b - a)) + a
   }
 }

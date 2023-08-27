@@ -1,4 +1,5 @@
 const sql = require('../database/sql-handler')
+const { getRandomInt } = require('../misc/server-utils')
 
 class ListGen {
   constructor () {
@@ -15,6 +16,11 @@ class ListGen {
       names.push(...(await this.lists[i].getter()))
     }
     return names
+  }
+
+  async getRandomName () {
+    const names = await this.getAllNames()
+    return names[getRandomInt(0, names.length)]
   }
 
   async findName (name) {
