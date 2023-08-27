@@ -118,6 +118,11 @@ class UserHandler {
       return false
     }
   }
+
+  async disconnectUser (session) {
+    const id = await this.getUserId(session)
+    await sql.updateById('wiki_users', 'session_token', [''], id)
+  }
 }
 
 module.exports = new UserHandler()
