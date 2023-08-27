@@ -6,6 +6,11 @@
   --top-distance: calc(var(--top-bar-height) + 2 * var(--top-bar-padding));
 }
 
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
 .header {
   display: flex;
   height: 50px;

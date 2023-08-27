@@ -42,6 +42,7 @@ export default function UserLogin () {
         <span>Password</span>
         <input type='password' placeholder='Enter your password' onChange={change('password')} />
       </div>
+      <a href='/Special:ResetPassword'>Reset password</a>
       <button className='blue-button' onClick={click}>
         Log in
       </button>

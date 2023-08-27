@@ -74,6 +74,18 @@ router.post('/create-account', async (req, res) => {
   } else res.sendStatus(400)
 })
 
+router.post('/send-reset-req', async (req, res) => {
+  const { name } = req.body
+  user.sendResetPassEmail(name)
+  res.sendStatus(200)
+})
+
+router.post('/reset-password', (req, res) => {
+  const { token, password } = req.body
+  user.resetPassword(token, password)
+  res.sendStatus(200)
+})
+
 // middleware for receiving the music file
 const upload = multer({ dest: path.join(__dirname, '../../client/music/') })
 

@@ -1,6 +1,8 @@
 const sql = require('./sql-handler')
 const validator = require('validator')
 const { MIN_PASSWORD_LENGTH } = require('../misc/common-utils')
+const mailer = require('../misc/email')
+const { URL } = require('../../../config')
 
 const crypto = require('crypto')
 
@@ -25,6 +27,14 @@ class UserHandler {
       user_ip (
         user_id INT,
         ip TEXT
+      )
+    `)
+
+    sql.create(`
+      pass_reset_link (
+        user_id INT,
+        link TEXT,
+        expiration_timestamp NUMERIC
       )
     `)
   }
@@ -140,6 +150,43 @@ class UserHandler {
       password.length >= MIN_PASSWORD_LENGTH &&
       validator.isEmail(email)
     )
+  }
+
+  async sendResetPassEmail (username) {
+    const row = (await sql.selectWithColumn('wiki_users', 'name', username))[0]
+    const expirationTime = 15 // in minutes
+    if (row) {
+      const linkToken = this.generateToken()
+      sql.insert('pass_reset_link', 'user_id, link, expiration_timestamp', [
+        row.id, linkToken, Date.now() + expirationTime * 60000 // convert to ms
+      ])
+
+      await mailer.sendEmail(row.email, 'Change your Club Penguin Music Wiki password', `
+Someone requested a password reset for your account.
+
+If this was you, you can reset your password via the following link
+${URL}Special:ResetPassword?t=${linkToken}
+      `)
+    }
+  }
+
+  async resetLinkIsValid (token) {
+    return Boolean(await this.getResetLink(token))
+  }
+
+  async resetPassword (token, newPass) {
+    const row = await this.getResetLink(token)
+    if (row) {
+      await sql.updateById('wiki_users', 'user_password', [this.getHash(newPass)], row.user_id)
+    }
+  }
+
+  async getResetLink (token) {
+    return (await sql.selectGreaterAndEqual(
+      'pass_reset_link',
+      'expiration_timestamp', Date.now(),
+      'link', [token]
+    ))[0]
   }
 }
 

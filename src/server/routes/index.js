@@ -74,6 +74,17 @@ router.get('/:value', async (req, res) => {
 
     if (value === 'UserLogin') {
       res.status(200).send(await getView(req, value, 'Log In'))
+    } else if (value === 'ResetPassword') {
+      const { t } = req.query
+      if (t) {
+        if (await user.resetLinkIsValid(t)) {
+          res.status(200).send(await getView(req, value, 'Reset password', t))
+        } else {
+          res.sendStatus(400)
+        }
+      } else {
+        res.status(200).send(await getView(req, 'RequestReset', 'Request password reset'))
+      }
     } else if (value === 'UserLogout') {
       await user.disconnectUser(getToken(req))
       res.status(302).redirect('/')

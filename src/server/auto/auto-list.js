@@ -12,6 +12,8 @@ module.exports = [
   'UserLogin',
   'Category',
   'CreateAccount',
+  'ResetPassword',
+  'RequestReset',
   'gens/OstGen',
   'gens/SongGen',
   'gens/DisambigGen'

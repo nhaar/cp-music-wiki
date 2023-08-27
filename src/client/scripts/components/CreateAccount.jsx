@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import '../../stylesheets/create-acc.css'
-import { postAndGetJSON, postJSON } from '../client-utils'
+import { postAndGetJSON, postJSON, setNthValue } from '../client-utils'
+import { createWarning } from '../react-utils'
 const validator = require('validator')
 const { MIN_PASSWORD_LENGTH } = require('../../../server/misc/common-utils')
 
@@ -16,17 +17,9 @@ export default function CreateAccount () {
   const [values, setValues] = useState(inputs.map(() => ''))
   const [takenName, setTakenName] = useState(false)
 
-  function setNthValue (n, value) {
-    setValues(v => {
-      const newV = [...v]
-      newV[n] = value
-      return newV
-    })
-  }
-
   function handleChange (i) {
     return e => {
-      setNthValue(i, e.target.value)
+      setNthValue(i, e.target.value, setValues)
     }
   }
 
@@ -44,14 +37,6 @@ export default function CreateAccount () {
   const emailMatches = values[3] === values[4]
   const validEmail = validator.isEmail(values[3])
   const valid = passwordMatches && emailMatches && !smallPassword && validEmail && !emptyName && !takenName
-
-  function createWarning (doesMatch, text, i) {
-    return doesMatch
-      ? undefined
-      : (
-        <span key={i} className='create--warning'>* {text} </span>
-        )
-  }
 
   async function handleClick () {
     await postJSON('api/create-account', {

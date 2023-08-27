@@ -89,3 +89,11 @@ export function getMonthName (month) {
     'July', 'August', 'September', 'October', 'November', 'December'
   ][month - 1]
 }
+
+export function setNthValue (n, value, setValues) {
+  setValues(v => {
+    const newV = [...v]
+    newV[n] = value
+    return newV
+  })
+}
