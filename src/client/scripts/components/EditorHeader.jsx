@@ -61,7 +61,17 @@ export default function EditorHeader (props) {
     }
   } else if (!props.id) {
     // creating page
-    components.splice(1, 5)
+    components.splice(0, components.length)
+    components[0] = [
+      (
+        <div
+          key={0} onClick={() => window.location.href = `/Special:Editor?n=${props.n}`}
+          className='header-setting-cur'
+        >
+          Create
+        </div>
+      )
+    ]
   } else if (props.deleted) {
     components.splice(1, 1)
   }

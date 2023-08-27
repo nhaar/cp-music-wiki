@@ -773,7 +773,7 @@ export default function Editor (props) {
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.editorData.isStatic} id={props.arg.row.id} name={name} cls={props.arg.editorData.cls} deleted={props.arg.isDeleted} predefined={props.arg.row.predefined} />
+      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.editorData.isStatic} id={props.arg.row.id} name={name} cls={props.arg.editorData.cls} deleted={props.arg.isDeleted} predefined={props.arg.row.predefined} n={props.arg.n} />
       <EditorDataContext.Provider value={props.arg.editorData}>
         <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
           <EditorContext.Provider value={isEditor}>

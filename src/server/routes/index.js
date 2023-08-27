@@ -131,7 +131,7 @@ router.get('/:value', async (req, res) => {
           const args = value === 'Editor'
             ? ['Editor', 'Editor']
             : ['ReadItem', 'Read']
-          res.status(200).send(await getView(req, ...args, { editorData: bridge.editorData[row.cls], row, isDeleted }))
+          res.status(200).send(await getView(req, ...args, { editorData: bridge.editorData[row.cls], row, isDeleted, n }))
         }
       }
     } else {
