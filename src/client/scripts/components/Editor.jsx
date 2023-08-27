@@ -785,7 +785,7 @@ export default function Editor (props) {
           </EditorContext.Provider>
         </FullscreenContext.Provider>
       </EditorDataContext.Provider>
-      {isEditor && <SubmitOptions row={props.arg.row} cls={props.arg.editorData.cls} data={data} />}
+      {isEditor && <SubmitOptions row={props.arg.row} cls={props.arg.editorData.cls} data={data} unsaved={hasUnsaved} />}
     </div>
   )
 }
@@ -798,28 +798,32 @@ function SubmitOptions (props) {
   }
 
   async function submitData () {
-    if (window.confirm('Submit data?')) {
-      const row = { ...props.row }
-      row.data = props.data
-      const token = getCookies().session
-      const payload = {
-        cls: props.cls,
-        row,
-        token,
-        isMinor
+    if (props.unsaved !== false) {
+      if (window.confirm('Submit data?')) {
+        const row = { ...props.row }
+        row.data = props.data
+        const token = getCookies().session
+        const payload = {
+          cls: props.cls,
+          row,
+          token,
+          isMinor
+        }
+        const response = await postJSON('api/update', payload)
+        if (response.status === 200) {
+          window.alert('Data submitted with success')
+          // remove unsaved changes blocker
+          window.onbeforeunload = undefined
+          window.location.href = '/Special:Items'
+        } else if (response.status === 400) {
+          const errors = (await response.json()).errors
+          window.alert(`There is a mistake in your submission\n${errors}`)
+        } else if (response.status === 403) {
+          window.alert("You don't have permission to do that")
+        }
       }
-      const response = await postJSON('api/update', payload)
-      if (response.status === 200) {
-        window.alert('Data submitted with success')
-        // remove unsaved changes blocker
-        window.onunload = undefined
-        window.location.href = '/Special:Items'
-      } else if (response.status === 400) {
-        const errors = (await response.json()).errors
-        window.alert(`There is a mistake in your submission\n${errors}`)
-      } else if (response.status === 403) {
-        window.alert("You don't have permission to do that")
-      }
+    } else {
+      window.alert("You haven't done any changes to this item")
     }
   }
 

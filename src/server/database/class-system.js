@@ -1,4 +1,4 @@
-const { removeBraces, matchGroup, deepcopy } = require('../misc/server-utils')
+const { removeBraces, matchGroup, deepcopy, compareObjects } = require('../misc/server-utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
 const predef = require('./predefined')
@@ -594,6 +594,11 @@ class ClassSystem {
 
   isMajorClass (cls) {
     return this.isStaticClass(cls) || this.isMainClass(cls)
+  }
+
+  async didDataChange (id, data) {
+    const old = (await this.getItem(id)).data
+    return !compareObjects(old, data)
   }
 }
 

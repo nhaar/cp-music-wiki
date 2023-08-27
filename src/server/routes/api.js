@@ -48,16 +48,20 @@ router.post('/get', checkId, async (req, res) => {
 router.post('/update', checkAdmin, checkItem, async (req, res) => {
   const { row, isMinor } = req.body
 
-  const token = getToken(req)
-
-  const { data, cls } = row
-  const validationErrors = clsys.validate(cls, data)
-  if (validationErrors.length === 0) {
-    await rev.addChange(row, token, isMinor)
-    clsys.updateItem(row)
-    // gen.updateLists()
-    res.sendStatus(200)
-  } else sendBadReqJSON(res, { errors: validationErrors })
+  const changed = await clsys.didDataChange(row.id, row.data)
+  if (changed) {
+    const token = getToken(req)
+    const { data, cls } = row
+    const validationErrors = clsys.validate(cls, data)
+    if (validationErrors.length === 0) {
+      await rev.addChange(row, token, isMinor)
+      clsys.updateItem(row)
+      // gen.updateLists()
+      res.sendStatus(200)
+    } else sendBadReqJSON(res, { errors: validationErrors })
+  } else {
+    res.sendStatus(400)
+  }
 })
 
 router.post('/check-username', async (req, res) => {
