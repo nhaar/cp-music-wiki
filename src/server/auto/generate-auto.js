@@ -11,6 +11,6 @@ list.forEach((component, i) => {
 
     import { createRoot } from 'react-dom/client'
 
-    createRoot(document.getElementById('root')).render(<Main content={Content} title={window.title} arg={window.arg} />)
+    createRoot(document.getElementById('root')).render(<Main content={Content} title={window.title} arg={window.arg} user={window.user} />)
   `)
 })

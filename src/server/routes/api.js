@@ -11,6 +11,7 @@ const rev = require('../database/revisions')
 const clsys = require('../database/class-system')
 const del = require('../database/deletions')
 const gen = require('../gens/gen-list')
+const { getToken } = require('../misc/server-utils')
 
 // const Gen = require('../misc/lists')
 // const gen = new Gen()
@@ -42,12 +43,6 @@ router.post('/get', checkId, async (req, res) => {
     sendNotFound(res, 'Item not found in the database')
   }
 })
-
-function getToken (req) {
-  const { cookie } = req.headers
-  const match = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
-  return match && match[0]
-}
 
 // update a data type
 router.post('/update', checkAdmin, checkItem, async (req, res) => {

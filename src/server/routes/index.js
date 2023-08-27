@@ -10,11 +10,13 @@ const clsys = require('../database/class-system')
 const user = require('../database/user')
 const del = require('../database/deletions')
 const gens = require('../gens/gen-list')
+const { getToken } = require('../misc/server-utils')
 
-function getView (scriptName, title, arg) {
+async function getView (req, scriptName, title, arg) {
+  const userData = await user.checkUser(getToken(req))
   const scriptTag = `
     <script>
-    ${[['title', title], ['arg', arg]].map(entry => {
+    ${[['title', title], ['arg', arg], ['user', userData]].map(entry => {
         let value = entry[1]
         const type = typeof value
         if (type === 'object') value = JSON.stringify(value)
@@ -52,15 +54,15 @@ function getView (scriptName, title, arg) {
 // homepage
 router.get('/', async (req, res) => {
   const text = (await clsys.selectAllInClass('main_page'))[0].data.text
-  res.send(getView('MainPage', 'Main Page', text || ''))
+  res.send(await getView(req, 'MainPage', 'Main Page', text || ''))
 })
 
-async function getDiffView (cur, old) {
+async function getDiffView (cur, old, req) {
   const curData = await rev.getRevisionData(Number(cur))
   const oldData = await rev.getRevisionData(Number(old))
   const diff = rev.getRevDiff(oldData, curData)
 
-  return getView('Diff', 'Difference between revisions', diff)
+  return await getView(req, 'Diff', 'Difference between revisions', diff)
 }
 
 router.get('/:value', async (req, res) => {
@@ -71,17 +73,17 @@ router.get('/:value', async (req, res) => {
     value = specialMatch[0]
 
     if (value === 'UserLogin') {
-      res.status(200).send(getView(value, 'Log In'))
+      res.status(200).send(await getView(req, value, 'Log In'))
     } else if (value === 'RecentChanges') {
-      res.status(200).send(getView(value, 'Recent Changes'))
+      res.status(200).send(await getView(req, value, 'Recent Changes'))
     } else if (value === 'FileUpload') {
-      res.status(200).send(getView(value, 'Upload a file'))
+      res.status(200).send(await getView(req, value, 'Upload a file'))
     } else if (value === 'Diff') {
       const { cur, old } = req.query
-      const view = await getDiffView(cur, old)
+      const view = await getDiffView(cur, old, req)
       res.status(200).send(view)
     } else if (value === 'Items') {
-      res.status(200).send(getView('PreEditor', 'Item browser', bridge.preeditorData))
+      res.status(200).send(await getView(req, 'PreEditor', 'Item browser', bridge.preeditorData))
     } else if (value === 'Editor' || value === 'Read' || value === 'Delete' || value === 'Undelete') {
       const { id, n } = req.query
       const cls = n && bridge.preeditorData[n].cls
@@ -103,14 +105,14 @@ router.get('/:value', async (req, res) => {
         res.sendStatus(403)
       } else {
         if (value === 'Undelete') {
-          res.send(getView(value, 'Undelete item', id))
+          res.send(await getView(req, value, 'Undelete item', id))
         } else if (value === 'Delete') {
-          res.status(200).send(getView(value, 'Delete item', { deleteData: (await bridge.getDeleteData(Number(id))), row }))
+          res.status(200).send(await getView(req, value, 'Delete item', { deleteData: (await bridge.getDeleteData(Number(id))), row }))
         } else {
           const args = value === 'Editor'
             ? ['Editor', 'Editor']
             : ['ReadItem', 'Read']
-          res.status(200).send(getView(...args, { editorData: bridge.editorData[row.cls], row, isDeleted }))
+          res.status(200).send(await getView(req, ...args, { editorData: bridge.editorData[row.cls], row, isDeleted }))
         }
       }
     } else {
@@ -120,14 +122,14 @@ router.get('/:value', async (req, res) => {
     value = categoryMatch[0]
     const cur = req.query.cur || 1
     const pages = await gens.getPagesInCategory(value)
-    res.status(200).send(getView('Category', `Pages in category \\"${value}\\"`, { pages, cur, name: value }))
+    res.status(200).send(await getView(req, 'Category', `Pages in category \\"${value}\\"`, { pages, cur, name: value }))
   } else {
     value = converUrlToName(value)
     const gen = await gens.findName(value)
     if (gen) {
       // const data = await gen.parser(value)
       const data = await gens.parseWithCategoryNames(gen.parser, value)
-      res.status(200).send(getView(`gens/${gen.file}`, value, { name: value, data }))
+      res.status(200).send(await getView(req, `gens/${gen.file}`, value, { name: value, data }))
     } else {
       res.sendStatus(404)
     }

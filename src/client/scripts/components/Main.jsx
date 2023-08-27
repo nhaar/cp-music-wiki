@@ -5,6 +5,8 @@ import Menu from '../../images/menu.png'
 import Arrow from '../../images/double-arrow.png'
 import Search from '../../images/search.png'
 import Ellipsis from '../../images/ellipsis-h.png'
+import UserIcon from '../../images/user-icon.png'
+import ArrowDown from '../../images/arrow-down.png'
 import { getCookies, postAndGetJSON } from '../client-utils'
 import SearchQuery from './SearchQuery'
 
@@ -46,15 +48,22 @@ function Searchbar () {
   )
 }
 
-function UserArea () {
-  const { username } = getCookies()
-
-  const Element = username
-    ? <a href='/'> {username} </a>
+function UserArea (props) {
+  const Element = props.user
+    ? (
+      <div>
+        <a href='/'> {props.user.user} </a>
+        <div className='user-imgs'>
+          <img src={UserIcon} className='user-icon' />
+          <img src={ArrowDown} className='user-arrow' />
+        </div>
+      </div>
+      )
     : (
-      <a href='/Special:UserLogin'>
+      <div>
+        <a>Create an account</a>
         <img className='ellipsis-img icon-img' src={Ellipsis} />
-      </a>
+      </div>
       )
 
   return (
@@ -69,7 +78,7 @@ function Header (props) {
     <div className='header'>
       <HeaderAside props={{ ...props }} />
       <Searchbar />
-      <UserArea />
+      <UserArea user={props.user} />
     </div>
   )
 }
@@ -145,7 +154,7 @@ export default function Main (props) {
 
   return (
     <div>
-      <Header swapSidebar={swapSidebar} sidebar={sidebar} />
+      <Header swapSidebar={swapSidebar} sidebar={sidebar} user={props.user} />
       <Middle content={props.content} arg={props.arg} sidebar={sidebar} title={props.title} />
       <Footer />
     </div>

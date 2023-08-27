@@ -151,6 +151,9 @@ body {
   margin-right: auto;
 }
 
+img {
+  user-select: none;
+}
 
 .searchbar > img {
   position: absolute;
@@ -193,6 +196,12 @@ input:focus {
   align-self: center;
 }
 
+.user-area > div {
+  display: flex;
+  align-items: center;
+  column-gap: 20px;
+}
+
 .page-content-body {
   margin-bottom: auto;
 }
@@ -211,6 +220,32 @@ input:focus {
 
 .category--links > a {
   border-left: 1px solid gray;
+}
+
+.user-imgs {
+  display: flex;
+  position: relative;
+  padding: 10px;
+  align-items: center;
+}
+
+.user-imgs:hover {
+  background-color: #f7f7f7;
+  cursor: pointer;
+}
+
+.user-icon {
+  width: 20px;
+  height: auto;
+  right: 20px;
+  margin-right: 5px;
+}
+
+.user-arrow {
+  top: 50%;
+  width: 10px;
+  height: 5.46px;
+  right: 0px;
 }
 
 .category--links > a:first-child {

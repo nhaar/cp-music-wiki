@@ -107,6 +107,17 @@ class UserHandler {
   async insertIp (user, ip) {
     await sql.insert('user_ip', 'user_id, ip', [user, this.getHash(ip)])
   }
+
+  async checkUser (session) {
+    const row = (await sql.selectWithColumn('wiki_users', 'session_token', session))[0]
+    if (row) {
+      return {
+        user: row.name
+      }
+    } else {
+      return false
+    }
+  }
 }
 
 module.exports = new UserHandler()

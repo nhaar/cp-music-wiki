@@ -69,4 +69,10 @@ function matchInside (str, lChar, rChar) {
   return str.match(`(?<=${lChar}).*(?=${rChar})`)
 }
 
-module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces, capitalize, createDirectoryIfNotExists, matchInside }
+function getToken (req) {
+  const { cookie } = req.headers
+  const match = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
+  return match && match[0]
+}
+
+module.exports = { compareObjects, deepcopy, groupPatterns, matchGroup, removeBraces, capitalize, createDirectoryIfNotExists, matchInside, getToken }
