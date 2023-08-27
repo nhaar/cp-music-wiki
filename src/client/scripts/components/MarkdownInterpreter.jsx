@@ -29,7 +29,7 @@ export default function MarkdownInterpreter (props) {
     })
 
     return (
-      <block.type key={i}>
+      <block.type key={i} className={block.type === 'h2' ? 'md-h2 md-h' : ''}>
         {subcomponents}
       </block.type>
     )
@@ -41,34 +41,3 @@ export default function MarkdownInterpreter (props) {
     </div>
   )
 }
-
-/*
-output of lexer:
-
-*** start here
-===
-Hello World!
-===
-Welcome to the Club Penguin Music Wiki!
-
-SIKE! this is just a freaking DEV VERSION MWAHAHAHAH
-
-the only freaking page that exists is
-[[
-King of Kingston
-]]
-for some reason
-
-visit
-[
-url
-this for an actual decent wiki engine LMAO
-]
-
-now I'm gonna go by
-
-==
-header here for some unknown reason
-==
-I said BYE
-*/
