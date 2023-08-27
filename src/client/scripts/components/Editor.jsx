@@ -6,10 +6,12 @@ import { getCookies, postAndGetJSON, postJSON } from '../client-utils'
 import { ItemContext } from '../contexts/ItemContext'
 import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
+import Focus from '../../images/anti-fullscreen.png'
 import EditorHeader from './EditorHeader'
 import { getName } from '../../../server/misc/common-utils'
 import { FullscreenContext } from '../contexts/FullscreenContext'
-import FourArrows from '../../images/four-corner-arrows.png'
+import Unfocus from '../../images/four-corner-arrows.png'
+import { EditorDataContext } from '../contexts/EditorDataContext'
 // element modules
 // array modules
 // editor module
@@ -535,6 +537,7 @@ function getDefault (props) {
 
 function TableModule (props) {
   const [fullscreenPath, setFullscreenPath] = useContext(FullscreenContext)
+  const editorData = useContext(EditorDataContext)
 
   const components = []
   props.declrs.forEach((declr, i) => {
@@ -554,17 +557,112 @@ function TableModule (props) {
       />
     )
 
+    // add path displayer if at the exact start
+    if (fullscreenPath && pathIncludes(fullscreenPath, path) && fullscreenPath.length === path.length) {
+      let main = editorData.main
+      const prettyPath = []
+
+      path.forEach(step => {
+        if (typeof step === 'number') {
+          prettyPath.push(`Row #${step + 1}`)
+        } else {
+          prettyPath.push(main[step][1])
+          main = main[step][0]
+          if (Array.isArray(main)) main = main[0]
+        }
+      })
+
+      components.push((
+        <div
+          key={i}
+          className='standard-border' style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px',
+            marginBottom: '10px',
+            userSelect: 'none'
+          }}
+        >
+          <img
+            src={Unfocus} style={{
+              width: '20px',
+              height: '20px',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+            onClick={() => setFullscreenPath(undefined)}
+          />
+          <div style={{
+            color: 'gray',
+            fontSize: '10px'
+          }}
+          >
+            Exit focus mode
+          </div>
+        </div>
+      ))
+      components.push((
+        <div
+          key={`-${i}`}
+          className='standard-border flex-column' style={{
+            fontStyle: 'italic',
+            padding: '10px',
+            marginBottom: '10px'
+          }}
+        >
+          <div style={{
+            borderBottom: '1px solid gray',
+            paddingBottom: '10px',
+            marginBottom: '10px'
+          }}
+          >
+            Focused on the path
+          </div>
+          <div style={{
+            display: 'flex'
+          }}
+          >
+
+            {prettyPath.map((step, i) => (
+              <div
+                key={i} style={{
+                  display: 'flex'
+                }}
+              >
+                <div style={{
+                  marginRight: '20px'
+                }}
+                >
+                  {step}
+                </div>
+
+                {i < prettyPath.length - 1
+                  ? (
+                    <span style={{
+                      marginRight: '20px'
+                    }}
+                    >=&#62;
+                    </span>
+                    )
+                  : ''}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))
+    }
+
     if (!fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)) {
       components.push((
         <div
-          key={i} className={`table-row ${getAlternatingClass(props.path)}`}
+          key={`+${i}`} className={`table-row ${getAlternatingClass(props.path)}`}
         >
           <div
             className='header--container'
             onClick={clickHeader}
           >
             <div className='header--title'>{declr.header}</div>
-            <img src={FourArrows} className='four-arrows' onClick={clickHeader(path)} />
+            {!fullscreenPath && <img src={Focus} className='four-arrows' onClick={clickHeader(path)} />}
             <img src={QuestionMark} className='question-mark' title={declr.desc} />
           </div>
           {mainComponent}
@@ -572,7 +670,7 @@ function TableModule (props) {
       ))
     } else if ((fullscreenPath && pathIncludes(fullscreenPath, path))) {
       components.push((
-        <div>
+        <div key={i}>
           {mainComponent}
         </div>
       ))
@@ -676,15 +774,17 @@ export default function Editor (props) {
   return (
     <div className='editor--container'>
       <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.editorData.isStatic} id={props.arg.row.id} name={name} cls={props.arg.editorData.cls} deleted={props.arg.isDeleted} predefined={props.arg.row.predefined} />
-      <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
-        <EditorContext.Provider value={isEditor}>
-          <ItemContext.Provider value={updateData}>
-            <div className='editor'>
-              <TableModule declrs={declrs} value={data} path={[]} />
-            </div>
-          </ItemContext.Provider>
-        </EditorContext.Provider>
-      </FullscreenContext.Provider>
+      <EditorDataContext.Provider value={props.arg.editorData}>
+        <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
+          <EditorContext.Provider value={isEditor}>
+            <ItemContext.Provider value={updateData}>
+              <div className='editor'>
+                <TableModule declrs={declrs} value={data} path={[]} />
+              </div>
+            </ItemContext.Provider>
+          </EditorContext.Provider>
+        </FullscreenContext.Provider>
+      </EditorDataContext.Provider>
       {isEditor && <SubmitOptions row={props.arg.row} cls={props.arg.editorData.cls} data={data} />}
     </div>
   )
@@ -722,7 +822,6 @@ function SubmitOptions (props) {
   }
 
   return (
-
     <div className='submit--container'>
       <div className='submit--summary'>
         <span>Summary:</span>
@@ -764,6 +863,5 @@ function pathIncludes (fullPath, curPath) {
     }
   }
 
-  console.log('success')
   return true
 }
