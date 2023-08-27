@@ -14,7 +14,8 @@ class UserHandler {
         user_password TEXT,
         display_name TEXT,
         session_token TEXT,
-        created_timestamp NUMERIC
+        created_timestamp NUMERIC,
+        perms TEXT
       )
     `)
 
@@ -41,9 +42,8 @@ class UserHandler {
    * @returns {boolean} True if is an admin
    */
   async isAdmin (session) {
-    // currently every user is admin so just check for existence of account
     const account = (await sql.selectWithColumn('wiki_users', 'session_token', session))[0]
-    return Boolean(account)
+    return account.perms === 'admin'
   }
 
   getToken (req) {
@@ -86,7 +86,6 @@ class UserHandler {
       const previousIps = (await sql.selectWithColumn('user_ip', 'user_id', internalData.id))
         .map(row => row.ip)
 
-      console.log(previousIps)
       if (!previousIps.includes(this.getHash(ip))) await this.insertIp(internalData.id, ip)
       return sessionToken
     }
@@ -100,7 +99,7 @@ class UserHandler {
    */
   async createAccount (name, password, display, ip) {
     const hash = this.getHash(password)
-    await sql.insert('wiki_users', 'name, user_password, display_name, created_timestamp', [name, hash, display, Date.now()])
+    await sql.insert('wiki_users', 'name, user_password, display_name, created_timestamp, perms', [name, hash, display, Date.now(), 'user'])
     const id = await sql.getBiggestSerial('wiki_users')
     await this.insertIp(id, ip)
   }
