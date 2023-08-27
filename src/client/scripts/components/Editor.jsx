@@ -534,14 +534,13 @@ function getDefault (props) {
 }
 
 function TableModule (props) {
-  const [value] = useState(() => props.value)
   const [fullscreenPath, setFullscreenPath] = useContext(FullscreenContext)
 
   const components = []
   props.declrs.forEach((declr, i) => {
     const path = [...props.path, declr.property]
 
-    let childValue = value[declr.property]
+    let childValue = props.value[declr.property]
     if (!childValue && declr.declrs) {
       childValue = getDefault(declr)
     }
@@ -765,5 +764,6 @@ function pathIncludes (fullPath, curPath) {
     }
   }
 
+  console.log('success')
   return true
 }
