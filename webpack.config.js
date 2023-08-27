@@ -52,10 +52,6 @@ function getModule (...names) {
     },
     devtool: 'inline-source-map',
     plugins: [
-      new HtmlWebpackPlugin({
-        template: path.join(__dirname, 'src/client/views/temp.html'),
-        filename: '[name].html'
-      }),
       new webpack.HotModuleReplacementPlugin(),
       {
         apply: compiler => {

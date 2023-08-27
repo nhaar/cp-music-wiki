@@ -8,7 +8,6 @@ const path = require('path')
 const { createDirectoryIfNotExists } = require('./misc/server-utils');
 
 [
-  '../client/views/generated',
   '../client/music',
   '../client/scripts/auto'
 ].forEach(dir => createDirectoryIfNotExists(path.join(__dirname, dir)))
