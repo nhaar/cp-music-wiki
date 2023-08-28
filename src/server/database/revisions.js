@@ -35,7 +35,7 @@ class RevisionHandler {
     if (!oldRow) {
       if (!clsys.isStaticClass(row.cls)) {
         // figure out id of new item by seeing biggest serial
-        id = (await sql.getBiggestSerial('items'))
+        id = (await sql.getBiggestSerial('items')) + 1
       }
       oldRow = { data: clsys.getDefault(row.cls) }
     }

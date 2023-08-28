@@ -54,7 +54,7 @@ function Settings (props) {
 }
 
 function ChangesSetting () {
-  const [showSettings, setShowSettings] = React.useState(true)
+  const [showSettings, setShowSettings] = React.useState(false)
   function click () {
     setShowSettings(prev => !prev)
   }
@@ -108,6 +108,20 @@ function Changes () {
         } else {
           deltaClass = 'zero-diff'
         }
+
+        currentList.push(
+          <li key={`-${i}`}>
+            (<a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}> diff </a> | hist )
+            . .
+            <a href={`/Special:Read?id=${change.id}`}>
+              {change.cls} | {change.name}
+            </a>; {time}
+            . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
+
+          </li>
+        )
+
+        // no ul means remove datwe
         function setDate (day) {
           curDate = day
           const lastIndex = elements.length - 1
@@ -116,12 +130,12 @@ function Changes () {
             elements.splice(lastIndex, 1)
           }
           elements.push(
-            <h4 key={i * (-1)}>
+            <h4 key={`+${i}`}>
               {day}
             </h4>
           )
         }
-        if ((curDate !== day && curDate !== undefined) || i === change.length - 1) {
+        if ((curDate !== day && curDate !== undefined) || i === data.length - 1) {
           setDate(day)
           elements.push(
             <ul key={i}>
@@ -132,21 +146,9 @@ function Changes () {
         } else if (curDate === undefined) {
           setDate(day)
         }
-
-        currentList.push(
-          <li key={i}>
-            (<a href={`Diff?old=${change.old}&cur=${change.new}`}> diff </a> | hist )
-            . .
-            <a href={`editor?id=${change.id}`}>
-              {change.cls} | {change.name}
-            </a>; {time}
-            . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
-
-          </li>
-        )
       })
 
-      setElement(() => elements)
+      setElement(elements)
     })()
   }, [])
 

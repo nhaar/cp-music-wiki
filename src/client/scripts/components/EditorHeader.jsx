@@ -65,7 +65,7 @@ export default function EditorHeader (props) {
     components[0] = [
       (
         <div
-          key={0} onClick={() => window.location.href = `/Special:Editor?n=${props.n}`}
+          key={0} onClick={() => { window.location.href = `/Special:Editor?n=${props.n}` }}
           className='header-setting-cur'
         >
           Create

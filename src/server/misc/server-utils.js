@@ -74,8 +74,10 @@ module.exports = {
 
   getToken (req) {
     const { cookie } = req.headers
-    const match = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
-    return match && match[0]
+    if (cookie) {
+      const match = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
+      return match && match[0]
+    } else return ''
   },
 
   getRandomInt (a, b) {

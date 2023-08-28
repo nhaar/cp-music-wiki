@@ -55,7 +55,7 @@ class UserHandler {
    */
   async isAdmin (session) {
     const account = (await sql.selectWithColumn('wiki_users', 'session_token', session))[0]
-    return account.perms === 'admin'
+    return account && account.perms === 'admin'
   }
 
   getToken (req) {

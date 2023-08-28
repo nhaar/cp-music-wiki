@@ -597,8 +597,11 @@ class ClassSystem {
   }
 
   async didDataChange (id, data) {
-    const old = (await this.getItem(id)).data
-    return !compareObjects(old, data)
+    const old = await this.getItem(id)
+    if (!old) return true
+    else {
+      return !compareObjects(old.data, data)
+    }
   }
 }
 
