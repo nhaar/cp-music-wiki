@@ -18,7 +18,8 @@ class RevisionHandler {
         wiki_user INT,
         approver INT,
         timestamp NUMERIC,
-        minor_edit INT
+        minor_edit INT,
+        created INT
       )
     `)
   }
@@ -32,17 +33,19 @@ class RevisionHandler {
   async addChange (row, token, isMinor) {
     let oldRow = await clsys.getItem(row.id)
     let id = row.id
+    let created = false
     if (!oldRow) {
       if (!clsys.isStaticClass(row.cls)) {
         // figure out id of new item by seeing biggest serial
         id = (await sql.getBiggestSerial('items')) + 1
+        created = true
       }
       oldRow = { data: clsys.getDefault(row.cls) }
     }
     const userId = await user.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
-    await this.insertRev(row.cls, id, userId, delta, isMinor)
+    await this.insertRev(row.cls, id, userId, delta, isMinor, created)
   }
 
   /**
@@ -63,12 +66,12 @@ class RevisionHandler {
    * @param {string} user - Id of the user submitting the revision
    * @param {jsondiffpatch.DiffPatcher} patch - The patch of the revision, if it is not a deletion
    */
-  async insertRev (cls, itemId, user, patch = null, isMinor = false) {
+  async insertRev (cls, itemId, user, patch = null, isMinor = false, created = false) {
     if (patch) patch = JSON.stringify(patch)
     await sql.insert(
       'revisions',
-      'cls, item_id, wiki_user, timestamp, patch, minor_edit',
-      [cls, itemId, user, Date.now(), patch, Number(isMinor)]
+      'cls, item_id, wiki_user, timestamp, patch, minor_edit, created',
+      [cls, itemId, user, Date.now(), patch, Number(isMinor), Number(created)]
     )
   }
 

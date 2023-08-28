@@ -109,9 +109,33 @@ function Changes (props) {
 
         currentList.push(
           <li key={`-${i}`}>
-            (<a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}> diff </a> | hist )
+            &#40;{change.old
+            ? (
+              <a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}> diff </a>
+              )
+            : ' diff '} | hist &#41;
             . .
-            <a href={`/Special:Read?id=${change.id}`}>
+            {change.old
+              ? undefined
+              : (
+                <span>
+                  &nbsp;
+                  <span
+                    style={{
+                      fontWeight: 'bold',
+                      textDecoration: 'underline dotted',
+                      cursor: 'help'
+                    }} title='This edit created a new item'
+                  >N
+                  </span>
+                  &nbsp;
+                </span>
+                )}
+            <a
+              href={`/Special:Read?id=${change.id}`} style={{
+                fontWeight: 'bold'
+              }}
+            >
               {change.cls} | {change.name}
             </a>; {time}
             . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
