@@ -1,5 +1,5 @@
 import React from 'react'
-import { getJSON, getMonthName } from '../client-utils'
+import { getJSON, getMonthName, postAndGetJSON } from '../client-utils'
 import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
@@ -26,7 +26,7 @@ function Settings (props) {
         <div className='value-picker'>
           <span className='bold'> Results to Show </span>
           <div>
-            {props.settings.resultOptions.map((value, i) => createButton(value, i, clickResults, props.settings.results))}
+            {props.settings.RESULT_OPTIONS.map((value, i) => createButton(value, i, clickResults, props.settings.results))}
           </div>
         </div>
         <div className='settings--group'>
@@ -39,13 +39,13 @@ function Settings (props) {
         <div className='value-picker'>
           <span className='gray bold'> Recent hours </span>
           <div>
-            {props.settings.hourOptions.map((value, i) => createButton(value, i, clickPeriod, props.settings.period))}
+            {props.settings.HOUR_OPTIONS.map((value, i) => createButton(value, i, clickPeriod, props.settings.period))}
           </div>
         </div>
         <div className='value-picker'>
           <span className='gray bold'> Recent days </span>
           <div>
-            {props.settings.dayOptions.map((value, i) => createButton(value, i + props.settings.hourOptions.length, clickPeriod, props.settings.period))}
+            {props.settings.DAY_OPTIONS.map((value, i) => createButton(value, i + props.settings.HOUR_OPTIONS.length, clickPeriod, props.settings.period))}
           </div>
         </div>
       </div>
@@ -53,43 +53,40 @@ function Settings (props) {
   )
 }
 
-function ChangesSetting () {
+function ChangesSetting (props) {
   const [showSettings, setShowSettings] = React.useState(false)
   function click () {
     setShowSettings(prev => !prev)
   }
-  const [results, setResults] = React.useState(0)
-  const [period, setPeriod] = React.useState(0)
-  const resultOptions = [50, 100, 250, 500]
-  const hourOptions = [1, 2, 6, 12]
-  const dayOptions = [1, 3, 7, 14, 30]
-
-  const settingVars = { results, setResults, period, setPeriod, resultOptions, hourOptions, dayOptions }
 
   function addPlural (state, ...options) {
     return !options.includes(state) ? 's' : ''
   }
 
   function pickPeriodWord () {
-    return period > 3 ? 'day' : 'hour'
+    return props.period > props.CUTOFF ? 'day' : 'hour'
   }
 
   return (
     <div className='settings--container' onClick={click}>
       <img className='gear-img' src={Gear} />
-      <button className='settings--button'> {resultOptions[results]} change{addPlural(results, 0)}, {hourOptions.concat(dayOptions)[period]} {pickPeriodWord()}{addPlural(period, 0, 4)} </button>
+      <button className='settings--button'> {props.RESULT_OPTIONS[props.results]} change{addPlural(props.results, 0)}, {props.HOUR_OPTIONS.concat(props.DAY_OPTIONS)[props.period]} {pickPeriodWord()}{addPlural(props.period, 0, 4)} </button>
       <img className='arrow-img' src={Arrow} />
-      <Settings showSettings={showSettings} settings={settingVars} />
+      <Settings showSettings={showSettings} settings={props} />
     </div>
   )
 }
 
-function Changes () {
+function Changes (props) {
   const [elements, setElement] = React.useState([])
 
   React.useEffect(() => {
     (async () => {
-      const data = await getJSON('api/recent-changes')
+      const data = await postAndGetJSON('api/recent-changes', {
+        days: props.period > props.CUTOFF
+          ? props.DAY_OPTIONS[props.period - props.CUTOFF - 1]
+          : props.HOUR_OPTIONS[props.period] / 24
+      })
       const elements = []
 
       let curDate
@@ -150,7 +147,7 @@ function Changes () {
 
       setElement(elements)
     })()
-  }, [])
+  }, [props.results, props.period])
 
   return (
     <div>
@@ -160,15 +157,29 @@ function Changes () {
 }
 
 export default function RecentChanges () {
+  const [results, setResults] = React.useState(0)
+  const [period, setPeriod] = React.useState(0)
+
+  const props = {
+    results,
+    period,
+    setResults,
+    setPeriod,
+    RESULT_OPTIONS: [50, 100, 250, 500],
+    HOUR_OPTIONS: [1, 2, 6, 12],
+    DAY_OPTIONS: [1, 3, 7, 14, 30],
+    CUTOFF: 3
+  }
+
   return (
     <div>
       <p>
         Track the most recent changes to the wiki on this page.
       </p>
       <div className='settings--div'>
-        <ChangesSetting />
+        <ChangesSetting {...props} />
       </div>
-      <Changes />
+      <Changes {...props} />
     </div>
   )
 }
