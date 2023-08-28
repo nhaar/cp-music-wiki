@@ -1,5 +1,5 @@
-import React from 'react'
-import { getMonthName, postAndGetJSON } from '../client-utils'
+import React, { useEffect } from 'react'
+import { getCookies, getMonthName, postAndGetJSON } from '../client-utils'
 import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
@@ -158,8 +158,14 @@ function Changes (props) {
 }
 
 export default function RecentChanges () {
-  const [results, setResults] = React.useState(0)
-  const [period, setPeriod] = React.useState(0)
+  const cookies = getCookies()
+  const [results, setResults] = React.useState(Number(cookies.recentChangeResults) || 0)
+  const [period, setPeriod] = React.useState(Number(cookies.recentChangePeriod) || 0)
+
+  useEffect(() => {
+    document.cookie = `recentChangeResults=${results}`
+    document.cookie = `recentChangePeriod=${period}`
+  }, [results, period])
 
   const props = {
     results,
