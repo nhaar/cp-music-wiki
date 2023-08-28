@@ -81,7 +81,7 @@ class RevisionHandler {
     const row = await sql.selectId('revisions', revId)
     const itemId = row.item_id
 
-    const revisions = await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', [itemId])
+    const revisions = await sql.selectAndEquals('revisions', 'id, item_id', [revId, itemId])
 
     const data = (await del.getItemIncludeDeleted(itemId)).data
     for (let i = revisions.length - 1; i >= 0; i--) {
