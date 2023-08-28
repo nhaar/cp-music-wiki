@@ -70,7 +70,7 @@ function ChangesSetting (props) {
   return (
     <div className='settings--container'>
       <img className='gear-img' src={Gear} />
-      <button className='settings--button' onClick={click}> {props.RESULT_OPTIONS[props.results]} change{addPlural(props.results, 0)}, {props.HOUR_OPTIONS.concat(props.DAY_OPTIONS)[props.period]} {pickPeriodWord()}{addPlural(props.period, 0, 4)} </button>
+      <button className='settings--button' onClick={click}> {props.RESULT_OPTIONS[props.results]} changes, {props.HOUR_OPTIONS.concat(props.DAY_OPTIONS)[props.period]} {pickPeriodWord()}{addPlural(props.period, 0, 4)} </button>
       <img className='arrow-img' src={Arrow} />
       <Settings showSettings={showSettings} settings={props} />
     </div>
