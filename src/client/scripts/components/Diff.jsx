@@ -2,14 +2,27 @@ import React from 'react'
 import '../../stylesheets/diff.css'
 
 export default function Diff (props) {
-  function formatValue (value) {
+  function formatValue (value, info) {
     // convert whitespaces
-    const lines = value.split('\n')
-    return (
-      lines.map((line, i) => {
-        return <div key={i}><span>{line.replace(/\s/g, '\u00A0')}</span></div>
-      })
-    )
+
+    return value.replace(/\s/g, '\u00A0')
+    // const lastChars = line.substring(line.length - 2)
+    // if (lastChars.match(/}|\]/)) {
+    //   info.indent -= 1
+    // }
+    // const indents = []
+    // for (let j = 0; j < info.indent; j++) {
+    //   for (let k = 0; k < info.INDENT_SIZE; k++) {
+    //     indents.push()
+    //   }
+    // }
+    // const newLine = `${indents.join('')}${line}`
+
+    // if (lastChars.match(/{|\[/)) {
+    //   info.indent += 1
+    // }
+
+    // return newLine
   }
 
   const diffChildren = []
@@ -39,10 +52,16 @@ export default function Diff (props) {
     )
   }
 
-  function addSpan (change, i, isAdd) {
+  const indentInfo = {
+    indent: 0,
+    INDENT_SIZE: 4
+  }
+
+  function addSpan (change, i, isAdd, value) {
     let className = ''
+
     function getValue () {
-      return <span className={`diff--change-text ${className}`} key={i}>{formatValue(change.value)}</span>
+      return <span className={`diff--change-text ${className}`} key={i}>{formatValue(value, indentInfo)}</span>
     }
     if ((change.added && isAdd) || (change.removed && !isAdd)) {
       className = isAdd ? 'add-span' : 'remove-span'
@@ -52,14 +71,32 @@ export default function Diff (props) {
     }
   }
 
-  function createHTML (diff, isAdd) {
-    const elements = []
+  function getBlockText (diff, isAdd) {
+    const lines = []
 
+    let spans = []
     diff.forEach((change, i) => {
-      elements.push(addSpan(change, i, isAdd))
+      const split = change.value.split('\n')
+      split.forEach((segment, j) => {
+        spans.push(addSpan(change, j, isAdd, segment))
+        if (j < split.length - 1) {
+          lines.push([...spans.filter(line => line)])
+          spans = []
+        }
+      })
     })
 
-    return elements
+    return (
+      <div className='flex-column'>
+        {lines.map(line => (
+          <div style={{
+            display: 'flex'
+          }}
+          >{line}
+          </div>
+        ))}
+      </div>
+    )
   }
 
   props.arg.forEach(group => {
@@ -68,12 +105,13 @@ export default function Diff (props) {
       diffChildren.push(
         <div key={key()} />
       )
-      createNewDiff(<div>{addSpan(group[1], -1, true)}</div>, type)
-    } else if (type === 'removeadd' || type === 'addremove') {
-      const types = type.match(/(remove|add)/g)
+      const block = getBlockText([group[1]], type === 'add')
+      createNewDiff(block, type)
+    } else if (type === 'removeadd') {
+      const types = ['remove', 'add']
       for (let i = 0; i < 2; i++) {
-        const value = createHTML(group[3], i)
-        createNewDiff(<div>{value}</div>, types[i])
+        const block = getBlockText(group[3], i === 1)
+        createNewDiff(block, types[i])
       }
     }
   })

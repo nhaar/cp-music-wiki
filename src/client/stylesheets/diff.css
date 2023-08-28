@@ -50,14 +50,12 @@
   font-weight: bold;
 }
 
-.remove-span > div > span {
+.remove-span {
   background-color: var(--remove-color);
-  display: inline-block;
 }
 
-.add-span > div > span {
+.add-span {
   background-color: var(--add-color);
-  display: inline-block;
 }
 
 .add-diff {
