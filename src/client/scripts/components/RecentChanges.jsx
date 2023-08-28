@@ -1,5 +1,5 @@
 import React from 'react'
-import { getJSON, getMonthName, postAndGetJSON } from '../client-utils'
+import { getMonthName, postAndGetJSON } from '../client-utils'
 import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
@@ -85,7 +85,8 @@ function Changes (props) {
       const data = await postAndGetJSON('api/recent-changes', {
         days: props.period > props.CUTOFF
           ? props.DAY_OPTIONS[props.period - props.CUTOFF - 1]
-          : props.HOUR_OPTIONS[props.period] / 24
+          : props.HOUR_OPTIONS[props.period] / 24,
+        number: props.RESULT_OPTIONS[props.results]
       })
       const elements = []
 

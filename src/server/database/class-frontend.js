@@ -119,14 +119,14 @@ class FrontendBridge {
     return deleteData
   }
 
-  async getLastRevisions (days) {
+  async getLastRevisions (days, number) {
     // days is converted to ms
     const timestamp = Date.now() - (days) * 86400000
     const rows = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
     const classes = clsys.getMajorClasses()
     const latest = []
 
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 0; i < rows.length && i < number + 1; i++) {
       const row = rows[i]
       const next = await rev.getNextRev(row.id)
       if (next) {

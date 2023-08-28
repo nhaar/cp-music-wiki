@@ -30,12 +30,6 @@ export async function postAndGetJSON (route, object) {
   return data
 }
 
-export async function getJSON (route) {
-  return (
-    await (await fetch(route)).json()
-  )
-}
-
 /**
  * Checks inside an array of object each object until it finds one where the named property is equal to the given value, and returns the object and index
  * @param {object[]} object - Array of objects
