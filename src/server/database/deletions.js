@@ -69,6 +69,10 @@ class DeletionHandler {
     }
     return row
   }
+
+  async isDeleted (id) {
+    return Boolean(await this.getDeletedRow(id))
+  }
 }
 
 module.exports = new DeletionHandler()

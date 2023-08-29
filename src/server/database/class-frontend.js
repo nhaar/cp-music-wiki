@@ -1,6 +1,7 @@
 const clsys = require('./class-system')
 const sql = require('./sql-handler')
 const rev = require('./revisions')
+const del = require('./deletions')
 const { capitalize, matchInside, deepcopy } = require('../misc/server-utils')
 
 class FrontendBridge {
@@ -176,12 +177,15 @@ class FrontendBridge {
     // add rollbackable changes
     const foundItems = []
 
-    latest.forEach((change, i) => {
+    for (let i = 0; i < latest.length; i++) {
+      const change = latest[i]
       if (!foundItems.includes(change.id)) {
         foundItems.push(change.id)
-        latest[i].rollback = true
+        if (!await del.isDeleted(change.id)) {
+          latest[i].rollback = true
+        }
       }
-    })
+    }
 
     return latest
   }

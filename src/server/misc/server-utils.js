@@ -82,5 +82,9 @@ module.exports = {
 
   getRandomInt (a, b) {
     return Math.floor(Math.random() * (b - a)) + a
+  },
+
+  getLastElement (arr) {
+    return arr[arr.length - 1]
   }
 }

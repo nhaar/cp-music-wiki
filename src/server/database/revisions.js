@@ -5,6 +5,7 @@ const del = require('./deletions')
 
 const Diff = require('diff')
 const jsondiffpatch = require('jsondiffpatch')
+const { getLastElement } = require('../misc/server-utils')
 
 class Tagger {
   constructor (rev) {
@@ -208,7 +209,7 @@ class RevisionHandler {
   async rollback (user, item, token) {
     const revisions = await this.selectRevisions(item)
     const lastUserRevisions = []
-    const lastRev = revisions[revisions.length - 1]
+    const lastRev = getLastElement(revisions)
     const isRollback = await (new Tagger(lastRev.id)).hasTag(1)
     if (isRollback) {
       lastUserRevisions.push(lastRev)
@@ -222,15 +223,19 @@ class RevisionHandler {
     }
 
     const row = await clsys.getItem(item)
-    for (let i = 0; i < lastUserRevisions.length; i++) {
-      const revision = lastUserRevisions[i]
-      const tagger = new Tagger(revision.id)
-      row.data = jsondiffpatch.unpatch(row.data, revision.patch)
-      await tagger.addTag(0)
-    }
+    if (getLastElement(lastUserRevisions).created) {
+      await del.deleteItem(item, token, 0, 'Rollback')
+    } else {
+      for (let i = 0; i < lastUserRevisions.length; i++) {
+        const revision = lastUserRevisions[i]
+        const tagger = new Tagger(revision.id)
+        row.data = jsondiffpatch.unpatch(row.data, revision.patch)
+        await tagger.addTag(0)
+      }
 
-    await this.addChange(row, token, true, [1])
-    await clsys.updateItem(row)
+      await this.addChange(row, token, true, [1])
+      await clsys.updateItem(row)
+    }
   }
 }
 
