@@ -286,7 +286,7 @@ function Changes (props) {
         number: props.RESULT_OPTIONS[props.results]
       })
 
-      const dividedInDays = {}
+      let dividedInDays = {}
       data.forEach(change => {
         const date = new Date(Number(change.timestamp))
         const day = `${date.getDate()} ${getMonthName(date.getMonth())} ${date.getFullYear()}`
@@ -296,7 +296,13 @@ function Changes (props) {
           dividedInDays[day] = [change]
         }
       })
-      setData(dividedInDays)
+      dividedInDays = Object.entries(dividedInDays).reverse()
+      const ordered = {}
+      dividedInDays.forEach(element => {
+        const [day, info] = element
+        ordered[day] = info
+      })
+      setData(ordered)
     })()
   }, [props.results, props.period])
 
