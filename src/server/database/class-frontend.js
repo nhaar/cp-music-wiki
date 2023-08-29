@@ -136,7 +136,7 @@ class FrontendBridge {
     for (let i = 0; i < rows.length && i < number + 1; i++) {
       const row = rows[i]
       const next = await rev.getNextRev(row.id)
-      const name = await clsys.getQueryNameById(row.item_id)
+      const name = await del.getQueryNameById(row.item_id)
       const { cls } = row
       if (next) {
         const sizes = [row.id, next]

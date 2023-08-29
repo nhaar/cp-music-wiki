@@ -173,7 +173,7 @@ router.post('/get-by-name', checkClass, async (req, res) => {
 // get name with id
 router.post('/get-name', checkId, async (req, res) => {
   const { id } = req.body
-  const name = await clsys.getQueryNameById(id)
+  const name = await del.getQueryNameById(id)
   res.status(200).send({ name })
 })
 

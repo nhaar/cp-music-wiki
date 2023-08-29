@@ -57,6 +57,14 @@ class DeletionHandler {
     }), keyword)
   }
 
+  async getQueryNameById (id) {
+    try {
+      return (await this.getItemIncludeDeleted(id)).querywords.split('&&')[0]
+    } catch (error) {
+      return ''
+    }
+  }
+
   async getDeletedRow (id) {
     return (await sql.selectWithColumn('deleted_items', 'item_id', id))[0]
   }
