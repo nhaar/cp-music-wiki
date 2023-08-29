@@ -228,13 +228,16 @@ class RevisionHandler {
     } else {
       for (let i = 0; i < lastUserRevisions.length; i++) {
         const revision = lastUserRevisions[i]
-        const tagger = new Tagger(revision.id)
         row.data = jsondiffpatch.unpatch(row.data, revision.patch)
-        await tagger.addTag(0)
       }
 
       await this.addChange(row, token, true, [1])
       await clsys.updateItem(row)
+    }
+    for (let i = 0; i < lastUserRevisions.length; i++) {
+      const revision = lastUserRevisions[i]
+      const tagger = new Tagger(revision.id)
+      await tagger.addTag(0)
     }
   }
 }
