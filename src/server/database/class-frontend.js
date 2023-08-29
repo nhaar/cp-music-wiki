@@ -126,53 +126,93 @@ class FrontendBridge {
     return encoder.encode(text).length
   }
 
+  createDeletionInfo (row, name, cls) {
+    return {
+      deletionLog: true,
+      deletion: row.is_deletion,
+      timestamp: row.timestamp,
+      cls,
+      name,
+      row,
+      userId: row.wiki_user,
+      id: row.item_id,
+      tags: row.tags
+    }
+  }
+
+  createRevisionInfo (old, cur, delta, name, className, user) {
+    return {
+      delta,
+      timestamp: cur.timestamp,
+      cls: className,
+      name,
+      old: old ? old.id : undefined,
+      cur: cur.id,
+      user,
+      userId: cur.wiki_user,
+      id: cur.item_id,
+      tags: cur.tags
+    }
+  }
+
   async getLastRevisions (days, number) {
     // days is converted to ms
     const timestamp = Date.now() - (days) * 86400000
-    const rows = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
+    const revs = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
+    const dels = await sql.selectGreaterAndEqual('deletion_log', 'timestamp', timestamp)
+    const rows = revs.concat(dels).sort((a, b) => {
+      return b.timestamp - a.timestamp
+    })
     const classes = clsys.getMajorClasses()
     const latest = []
 
     for (let i = 0; i < rows.length && i < number + 1; i++) {
       const row = rows[i]
-      const next = await rev.getNextRev(row.id)
       const name = await del.getQueryNameById(row.item_id)
-      const { cls } = row
-      if (next) {
-        const sizes = [row.id, next]
-        for (let i = 0; i < 2; i++) {
-          sizes[i] = await this.checkRevisionSize(sizes[i])
-        }
-        const nextRow = await sql.selectId('revisions', next)
-        const delta = sizes[1] - sizes[0]
-        const user = (await sql.selectId('wiki_users', nextRow.wiki_user)).name
+      const cls = await del.getClass(row.item_id)
+      const className = classes[cls].name
+      if (row.is_deletion === undefined) {
+        const next = await rev.getNextRev(row.id)
+        if (next) {
+          const sizes = [row.id, next]
+          for (let i = 0; i < 2; i++) {
+            sizes[i] = await this.checkRevisionSize(sizes[i])
+          }
+          const nextRow = await sql.selectId('revisions', next)
+          const delta = sizes[1] - sizes[0]
+          const user = (await sql.selectId('wiki_users', nextRow.wiki_user)).name
 
-        latest.push({
-          delta,
-          timestamp: nextRow.timestamp,
-          cls: classes[cls].name,
-          name,
-          old: row.id,
-          cur: next,
-          user,
-          userId: nextRow.wiki_user,
-          id: row.item_id,
-          tags: nextRow.tags
-        })
+          latest.push(this.createRevisionInfo(row, nextRow, delta, name, className, user))
+        }
+        // latest.push({
+        //   delta,
+        //   timestamp: nextRow.timestamp,
+        //   cls: classes[cls].name,
+        //   name,
+        //   old: row.id,
+        //   cur: next,
+        //   user,
+        //   userId: nextRow.wiki_user,
+        //   id: row.item_id,
+        //   tags: nextRow.tags
+        // })
+      } else {
+        latest.push(this.createDeletionInfo(row, name, className))
       }
 
       if (row.created && row.timestamp > timestamp) {
-        latest.push({
-          delta: await this.checkRevisionSize(row.id),
-          timestamp: row.timestamp,
-          cls: classes[cls].name,
-          name,
-          cur: row.id,
-          user: (await sql.selectId('wiki_users', row.wiki_user)).name,
-          userId: row.wiki_user,
-          id: row.item_id,
-          tags: row.tags
-        })
+        latest.push(this.createRevisionInfo(undefined, row, await this.checkRevisionSize(row.id), name, className, (await sql.selectId('wiki_users', row.wiki_user)).name))
+        // latest.push({
+        //   delta: await this.checkRevisionSize(row.id),
+        //   timestamp: row.timestamp,
+        //   cls: classes[cls].name,
+        //   name,
+        //   cur: row.id,
+        //   user: ,
+        //   userId: row.wiki_user,
+        //   id: row.item_id,
+        //   tags: row.tags
+        // })
       }
     }
 

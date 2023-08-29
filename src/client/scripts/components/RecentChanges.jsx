@@ -81,6 +81,14 @@ function ChangesSetting (props) {
   )
 }
 
+function DeletionGroup (props) {
+  return (
+    <div>
+      Deletion!
+    </div>
+  )
+}
+
 function GroupedChange (props) {
   const [expanded, setExpanded] = useState(false)
   const userCount = {}
@@ -110,7 +118,7 @@ function GroupedChange (props) {
           style={{
             fontWeight: 'bold'
           }} href={`/Special:Read?id=${props.info.id}`}
-        >{props.item}
+        >{props.info.name}
         </a> &#40;{props.info.changes.length} changes | history&#41; . .&nbsp;
         <span className={getDeltaClass(props.info.size)}>{props.info.size}&#41;</span> . .
         &#91;
@@ -139,7 +147,7 @@ function GroupedChanges (props) {
     const changes = props.data[day]
     groupedData[day] = {}
     changes.forEach(change => {
-      const key = `${change.cls} | ${change.name}`
+      const key = `${change.id}${change.deletionLog}`
       if (groupedData[day][key]) {
         groupedData[day][key].users.push(change.user)
         groupedData[day][key].changes.push(change)
@@ -150,7 +158,9 @@ function GroupedChanges (props) {
           time: getTime(change.timestamp),
           changes: [change],
           size: change.delta,
-          id: change.id
+          id: change.id,
+          name: `${change.cls} | ${change.name}`,
+          deletionLog: change.deletionLog
         }
       }
     })
@@ -169,8 +179,9 @@ function GroupedChanges (props) {
     const items = groupedData[day]
     for (const item in items) {
       const info = items[item]
-      lis.push(
-        <GroupedChange {...{ info, item }} key={i} />
+      lis.push(info.deletionLog
+        ? <DeletionGroup {...{ info, item }} key={i} />
+        : <GroupedChange {...{ info, item }} key={i} />
       )
       i++
     }
@@ -233,67 +244,81 @@ function getDeltaClass (size) {
 
 function getSingleLine (change, i) {
   const time = getTime(change.timestamp)
-
-  const deltaClass = getDeltaClass(change.delta)
-
-  async function handleRollbackClick () {
-    await postJSON('api/rollback', { user: change.userId, item: change.id })
-    window.alert('Rollback applied')
-    window.location.reload()
-  }
-
-  return (
-    <li key={`-${i}`}>
-      &#40;{change.old
-      ? (
-        <a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}> diff </a>
-        )
-      : ' diff '} | hist &#41;
-      . .
-      {change.old
-        ? undefined
-        : (
-          <span>
-            &nbsp;
-            <span
-              style={{
-                fontWeight: 'bold',
-                textDecoration: 'underline dotted',
-                cursor: 'help'
-              }} title='This edit created a new item'
-            >N
-            </span>
-            &nbsp;
-          </span>
-          )}
-      <a
-        href={`/Special:Read?id=${change.id}`} style={{
-          fontWeight: 'bold'
-        }}
-      >
-        {change.cls} | {change.name}
-      </a>; {time}
-      . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
-      {change.rollback
-        ? (
-          <span>
-            &nbsp;&#91;<a onClick={handleRollbackClick}>rollback</a>&#93;
-          </span>
-          )
-        : undefined}
-      {change.tags
-        ? (
-          <span> &#40;Tags: {change.tags.split('%').map(tag => {
-            return {
-              0: 'Reverted',
-              1: 'Rollback'
-            }[tag]
-          })}&#41;
-          </span>
-          )
-        : undefined}
-    </li>
+  const itemLink = (
+    <a
+      href={`/Special:Read?id=${change.id}`} style={{
+        fontWeight: 'bold'
+      }}
+    >
+      {change.cls} | {change.name}
+    </a>
   )
+  if (change.deletionLog) {
+    return (
+      <li>
+        (Deletion log); {time} . . {change.user}
+        {change.deletion
+          ? 'Deleted '
+          : 'Undeleted '}
+        {itemLink}
+      </li>
+    )
+  } else {
+    const deltaClass = getDeltaClass(change.delta)
+
+    async function handleRollbackClick () {
+      await postJSON('api/rollback', { user: change.userId, item: change.id })
+      window.alert('Rollback applied')
+      window.location.reload()
+    }
+
+    return (
+      <li key={`-${i}`}>
+        &#40;{change.old
+        ? (
+          <a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}> diff </a>
+          )
+        : ' diff '} | hist &#41;
+        . .
+        {change.old
+          ? undefined
+          : (
+            <span>
+              &nbsp;
+              <span
+                style={{
+                  fontWeight: 'bold',
+                  textDecoration: 'underline dotted',
+                  cursor: 'help'
+                }} title='This edit created a new item'
+              >N
+              </span>
+              &nbsp;
+            </span>
+            )}
+        {itemLink}; {time}
+        . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
+        {change.rollback
+          ? (
+            <span>
+              &nbsp;&#91;<a onClick={handleRollbackClick}>rollback</a>&#93;
+            </span>
+            )
+          : undefined}
+        {change.tags
+          ? (
+            <span> &#40;Tags: {change.tags.split('%').map(tag => {
+              return {
+                0: 'Reverted',
+                1: 'Rollback'
+              }[tag]
+            })}&#41;
+            </span>
+            )
+          : undefined}
+      </li>
+    )
+  }
 }
 
 function Changes (props) {

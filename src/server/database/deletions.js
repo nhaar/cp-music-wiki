@@ -23,7 +23,8 @@ class DeletionHandler {
       timestamp NUMERIC,
       reason INT,
       additional_reason TEXT,
-      is_deletion INT
+      is_deletion INT,
+      tags TEXT
     )
   `)
   }
@@ -55,6 +56,10 @@ class DeletionHandler {
     return clsys.getNameWithRows(rows.map(row => {
       return { id: row.item_id, querywords: row.querywords }
     }), keyword)
+  }
+
+  async getClass (id) {
+    return (await this.getItemIncludeDeleted(id)).cls
   }
 
   async getQueryNameById (id) {
