@@ -16,10 +16,12 @@ class WebpackSetup {
     this.lintPlugin = {
       apply: compiler => {
         compiler.hooks.afterEmit.tap('AfterEmitPlugin', () => {
-          exec('npx standard --fix', (err, stdout, stderr) => {
-            if (err) console.error(err)
-            if (stdout) process.stdout.write(stdout)
-            if (stderr) process.stderr.write(stderr)
+          exec('npx standard --fix', (err, stdout) => {
+            if (err) {
+              console.log('====================== LINT ERRORS ======================')
+              process.stdout.write(stdout)
+              console.log('=========================================================')
+            }
           })
         })
       }
