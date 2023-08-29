@@ -90,6 +90,12 @@ router.post('/reset-password', (req, res) => {
   res.sendStatus(200)
 })
 
+router.post('/rollback', checkAdmin, (req, res) => {
+  const { user, item } = req.body
+  rev.rollback(user, item, getToken(req))
+  res.sendStatus(200)
+})
+
 // middleware for receiving the music file
 const upload = multer({ dest: path.join(__dirname, '../../client/music/') })
 

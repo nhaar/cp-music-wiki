@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { getCookies, getMonthName, postAndGetJSON } from '../client-utils'
+import { getCookies, getMonthName, postAndGetJSON, postJSON } from '../client-utils'
 import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
@@ -21,7 +21,6 @@ function Settings (props) {
   }
 
   function handleCheckbox (e) {
-    console.log(e.target.checked)
     props.settings.setGroupTogether(e.target.checked)
   }
 
@@ -237,6 +236,12 @@ function getSingleLine (change, i) {
 
   const deltaClass = getDeltaClass(change.delta)
 
+  async function handleRollbackClick () {
+    await postJSON('api/rollback', { user: change.userId, item: change.id })
+    window.alert('Rollback applied')
+    window.location.reload()
+  }
+
   return (
     <li key={`-${i}`}>
       &#40;{change.old
@@ -269,6 +274,13 @@ function getSingleLine (change, i) {
         {change.cls} | {change.name}
       </a>; {time}
       . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
+      {change.rollback
+        ? (
+          <span>
+            &nbsp;&#91;<a onClick={handleRollbackClick}>rollback</a>&#93;
+          </span>
+          )
+        : undefined}
 
     </li>
   )

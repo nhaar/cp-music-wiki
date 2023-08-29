@@ -6,6 +6,43 @@ const del = require('./deletions')
 const Diff = require('diff')
 const jsondiffpatch = require('jsondiffpatch')
 
+class Tagger {
+  constructor (rev) {
+    this.id = rev
+  }
+
+  static getTagString (...tags) {
+    return tags.join('%')
+  }
+
+  async hasTag (tag) {
+    const tags = await this.getTags()
+    return tags.split('%').includes(tag + '')
+  }
+
+  async updateTags (updatefn) {
+    const tags = updatefn(await this.getTags())
+    await sql.update('revisions', 'tags', 'id = $1', [tags], [this.id])
+  }
+
+  async getTags () {
+    return (await sql.selectId('revisions', this.id)).tags
+  }
+
+  async addTag (tag) {
+    await this.updateTags(old => {
+      return `${old}%${tag}`
+    })
+  }
+
+  async removeTag (tag) {
+    if (typeof tag === 'string') tag = Number(tag)
+    await this.updateTags(old => {
+      return old.split('%').filter(t => Number(t) !== tag).join('%')
+    })
+  }
+}
+
 class RevisionHandler {
   /** Create the database if it doesn't exist */
   constructor () {
@@ -19,7 +56,8 @@ class RevisionHandler {
         approver INT,
         timestamp NUMERIC,
         minor_edit INT,
-        created INT
+        created INT,
+        tags TEXT
       )
     `)
   }
@@ -30,7 +68,7 @@ class RevisionHandler {
    * @param {Row} row - Row for the data being changed
    * @param {string} token - Session token for the user submitting the revision
    */
-  async addChange (row, token, isMinor) {
+  async addChange (row, token, isMinor, tags = []) {
     let oldRow = await clsys.getItem(row.id)
     let id = row.id
     let created = false
@@ -45,7 +83,7 @@ class RevisionHandler {
     const userId = await user.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
-    await this.insertRev(row.cls, id, userId, delta, isMinor, created)
+    await this.insertRev(row.cls, id, userId, delta, isMinor, created, tags)
   }
 
   /**
@@ -66,12 +104,12 @@ class RevisionHandler {
    * @param {string} user - Id of the user submitting the revision
    * @param {jsondiffpatch.DiffPatcher} patch - The patch of the revision, if it is not a deletion
    */
-  async insertRev (cls, itemId, user, patch = null, isMinor = false, created = false) {
+  async insertRev (cls, itemId, user, patch = null, isMinor = false, created = false, tags = []) {
     if (patch) patch = JSON.stringify(patch)
     await sql.insert(
       'revisions',
-      'cls, item_id, wiki_user, timestamp, patch, minor_edit, created',
-      [cls, itemId, user, Date.now(), patch, Number(isMinor), Number(created)]
+      'cls, item_id, wiki_user, timestamp, patch, minor_edit, created, tags',
+      [cls, itemId, user, Date.now(), patch, Number(isMinor), Number(created), Tagger.getTagString(...tags)]
     )
   }
 
@@ -157,35 +195,42 @@ class RevisionHandler {
    * @param {string} column - Name of the column to get
    * @returns {string[] | number[]} Array with all the column values
    */
-  async selectRevisions (cls, id, column) {
+  async selectRevisions (id) {
     return (
-      await cls.selectAndEquals(
+      await sql.selectWithColumn(
         'revisions',
-        'cls, item_id',
-        [cls, id],
-        column
+        'item_id',
+        id
       )
-    ).map(change => change[column])
+    )
   }
 
-  /**
-   * Get all patches for a class item
-   * @param {ClassName} cls - Name of the class
-   * @param {number} id - Id of item or 0 for static classes
-   * @returns {jsondiffpatch.DiffPatcher[]} Array with all the patches
-   */
-  async selectPatches (cls, id) {
-    return await this.selectRevisions(cls, id, 'patch')
-  }
+  async rollback (user, item, token) {
+    const revisions = await this.selectRevisions(item)
+    const lastUserRevisions = []
+    const lastRev = revisions[revisions.length - 1]
+    const isRollback = await (new Tagger(lastRev.id)).hasTag(1)
+    if (isRollback) {
+      lastUserRevisions.push(lastRev)
+    } else {
+      for (let i = revisions.length - 1; i >= 0; i--) {
+        const revision = revisions[i]
+        if (revision.wiki_user === user) {
+          lastUserRevisions.push(revision)
+        } else break
+      }
+    }
 
-  /**
-   * Get all the patch ids for a class item
-   * @param {ClassName} cls - Name of the class
-   * @param {number} id - Id of item or 0 for static classes
-   * @returns {number[]} Array with all the ids
-   */
-  async selectPatchIds (cls, id) {
-    return await this.selectRevisions(cls, id, 'id')
+    const row = await clsys.getItem(item)
+    for (let i = 0; i < lastUserRevisions.length; i++) {
+      const revision = lastUserRevisions[i]
+      const tagger = new Tagger(revision.id)
+      row.data = jsondiffpatch.unpatch(row.data, revision.patch)
+      await tagger.addTag(0)
+    }
+
+    await this.addChange(row, token, true, [1])
+    await clsys.updateItem(row)
   }
 }
 

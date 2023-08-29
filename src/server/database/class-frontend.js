@@ -154,6 +154,7 @@ class FrontendBridge {
           old: row.id,
           cur: next,
           user,
+          userId: nextRow.wiki_user,
           id: row.item_id
         })
 
@@ -165,11 +166,22 @@ class FrontendBridge {
             name,
             cur: row.id,
             user: (await sql.selectId('wiki_users', row.wiki_user)).name,
+            userId: row.wiki_user,
             id: row.item_id
           })
         }
       }
     }
+
+    // add rollbackable changes
+    const foundItems = []
+
+    latest.forEach((change, i) => {
+      if (!foundItems.includes(change.id)) {
+        foundItems.push(change.id)
+        latest[i].rollback = true
+      }
+    })
 
     return latest
   }
