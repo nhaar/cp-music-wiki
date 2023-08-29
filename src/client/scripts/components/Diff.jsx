@@ -88,10 +88,11 @@ export default function Diff (props) {
 
     return (
       <div className='flex-column'>
-        {lines.map(line => (
-          <div style={{
-            display: 'flex'
-          }}
+        {lines.map((line, i) => (
+          <div
+            key={i} style={{
+              display: 'flex'
+            }}
           >{line}
           </div>
         ))}
