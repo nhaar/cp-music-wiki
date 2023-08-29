@@ -281,7 +281,17 @@ function getSingleLine (change, i) {
           </span>
           )
         : undefined}
-
+      {change.tags
+        ? (
+          <span> &#40;Tags: {change.tags.split('%').map(tag => {
+            return {
+              0: 'Reverted',
+              1: 'Rollback'
+            }[tag]
+          })}&#41;
+          </span>
+          )
+        : undefined}
     </li>
   )
 }

@@ -156,7 +156,8 @@ class FrontendBridge {
           cur: next,
           user,
           userId: nextRow.wiki_user,
-          id: row.item_id
+          id: row.item_id,
+          tags: nextRow.tags
         })
       }
 
@@ -169,7 +170,8 @@ class FrontendBridge {
           cur: row.id,
           user: (await sql.selectId('wiki_users', row.wiki_user)).name,
           userId: row.wiki_user,
-          id: row.item_id
+          id: row.item_id,
+          tags: row.tags
         })
       }
     }
