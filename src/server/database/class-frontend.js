@@ -135,15 +135,15 @@ class FrontendBridge {
     for (let i = 0; i < rows.length && i < number + 1; i++) {
       const row = rows[i]
       const next = await rev.getNextRev(row.id)
+      const name = await clsys.getQueryNameById(row.item_id)
+      const { cls } = row
       if (next) {
         const sizes = [row.id, next]
         for (let i = 0; i < 2; i++) {
           sizes[i] = await this.checkRevisionSize(sizes[i])
         }
         const nextRow = await sql.selectId('revisions', next)
-        const { cls } = row
         const delta = sizes[1] - sizes[0]
-        const name = await clsys.getQueryNameById(row.item_id)
         const user = (await sql.selectId('wiki_users', nextRow.wiki_user)).name
 
         latest.push({
@@ -157,19 +157,19 @@ class FrontendBridge {
           userId: nextRow.wiki_user,
           id: row.item_id
         })
+      }
 
-        if (row.created && row.timestamp > timestamp) {
-          latest.push({
-            delta: await this.checkRevisionSize(row.id),
-            timestamp: row.timestamp,
-            cls: classes[cls].name,
-            name,
-            cur: row.id,
-            user: (await sql.selectId('wiki_users', row.wiki_user)).name,
-            userId: row.wiki_user,
-            id: row.item_id
-          })
-        }
+      if (row.created && row.timestamp > timestamp) {
+        latest.push({
+          delta: await this.checkRevisionSize(row.id),
+          timestamp: row.timestamp,
+          cls: classes[cls].name,
+          name,
+          cur: row.id,
+          user: (await sql.selectId('wiki_users', row.wiki_user)).name,
+          userId: row.wiki_user,
+          id: row.item_id
+        })
       }
     }
 
