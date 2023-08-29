@@ -10,10 +10,10 @@ class SQLHandler {
   /** Connects to the database */
   constructor () {
     this.pool = new Pool({
-      user: config.user,
-      password: config.password,
+      user: config.PG_USER,
+      password: config.PG_PASSWORD,
       database: 'musicwiki',
-      port: config.pgport
+      port: config.PG_PORT
     })
   }
 

@@ -17,9 +17,9 @@ require('./auto/generate-auto')
 const config = require('../../webpack.config')
 const compiler = webpack(config)
 
-const { port } = require('../../config')
+const { PORT } = require('../../config')
 
-const SERVER_PORT = port
+const SERVER_PORT = PORT
 
 const clsys = require('../server/database/class-system')
 
