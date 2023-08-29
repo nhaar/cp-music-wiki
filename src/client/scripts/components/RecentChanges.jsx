@@ -174,12 +174,12 @@ function GroupedChanges (props) {
       )
       i++
     }
-    i++
     components.push(
       <div key={i}>
         {lis}
       </div>
     )
+    i++
   }
   return (
     <div>
@@ -298,7 +298,7 @@ function Changes (props) {
         number: props.RESULT_OPTIONS[props.results]
       })
 
-      let dividedInDays = {}
+      const dividedInDays = {}
       data.forEach(change => {
         const date = new Date(Number(change.timestamp))
         const day = `${date.getDate()} ${getMonthName(date.getMonth())} ${date.getFullYear()}`
@@ -308,13 +308,7 @@ function Changes (props) {
           dividedInDays[day] = [change]
         }
       })
-      dividedInDays = Object.entries(dividedInDays).reverse()
-      const ordered = {}
-      dividedInDays.forEach(element => {
-        const [day, info] = element
-        ordered[day] = info
-      })
-      setData(ordered)
+      setData(dividedInDays)
     })()
   }, [props.results, props.period])
 
