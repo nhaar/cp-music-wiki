@@ -220,13 +220,16 @@ function getTime (timestamp) {
 }
 
 function getDeltaClass (size) {
+  let className = ''
   if (size > 0) {
-    return 'positive-diff'
+    className = 'positive-diff'
+  } else if (size < 0) {
+    className = 'negative-diff'
+  } else className = 'zero-diff'
+  if (Math.abs(size) > 1000) {
+    className = `${className} bold`
   }
-  if (size < 0) {
-    return 'negative-diff'
-  }
-  return 'zero-diff'
+  return className
 }
 
 function getSingleLine (change, i) {
