@@ -128,10 +128,26 @@ router.get('/:value', async (req, res) => {
         // page will either use `n` or `id`, not both together
         const { id, n } = req.query
 
+        const validQuery = [id, n].filter(v => typeof v === 'string' && v.match(/^\d+$/)).length > 0
+
+        // send error if query params are invalid
+        if (!validQuery) {
+          res.sendStatus(400)
+          return
+        }
+
         // if creating an item, figure out the class
         // otherwise it is unnecessary as the class will be embeded in the item row
+        const clsData = n && bridge.preeditorData[n]
+
         /** Class of the item (variable only used for creating item) */
-        const cls = n && bridge.preeditorData[n].cls
+        const cls = clsData && clsData.cls
+
+        // send error if invalid `n` value
+        if (n && !cls) {
+          res.sendStatus(400)
+          return
+        }
 
         // build item row if creating an item, otherwise just fetch it
         /** Item row */
@@ -143,39 +159,46 @@ router.get('/:value', async (req, res) => {
           row = await clsys.getItem(id)
         }
 
-        // row being undefined means could not find item in class system, so assume it is deleted
         /** True if the relevant item is deleted */
-        const isDeleted = Boolean(!row)
+        let isDeleted = false
+
+        if (!row) {
+          // could not find in normal items, search for deleted item and if can't find send an error
+          row = await del.getDeletedRow(id)
+          if (row) {
+            // overwrite deleted item id with normal item id
+            row.id = id
+            isDeleted = true
+          } else {
+            res.sendStaus(404)
+            return
+          }
+        }
 
         // only admins can handle deleted items
         if (isDeleted && !(await user.isAdmin(user.getToken(req)))) {
           res.sendStatus(403)
-        } else {
-          if (!row) {
-            // get row if deleted
-            row = await del.getDeletedRow(id)
-            // overwrite deleted item id with normal item id
-            row.id = id
+          return
+        }
+
+        switch (value) {
+          // page for undeleting items
+          case 'Undelete': {
+            sendView(req, res, value, 'Undelete item', id)
+            break
           }
-          switch (value) {
-            // page for undeleting items
-            case 'Undelete': {
-              sendView(req, res, value, 'Undelete item', id)
-              break
-            }
-            // page for deleting items
-            case 'Delete': {
-              sendView(req, res, value, 'Delete item', { deleteData: (await bridge.getDeleteData(Number(id))), row })
-              break
-            }
-            // read and edit item pages
-            default: {
-              const args = value === 'Editor'
-                ? ['Editor', 'Editor']
-                : ['ReadItem', 'Read']
-              sendView(req, res, ...args, { editorData: bridge.editorData[row.cls], row, isDeleted, n })
-              break
-            }
+          // page for deleting items
+          case 'Delete': {
+            sendView(req, res, value, 'Delete item', { deleteData: (await bridge.getDeleteData(Number(id))), row })
+            break
+          }
+          // read and edit item pages
+          default: {
+            const args = value === 'Editor'
+              ? ['Editor', 'Editor']
+              : ['ReadItem', 'Read']
+            sendView(req, res, ...args, { editorData: bridge.editorData[row.cls], row, isDeleted, n })
+            break
           }
         }
         break
@@ -294,8 +317,19 @@ async function sendDiffView (req, res, cur, old) {
   for (let i = 0; i < diffData.length; i++) {
     diffData[i] = await rev.getRevisionData(Number(diffData[i]))
   }
-  const diff = rev.getRevDiff(...diffData)
+  // send error if either revisions don't exist
+  if (diffData.includes(null)) {
+    res.sendStatus(404)
+    return
+  }
 
+  // send error if trying to diff two different items
+  if (diffData[0].item_id !== diffData[1].item_id) {
+    res.sendStatus(400)
+    return
+  }
+
+  const diff = rev.getRevDiff(...diffData)
   sendView(req, res, 'Diff', 'Difference between revisions', diff)
 }
 

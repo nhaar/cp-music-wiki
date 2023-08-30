@@ -120,7 +120,10 @@ class RevisionHandler {
    * @returns {ItemData} What the data was
    */
   async getRevisionData (revId) {
+    if (isNaN(revId)) return null
     const row = await sql.selectId('revisions', revId)
+    if (!row) return null
+
     const itemId = row.item_id
 
     const revisions = (await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', itemId))
