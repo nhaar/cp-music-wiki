@@ -5,7 +5,8 @@ every time a change to the database must be made, this must be accessed first
 const handler = require('../database/sql-handler')
 const clsys = require('../database/class-system')
 const jsondiffpatch = require('jsondiffpatch')
-const { deepcopy, removeBraces } = require('./server-utils')
+const { removeBraces } = require('./server-utils')
+const { deepcopy } = require('./common-utils')
 
 /**
  * An array which represents all versions of a specific type data throught time,

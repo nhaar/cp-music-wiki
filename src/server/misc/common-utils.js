@@ -14,5 +14,12 @@ module.exports = {
 
     return cookies
   },
-  MIN_PASSWORD_LENGTH: 8
+  MIN_PASSWORD_LENGTH: 8,
+
+  /**
+   * Get a deepcopy of an object
+   * @param {object} object - Object to copy
+   * @returns {object} Copied object
+   */
+  deepcopy (object) { return JSON.parse(JSON.stringify(object)) }
 }

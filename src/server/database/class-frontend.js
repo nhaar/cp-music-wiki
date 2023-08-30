@@ -2,7 +2,8 @@ const clsys = require('./class-system')
 const sql = require('./sql-handler')
 const rev = require('./revisions')
 const del = require('./deletions')
-const { capitalize, matchInside, deepcopy } = require('../misc/server-utils')
+const { capitalize, matchInside } = require('../misc/server-utils')
+const { deepcopy } = require('../misc/common-utils')
 
 class FrontendBridge {
   constructor () {

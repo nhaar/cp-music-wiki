@@ -1,8 +1,8 @@
-const { removeBraces, matchGroup, deepcopy, compareObjects } = require('../misc/server-utils')
+const { removeBraces, matchGroup, compareObjects } = require('../misc/server-utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
 const predef = require('./predefined')
-const { getName } = require('../misc/common-utils')
+const { getName, deepcopy } = require('../misc/common-utils')
 
 /**
  * An object that maps database class names to their

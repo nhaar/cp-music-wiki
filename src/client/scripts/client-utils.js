@@ -71,8 +71,6 @@ export function findIndexInObject (object, property, value) {
   return findElementInObject(object, property, value).i
 }
 
-export function deepcopy (obj) { return JSON.parse(JSON.stringify(obj)) }
-
 export function getCookies () {
   return formatCookies(document.cookie)
 }

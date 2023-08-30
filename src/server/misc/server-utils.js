@@ -1,108 +1,145 @@
 const fs = require('fs')
 
-function groupPatterns (...patterns) {
-  const sources = (patterns.map(pattern => {
-    if (pattern instanceof RegExp) {
-      return pattern.source
-    } else return pattern
-  }))
-  const combined = sources.reduce((accumulator, cur) => {
-    return accumulator + cur
-  }, '')
-  return new RegExp(combined)
-}
-
-module.exports = {
+/** Class with helper methods to be used in the server side code */
+class ServerUtils {
   /**
-   * Checks if two objects are the exact same (down to the order of things)
-   * @param {object} obj1
-   * @param {object} obj2
-   * @returns {boolean}
+   * Group `RegExp` patterns into a single one, joining the patterns from left to right from the first pattern to the last one
+   * to create a single `RegExp`
+   * @param  {...(string | RegExp)} patterns - Arguments can be a `RegExp` literal or a string that represents part of a `RegExp`
+   * @returns {RegExp} Combined `RegExp`
    */
-  compareObjects (obj1, obj2) {
+  static groupPatterns (...patterns) {
+    return new RegExp(
+      patterns.map(pattern => {
+        if (pattern instanceof RegExp) {
+          return pattern.source
+        } else return pattern
+      }).join('')
+    )
+  }
+
+  /**
+   * Checks if the data from two objects is the same, that is, check if the values of the properties are equal
+   * (property order is also important)
+   * @param {object} obj1 - Object to compare
+   * @param {object} obj2 - Object to compare
+   * @returns {boolean} True if the objects have equal properties and values
+   */
+  static compareObjects (obj1, obj2) {
     return JSON.stringify(obj1) === JSON.stringify(obj2)
-  },
+  }
 
   /**
-   * Get a deepcopy of an object
-   * @param {object} object - Object to copy
-   * @returns {object} Copied object
+   * Match a `RegExp` formed of joined `RegExp`'s in a string
+   * @param {string} str - String to apply a `RegExp`
+   * @param {string} flags - Flag for the `RegExp`
+   * @param  {...(string | RegExp)} patterns - `RegExp` literals or strings representing `RegExp`'s to be joined into a single `RegExp` from the left to right
+   * @returns {object | null} Result of the `RegExp` match
    */
-  deepcopy (object) { return JSON.parse(JSON.stringify(object)) },
-
-  groupPatterns,
-
-  matchGroup (str, flags, ...patterns) {
-    return str.match(new RegExp(groupPatterns(...patterns), flags))
-  },
+  static matchGroup (str, flags, ...patterns) {
+    return str.match(new RegExp(ServerUtils.groupPatterns(...patterns), flags))
+  }
 
   /**
    * Remove all curly brace characters from a string
-   * @param {string} str
-   * @returns {string}
+   * @param {string} str - String to modify
+   * @returns {string} Modified string
    */
-  removeBraces (str) {
+  static removeBraces (str) {
     return str.replace(/{|}/g, '')
-  },
+  }
 
   /**
-   * Makes the first letter of a string uppercase
+   * Capitalize the first character of a string
    * @param {string} str - String to modify
    * @returns Modified string
    */
-  capitalize (str) {
+  static capitalize (str) {
     return `${str[0].toUpperCase()}${str.slice(1)}`
-  },
+  }
 
-  createDirectoryIfNotExists (directoryPath) {
+  /**
+   * Create a directory if it doesn't exist
+   * @param {string} directoryPath - Path to the directory
+   */
+  static createDirectoryIfNotExists (directoryPath) {
     if (!fs.existsSync(directoryPath)) {
       fs.mkdirSync(directoryPath)
     }
-  },
+  }
 
   /**
-   * Match for a pattern than enclosures everything inside two characters
+   * Apply a `RegExp` match with the pattern with a greedy capture of everything between two characters, excluding
+   * the two border characters, with no flags
    * @param {string} str - String to match
-   * @param {string} lChar - Left character of the enclosure
-   * @param {string} rChar - Right character of the enclosure, leave blank for same as left
-   * @returns {object | null} Match result
+   * @param {string} lChar - Left character of the enclosure, with two `\` if it needs to be escaped in a `RegExp`
+   * @param {string} rChar - Right character of the enclosure, with two `\` if it needs to be escaped, or leave out for the same as left
+   * @returns {object | null} Result of the `RegExp` match
    */
-  matchInside (str, lChar, rChar) {
+  static matchInside (str, lChar, rChar) {
     if (!rChar) rChar = lChar
     return str.match(`(?<=${lChar}).*(?=${rChar})`)
-  },
+  }
 
-  getToken (req) {
-    const { cookie } = req.headers
-    if (cookie) {
-      const match = cookie.match(/(?<=(session=))[\d\w]+(?=(;|$))/)
-      return match && match[0]
-    } else return ''
-  },
+  /**
+   * Obtain the user session token from an incoming HTTP request
+   * @param {import('express').Request} req - Express request
+   * @returns {string} User token if it exists, an empty string otherwise
+   */
+  static getToken (req) {
+    if (req.headers.cookie) {
+      return ServerUtils.getMatch(req.headers.cookie, /(?<=(session=))[\d\w]+(?=(;|$))/)
+    }
+    return ''
+  }
 
-  getRandomInt (a, b) {
+  /**
+   * Get a random integer in an interval
+   * @param {number} a - Lower bound of the interval, including
+   * @param {number} b - Upper bound of the interval, excluding
+   * @returns {number} Random generated integer
+   */
+  static getRandomInt (a = 0, b) {
     return Math.floor(Math.random() * (b - a)) + a
-  },
+  }
 
-  getLastElement (arr) {
+  /**
+   * Get the last element of an array
+   * @param {any[]} arr - Target array
+   * @returns {any} Last element of the array
+   */
+  static getLastElement (arr) {
     return arr[arr.length - 1]
-  },
+  }
 
   /**
    * Check if a value is a JavaScript object, excluding arrays
    * @param {any} value - Value to check
-   * @returns {boolean} True if the value is an object and not an array
+   * @returns {boolean} `true` if the value is an object and not an array, `false` otherwise
    */
-  isObject (value) {
+  static isObject (value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value)
-  },
+  }
 
-  isStringNumber (value) {
+  /**
+   * Check if a value is a string representation of an integer
+   * @param {any} value - Value to check
+   * @returns {boolean} `true` if the value is a string representation of an integer, `false` otherwise
+   */
+  static isStringNumber (value) {
     return typeof value === 'string' && value.match(/^\d+$/)
-  },
+  }
 
-  getMatch (str, pattern) {
+  /**
+   * Apply a `RegExp` match with no flags and get the matched string
+   * @param {string} str - String to apply `RegExp`
+   * @param {RegExp | string} pattern - `RegExp` literal or string with the pattern
+   * @returns {string | null} Matched string if it exists, `null` otherwise
+   */
+  static getMatch (str, pattern) {
     const match = str.match(pattern)
     return match && match[0]
   }
 }
+
+module.exports = ServerUtils
