@@ -1,130 +1,119 @@
 const express = require('express')
 const router = express.Router()
 
-const multer = require('multer')
-
-const path = require('path')
-
 const bridge = require('../database/class-frontend')
 const user = require('../database/user')
 const rev = require('../database/revisions')
 const clsys = require('../database/class-system')
 const del = require('../database/deletions')
 const gen = require('../gens/gen-list')
-const { getToken } = require('../misc/server-utils')
+const ApiMiddleware = require('../misc/api-middleware')
+const JSONErrorSender = require('../misc/json-error-sender')
+const { getToken, isObject, getMatch } = require('../misc/server-utils')
 
-// const Gen = require('../misc/lists')
-// const gen = new Gen()
-
-const checkClass = checkValid(body => clsys.isMajorClass(body.cls), 'Invalid item class provided')
-
-const checkItem = checkValid(body => {
-  const { row } = body
-  return clsys.isMajorClass(row.cls) && (row !== null && typeof row === 'object')
-}, 'Invalid item provided')
-
-const checkId = checkValid(body => Number.isInteger(body.id), 'Id is not an integer')
-
-// get default data
-router.post('/default', checkClass, async (req, res) => {
+/** Route for getting the default data object of a class */
+router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
   const { cls } = req.body
-  const row = await clsys.getDefault(cls)
-  res.status(200).send(row)
+  res.status(200).send(await clsys.getDefault(cls))
 })
 
-// get a data row
-router.post('/get', checkId, async (req, res) => {
+/** Route for getting the row for an item (not deleted) in the database */
+router.post('/get', ApiMiddleware.checkId, async (req, res) => {
   const { id } = req.body
 
   const row = await clsys.getItem(id)
   if (row) {
     res.status(200).send(row)
   } else {
-    sendNotFound(res, 'Item not found in the database')
+    JSONErrorSender.sendNotFound(res, 'Item not found in the database')
   }
 })
 
-// update a data type
-router.post('/update', checkAdmin, checkItem, async (req, res) => {
+/**
+ * Route for sending an update to an item
+ *
+ * Only admins have access to this route
+ * */
+router.post('/update', ApiMiddleware.checkAdmin, ApiMiddleware.getValidatorMiddleware(body => {
+  return clsys.isMajorClass(body.row.cls) && isObject(body.row) && isObject(body.row.data)
+}, 'Invalid item provided'), async (req, res) => {
+  // `row` is the item row and `isMinor` refers to whether the change is a minor edit
   const { row, isMinor } = req.body
 
-  const changed = await clsys.didDataChange(row.id, row.data)
-  if (changed) {
-    const token = getToken(req)
-    const { data, cls } = row
-    const validationErrors = clsys.validate(cls, data)
+  if (await clsys.didDataChange(row.id, row.data)) {
+    const validationErrors = clsys.validate(row.cls, row.data)
     if (validationErrors.length === 0) {
-      await rev.addChange(row, token, isMinor)
+      await rev.addChange(row, getToken(req), isMinor)
       clsys.updateItem(row)
-      // gen.updateLists()
       res.sendStatus(200)
-    } else sendBadReqJSON(res, { errors: validationErrors })
+    } else JSONErrorSender.sendBadReqJSON(res, { errors: validationErrors })
   } else {
     res.sendStatus(400)
   }
 })
 
+/** Route for checking whether an username is taken or not */
 router.post('/check-username', async (req, res) => {
+  // `name` is the name being checked
   const { name } = req.body
   res.status(200).send({ taken: await user.isNameTaken(name) })
 })
 
+/** Route for creating a new wiki account */
 router.post('/create-account', async (req, res) => {
+  // `name`, `password` and `email` are the new account's username, password and email
   const { name, password, email } = req.body
-  const isValid = await user.canCreate(name, password, email)
-  if (isValid) {
+  if (await user.canCreate(name, password, email)) {
     user.createAccount(name, password, email, req.ip)
     res.sendStatus(200)
   } else res.sendStatus(400)
 })
 
+/** Route for requesting a password reset */
 router.post('/send-reset-req', async (req, res) => {
+  // `name` is the username of the account to reset the password
   const { name } = req.body
   user.sendResetPassEmail(name)
   res.sendStatus(200)
 })
 
+/** Route for resetting an account's password */
 router.post('/reset-password', (req, res) => {
+  // `token` is the verification token included in the password reset link and `password` is the new password
   const { token, password } = req.body
   user.resetPassword(token, password)
   res.sendStatus(200)
 })
 
-router.post('/rollback', checkAdmin, (req, res) => {
+/**
+ * Route for performing a rollback on an user's edits over an item
+ *
+ * Only admins can perform a rollback
+ * */
+router.post('/rollback', ApiMiddleware.checkAdmin, (req, res) => {
+  // `user` is the name of the user and `item` is the id of the item of the rollback
   const { user, item } = req.body
   rev.rollback(user, item, getToken(req))
   res.sendStatus(200)
 })
 
-// middleware for receiving the music file
-const upload = multer({ dest: path.join(__dirname, '../../client/music/') })
+/**
+ * Route for deleting an item
+ *
+ * Only admins can delete items
+ */
+router.post('/delete', ApiMiddleware.checkAdmin, async (req, res) => {
+  // `id` is the item to delete, `token`, `reason` is the id of the reason and `otherReason` is a string for the other reason
+  const { id, reason, otherReason } = req.body
 
-async function checkAdmin (req, res, next) {
-  let isAdmin = false
-  const session = getToken(req)
-  if (session) {
-    isAdmin = await user.isAdmin(session)
-  }
-
-  if (isAdmin) {
-    next()
-  } else {
-    res.status(403).send({})
-  }
-}
-
-router.post('/delete', checkAdmin, async (req, res) => {
-  const { id, token, reason, otherReason } = req.body
-
-  // check any references
-  const cls = (await clsys.getItem(id)).cls
-  const refs = await clsys.checkReferences(cls, id)
+  // check if other items reference this item, if they do, send error
+  const refs = await clsys.checkReferences(id)
   if (refs.length === 0) {
-    if (await clsys.isStaticClass(cls) || await clsys.isPredefined(id)) {
+    // static and predefined items are undeletable
+    if (await clsys.isStaticItem(id) || await clsys.isPredefined(id)) {
       res.sendStatus(400)
     } else {
-      // delete
-      del.deleteItem(id, token, reason, otherReason)
+      del.deleteItem(id, getToken(req), reason, otherReason)
       res.sendStatus(200)
     }
   } else {
@@ -132,54 +121,85 @@ router.post('/delete', checkAdmin, async (req, res) => {
   }
 })
 
-router.post('/undelete', checkAdmin, async (req, res) => {
+/**
+ * Route for undeleting an item
+ *
+ * Only admins can undelete an item
+ */
+router.post('/undelete', ApiMiddleware.checkAdmin, ApiMiddleware.checkId, async (req, res) => {
+  // `id` is the id of the item and `reason` is the reason for undeleting
   const { id, reason } = req.body
-  del.undeleteItem(id, reason, user.getToken(req))
+  await del.undeleteItem(id, reason, user.getToken(req))
+  res.sendStatus(200)
 })
 
-// receive music files
-router.post('/submit-file', checkAdmin, upload.single('file'), async (req, res) => {
-  const error = msg => sendBadReq(res, msg)
+/**
+ * Route for receiving music files
+ *
+ * The file request must be a form with the file
+ *
+ * Only admins can submit files
+ * */
+router.post('/submit-file', ApiMiddleware.checkAdmin, ApiMiddleware.musicUpload.single('file'), async (req, res) => {
+  function error (msg) {
+    return JSONErrorSender.sendBadReq(res, msg)
+  }
+  // The form must contain the file named as `file`
   const { file } = req
-  if (!file) error('No file found')
+  if (!file) {
+    error('No file found')
+    return
+  }
+  // file variables are given via multer
+  const { originalname, filename } = req.file
+
+  if (!filename) error('Could not get file path')
+  else if (!originalname) error('Could not get file name')
   else {
-    const { originalname, filename } = req.file
-    if (!filename) error('Could not get file path')
-    else if (!originalname) error('Could not get file name')
-    else {
-      clsys.updateItem({ cls: 'file', data: { originalname, filename } })
-      res.sendStatus(200)
-    }
+    // update item under the static class `file`
+    clsys.updateItem({ cls: 'file', data: { originalname, filename } })
+    res.sendStatus(200)
   }
 })
 
-// get filtering by a name
-router.post('/get-by-name', checkClass, async (req, res) => {
+/** Route for getting all the items in a class filtered by a name */
+router.post('/get-by-name', ApiMiddleware.checkClass, ApiMiddleware.checkKeyword, async (req, res) => {
+  // `keyword` is the expression to filter with, `cls` is the class of items to search
+  // and `withDeleted` is true if deleted items should be included
   const { keyword, cls, withDeleted } = req.body
-  const isAdmin = await user.isAdmin(user.getToken(req))
-  if (typeof keyword !== 'string') sendBadReq(res, 'Invalid keyword')
-  else {
-    let results
-    const deletedArg = keyword.match(/(?<=^Deleted:).*/)
-    if (withDeleted && deletedArg && isAdmin) {
-      results = await del.getByName(cls, deletedArg[0])
-    } else {
-      results = await clsys.getByName(cls, keyword)
-    }
-    res.status(200).send(results)
+
+  let results
+  // if using deleted results, the search will be delivered in the form `Deleted:KEYWORD`
+  // and only admins can see the deleted results
+  const deletedArg = getMatch(keyword, /(?<=^Deleted:).*/)
+  if (withDeleted && deletedArg && await user.isAdmin(user.getToken(req))) {
+    results = await del.getByName(cls, deletedArg)
+  } else {
+    results = await clsys.getByName(cls, keyword)
   }
+  res.status(200).send(results)
 })
 
-// get name with id
-router.post('/get-name', checkId, async (req, res) => {
+/**
+ * Route for getting the name of an item
+ *
+ * It sends the first name if multiple exist
+ * */
+router.post('/get-name', ApiMiddleware.checkId, async (req, res) => {
+  // `id` is the id of the item
   const { id } = req.body
-  const name = await del.getQueryNameById(id)
-  res.status(200).send({ name })
+  res.status(200).send({ name: await del.getQueryNameById(id) })
 })
 
+/** Route for an user to start a session */
 router.post('/login', async (req, res) => {
+  // `password` is the user's password and `user` is the user's username
   const { password, user: username } = req.body
-  if (typeof username !== 'string' || typeof password !== 'string') sendBadReq(res, 'Invalid data')
+  if (typeof username !== 'string' || typeof password !== 'string') {
+    JSONErrorSender.sendBadReq(res, 'Invalid data')
+    return
+  }
+
   const token = await user.checkCredentials(username, password, req.ip)
   if (token) {
     res.status(200).send({ token })
@@ -188,62 +208,18 @@ router.post('/login', async (req, res) => {
   }
 })
 
+/** Route for the frontend to fetch recent changes */
 router.post('/recent-changes', async (req, res) => {
+  // `days` is the time period in days to consider and `number` is the maximum number of changes
   const { days, number } = req.body
-  const latest = await bridge.getLastRevisions(days, number)
-  res.status(200).send(latest)
-  // get revisions from last day, later add frontend give options
+  res.status(200).send(await bridge.getLastRevisions(days, number))
 })
 
-router.post('/get-page-names', async (req, res) => {
+/** Route for getting the names of the wiki pages filtered by a keyword */
+router.post('/get-page-names', ApiMiddleware.checkKeyword, async (req, res) => {
   const { keyword } = req.body
 
-  res.status(200).send(
-    (await gen.getAllNames())
-      .filter(name => name.match(new RegExp(`${keyword}`, 'i')))
-  )
+  res.status(200).send(await gen.searchPages(keyword))
 })
-
-function sendStatusJSON (res, status, obj) {
-  res.status(status).send(obj)
-}
-
-/**
- * Send a bad request response with JSON
- * @param {import('express').Response} res
- * @param {object} obj - Object to send as JSON
- */
-function sendBadReqJSON (res, obj) {
-  sendStatusJSON(res, 400, obj)
-}
-
-/**
- * Send a bad request response with a single message
- * @param {import('express').Response} res
- * @param {string} msg - Error message
- */
-function sendBadReq (res, msg) {
-  sendBadReqJSON(res, { error: msg })
-}
-
-function sendNotFound (res, msg) {
-  sendStatusJSON(res, 404, { error: msg })
-}
-
-/**
- *
- * @param {*} callback
- * @param {*} msg
- * @returns {function()}
- */
-function checkValid (callback, msg) {
-  return (req, res, next) => {
-    if (callback(req.body)) {
-      next()
-    } else {
-      sendBadReq(res, msg)
-    }
-  }
-}
 
 module.exports = router

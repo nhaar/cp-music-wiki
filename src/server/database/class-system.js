@@ -211,6 +211,10 @@ class ClassSystem {
     return Object.assign({}, this.mainClasses, this.staticClasses)
   }
 
+  async isStaticItem (id) {
+    return this.isStaticClass(await this.getClass(id))
+  }
+
   /**
    * Check if a value is the name of a static class
    * @param {any} type - Value to check
@@ -435,7 +439,8 @@ class ClassSystem {
     return (await this.selectAllInClass(cls))[0]
   }
 
-  async checkReferences (cls, id) {
+  async checkReferences (id) {
+    const cls = await this.getClass(id)
     const clsPaths = this.idPaths[cls]
     const encountered = []
     const majorClasses = this.getMajorClasses()

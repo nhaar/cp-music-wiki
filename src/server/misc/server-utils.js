@@ -86,5 +86,23 @@ module.exports = {
 
   getLastElement (arr) {
     return arr[arr.length - 1]
+  },
+
+  /**
+   * Check if a value is a JavaScript object, excluding arrays
+   * @param {any} value - Value to check
+   * @returns {boolean} True if the value is an object and not an array
+   */
+  isObject (value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+  },
+
+  isStringNumber (value) {
+    return typeof value === 'string' && value.match(/^\d+$/)
+  },
+
+  getMatch (str, pattern) {
+    const match = str.match(pattern)
+    return match && match[0]
   }
 }

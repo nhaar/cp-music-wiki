@@ -24,7 +24,7 @@ const clsys = require('../database/class-system')
 const user = require('../database/user')
 const del = require('../database/deletions')
 const gens = require('../gens/gen-list')
-const { getToken } = require('../misc/server-utils')
+const { getToken, isStringNumber } = require('../misc/server-utils')
 
 /**
  * Route for the homepage
@@ -128,7 +128,7 @@ router.get('/:value', async (req, res) => {
         // page will either use `n` or `id`, not both together
         const { id, n } = req.query
 
-        const validQuery = [id, n].filter(v => typeof v === 'string' && v.match(/^\d+$/)).length > 0
+        const validQuery = [id, n].filter(isStringNumber).length > 0
 
         // send error if query params are invalid
         if (!validQuery) {

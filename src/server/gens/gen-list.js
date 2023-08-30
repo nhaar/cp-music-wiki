@@ -18,6 +18,11 @@ class ListGen {
     return names
   }
 
+  async searchPages (keyword) {
+    return (await this.getAllNames())
+      .filter(name => name.match(new RegExp(`${keyword}`, 'i')))
+  }
+
   async getRandomName () {
     const names = await this.getAllNames()
     return names[getRandomInt(0, names.length)]
