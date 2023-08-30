@@ -58,6 +58,10 @@ class UserHandler {
     return account && account.perms === 'admin'
   }
 
+  async isAdminRequest (req) {
+    return await this.isAdmin(this.getToken(req))
+  }
+
   getToken (req) {
     return formatCookies(req.headers.cookie).session
   }

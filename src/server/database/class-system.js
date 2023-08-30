@@ -426,6 +426,15 @@ class ClassSystem {
     return handler.selectWithColumn('items', 'cls', cls)
   }
 
+  /**
+   * Get the row for a static class
+   * @param {cls} cls - Static class
+   * @returns {ItemRow} Row for the class
+   */
+  async getStaticClass (cls) {
+    return (await this.selectAllInClass(cls))[0]
+  }
+
   async checkReferences (cls, id) {
     const clsPaths = this.idPaths[cls]
     const encountered = []
