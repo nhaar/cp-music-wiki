@@ -1,4 +1,5 @@
 const fs = require('fs')
+const { getMatch } = require('./common-utils')
 
 /** Class with helper methods to be used in the server side code */
 class ServerUtils {
@@ -88,7 +89,7 @@ class ServerUtils {
    */
   static getToken (req) {
     if (req.headers.cookie) {
-      return ServerUtils.getMatch(req.headers.cookie, /(?<=(session=))[\d\w]+(?=(;|$))/)
+      return getMatch(req.headers.cookie, /(?<=(session=))[\d\w]+(?=(;|$))/)
     }
     return ''
   }
@@ -128,17 +129,6 @@ class ServerUtils {
    */
   static isStringNumber (value) {
     return typeof value === 'string' && value.match(/^\d+$/)
-  }
-
-  /**
-   * Apply a `RegExp` match with no flags and get the matched string
-   * @param {string} str - String to apply `RegExp`
-   * @param {RegExp | string} pattern - `RegExp` literal or string with the pattern
-   * @returns {string | null} Matched string if it exists, `null` otherwise
-   */
-  static getMatch (str, pattern) {
-    const match = str.match(pattern)
-    return match && match[0]
   }
 }
 

@@ -9,7 +9,8 @@ const del = require('../database/deletions')
 const gen = require('../gens/gen-list')
 const ApiMiddleware = require('../misc/api-middleware')
 const JSONErrorSender = require('../misc/json-error-sender')
-const { getToken, isObject, getMatch } = require('../misc/server-utils')
+const { getToken, isObject } = require('../misc/server-utils')
+const { getMatch } = require('../misc/common-utils')
 
 /** Route for getting the default data object of a class */
 router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
