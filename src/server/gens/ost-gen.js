@@ -90,12 +90,28 @@ class OptionsSheet {
    *
    * Their syntax is the same as CSS classes, their definitions can be found in the `switch` statement within
    * this method
-   * @param {string} className - A string with all classes to be added to the sheet, with space betwen the classes
+   * @param {string} className - A string with all classes to be added to the sheet, with space betwen the classes, for using no `className` give `undefined` or an empty string
    */
   parseClasses (className) {
-    if (!className) return
+    if ([undefined, ''].includes(className)) return
     className.match(/[\w-]+/g).forEach(name => {
       switch (name) {
+        case 'standard': {
+          this.parseClasses('data-name use-song range-available start-date')
+          break
+        }
+        case 'standard-used': {
+          this.parseClasses('used-only standard')
+          break
+        }
+        case 'standard-used-multi': {
+          this.parseClasses('standard-used standard-data-date')
+          break
+        }
+        case 'standard-data-date': {
+          this.parseClasses('data-range data-date')
+          break
+        }
         case 'used-only': {
           this.usedOnly = true
           break
@@ -115,6 +131,17 @@ class OptionsSheet {
         case 'start-date': {
           this.useDateProp = 'start'
           break
+        }
+        case 'data-range': {
+          this.rowRangeProp = 'available'
+          break
+        }
+        case 'data-date': {
+          this.rowDateProp = 'start'
+          break
+        }
+        default: {
+          throw new Error(`Unknown class name "${name}". Did you commit a typo?`)
         }
       }
     })
@@ -162,56 +189,38 @@ class MediaGenerator {
     'Club Penguin OST': {
       id: 'flash',
       sheets: [
-        new OptionsSheet('used-only data-name use-song range-available start-date', {
+        new OptionsSheet('standard-used', {
           cls: 'flash_room',
           usesProp: 'songUses'
         }),
-        new OptionsSheet('used-only data-name use-song range-available start-date', {
+        new OptionsSheet('standard-used', {
           cls: 'flash_party',
           usesProp: 'partySongs',
           dateOriginProp: 'usePartyDate',
           rowRangeProp: 'active',
           rowDateProp: 'start'
         }),
-        new OptionsSheet('', {
+        new OptionsSheet('use-song', {
           cls: 'music_catalogue',
           predefinedName: 'Igloo',
           usesProp: 'songs',
           is2dUses: true,
-          useSongProp: 'song',
           rowDateProp: 'launch'
         }),
-        new OptionsSheet('', {
+        new OptionsSheet('data-name start-date', {
           cls: 'stage_play',
-          dataNameProp: 'name',
           usesProp: 'appearances',
           useDateProp: 'start',
           dataSongProp: 'themeSong'
         }),
-        new OptionsSheet('', {
+        new OptionsSheet('standard-used-multi', {
           cls: 'flash_minigame',
-          dataNameProp: 'name',
-          usesProp: 'songs',
-          rowRangeProp: 'available',
-          rowDateProp: 'start',
-          usedOnly: true,
-          dateOriginProp: 'useMinigameDates',
-          useRangeProp: 'available',
-          useDateProp: 'start',
-          useSongProp: 'song'
+          dateOriginProp: 'useMinigameDates'
         }),
-        new OptionsSheet('', {
+        new OptionsSheet('standard-used-multi', {
           cls: 'flash_misc',
-          dataNameProp: 'name',
-          usesProp: 'songs',
-          useSongProp: 'song',
-          rowRangeProp: 'available',
-          rowDateProp: 'start',
-          usedOnly: true,
           dateOriginProp: 'useOwnDate',
-          invertOriginBool: true,
-          useRangeProp: 'available',
-          useDateProp: 'start'
+          invertOriginBool: true
         })
       ],
       mediaName: 'Club Penguin'
@@ -219,13 +228,9 @@ class MediaGenerator {
     'Club Penguin Island OST': {
       id: 'cpi',
       sheets: [
-        new OptionsSheet('', {
+        new OptionsSheet('standard', {
           cls: 'cpi_screen',
-          dataNameProp: 'name',
-          usesProp: 'songUses',
-          useRangeProp: 'available',
-          useDateProp: 'start',
-          useSongProp: 'song'
+          usesProp: 'songUses'
         })
       ],
       mediaName: 'Club Penguin Island'
