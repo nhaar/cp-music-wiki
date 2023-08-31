@@ -130,6 +130,29 @@ class ServerUtils {
   static isStringNumber (value) {
     return typeof value === 'string' && value.match(/^\d+$/)
   }
+
+  /**
+   * Iterate through all elements of an array and execute an asynchronous callback, awaiting between each callback
+   * @param {any[]} arr - Array to iterate
+   * @param {function(any, number)} callback - Asynchronous function executed in each iteration that takes as the first argument the current element of the array and as the second argument the index of the element
+   */
+  static async forEachAsync (arr, callback) {
+    for (let i = 0; i < arr.length; i++) {
+      await callback(arr[i], i)
+    }
+  }
+
+  /**
+   * In an array of objects, find which object has the property `id` matching a value
+   * @param {object[]} array - Array with the objects
+   * @param {number} id - Value the `id` property needs to match
+   * @returns {object | undefined} The matched object if it exists
+   */
+  static findId (array, id) {
+    for (let i = 0; i < array.length; i++) {
+      if (array[i].id === id) return array[i]
+    }
+  }
 }
 
 module.exports = ServerUtils

@@ -1,407 +1,440 @@
 const clsys = require('../database/class-system')
-
-const medias = {
-  'Series OST': 'series',
-  'Club Penguin OST': 'flash'
-}
+const { forEachAsync, findId } = require('../misc/server-utils')
 
 /**
- * Represents the use of a song in some media at some point in history
+ * Object with important data for medias
+ * @typedef {object} MediaInfo
+ * @property {string} id - Short name identifying a media
+ * @property {OptionsSheet[]} sheets - All sheets for finding instances
+ * @property {string} mediaName - Display name in the series list for this media
  */
+
+/** Class represents the use of a song in some media at some point in history, which are called instances */
 class SongInstance {
   /**
-   *
-   * @param {string} name - Name of whatever the song was used in
-   * @param {object} dateEst - Object with data for the date
+   * Save the instance properties
+   * @param {string} name - Name of whatever the song was used in, as it will be displayed in the final list
+   * @param {object} dateEst - Object with data for the date of use
    * @param {string} dateEst.date - String representing the date
-   * @param {boolean} dateEst.isEstimate - Boolean representing if the date is an estimate
-   * @param {number} song - Id of the song
+   * @param {boolean} dateEst.isEstimate - `true` if the date is an estimate, `false` if it is an exact date for the use
+   * @param {string | number} song - Item id of the song in either number or string representation
    */
   constructor (name, dateEst, song) {
-    const properSong = typeof song === 'object' ? song.song : Number(song)
-    Object.assign(this, { name, date: dateEst.date, song: properSong, estimate: dateEst.isEstimate })
+    Object.assign(this, { name })
+    if (song) this.addSong(song)
+    if (dateEst) this.addDate(dateEst)
+  }
+
+  /**
+   * Validate and save the song property
+   * @param {string | number} song - Item id of the song in either number or string representation
+   */
+  addSong (song) {
+    this.song = Number(song)
+  }
+
+  /**
+   * Save the date properties
+   * @param {object} dateEst - Object with data for the date of use
+   * @param {string} dateEst.date - String representing the date
+   * @param {boolean} dateEst.isEstimate - `true` if the date is an estimate, `false` if it is an exact date for the use
+   */
+  addDate (dateEst) {
+    this.date = dateEst.date
+    this.estimate = dateEst.isEstimate
   }
 }
 
 /**
- * Object to hold information for how the media are generated
+ * Objects of this class contain properties that are processed by the 'MediaGenerator' to process song instances
+ *
+ * Below is a list of all the properties read by the generator. If they don't apply to the specific use case,
+ * they can be left out and the generator will understand
+ *
+ * The words `row`, `data` and `use` in this context refer to how they operate inside `MediaGenerator.iterateInstances`,
+ * where `row` is the target of `rowAction`, `data` is a property inside `row` that contains an object,
+ * and `use` is the target of `useAction`
+ *
+ * The words `name`, `song` and `date` refer to how they are used inside `SongInstance`
+ *
+ * @property {string} cls - Name of class that stores the instances
+ * @property {string} usesProp - Property in `data` with an array of `uses`s
+ * @property {boolean} is2dUses - `true` if the `use`s array is a two dimensional array, `false` otherwise
+ * @property {boolean} usedOnly - `true` if only `use`s with the `isUnused` property set to `false` should be used, `false` otherwise
+ * @property {string} dataNameProp - Property in `data` that contains `name`
+ * @property {string} useSongProp - Property inside `use` that contains `song`
+ * @property {string} dataSongProp - Property inside `data` that contains `song`
+ * @property {string} useRangeProp - Property inside `use` that contains a date range
+ * @property {string} useDateProp - Property inside `use`s that contains `date`
+ * @property {string} dateOriginProp - Property inside `use`s that decides whether `date` comes from `row` or from `use`
+ * @property {string} rowRangeProp - Property inside `data` that contains a date range
+ * @property {string} rowDateProp - Property inside `data` that contains `date`
+ * @property {string} predefinedName - Predefined `name` for all instances
+ * @property {boolean} invertOriginBool - `true` if the property in `dateOriginProp` should represents using the `data` property if it is `false`, `true` for the other way around
  */
-class MediaInfo {
+class OptionsSheet {
   /**
-   *
-   * @param {string} name - The identifier name for the media
-   * @param {function() : void} updateMethod - A function that updates the song instances
-   * @param {string} dest - The name of the HTML file this will be created in
-   * @param  {...string} tables - The name of all the tables that contain relevant data for the media
+   * Store class and given options
+   * @param {string} className - A string with all the option sheet class names used, see `parseClasses` for more info
+   * @param {OptionsSheet} options - Object with all the properties to pass to the sheet
    */
-  constructor (name, updateMethod, dest, ...tables) {
-    Object.assign(this, { name, updateMethod, dest, tables })
+  constructor (className, options = {}) {
+    this.parseClasses(className)
+    Object.assign(this, { ...options })
   }
-}
 
-async function generateOSTList (media) {
-  const songs = await clsys.selectAllInClass('song')
-  const authors = await clsys.selectAllInClass('author')
-  const sources = await clsys.selectAllInClass('source')
-  const plays = await clsys.selectAllInClass('stage_play')
-
-  // make an index of the priorities in case it gets used
-  const priorityIndex = {}
-  songs.forEach(song => {
-    priorityIndex[song.id] = song.data.priority
-  })
-
-  /** Array will keep all the song instances, and gets reset for each media */
-  let instances = []
-
-  /** This array will keep the rows of all the tables that are relevant for the current media */
-  let tables
-
-  const iterateUsePushInstance = (uses, callback) => {
-    uses.forEach(use => {
-      const args = callback(use)
-      if (args) {
-        instances.push(new SongInstance(...args.concat(use)))
+  /**
+   * Parse all the option classes
+   *
+   * Classes are a shorthand way to define properties with a single string
+   *
+   * Their syntax is the same as CSS classes, their definitions can be found in the `switch` statement within
+   * this method
+   * @param {string} className - A string with all classes to be added to the sheet, with space betwen the classes
+   */
+  parseClasses (className) {
+    if (!className) return
+    className.match(/[\w-]+/g).forEach(name => {
+      switch (name) {
+        case 'used-only': {
+          this.usedOnly = true
+          break
+        }
+        case 'data-name': {
+          this.dataNameProp = 'name'
+          break
+        }
+        case 'use-song': {
+          this.useSongProp = 'song'
+          break
+        }
+        case 'range-available': {
+          this.useRangeProp = 'available'
+          break
+        }
+        case 'start-date': {
+          this.useDateProp = 'start'
+          break
+        }
       }
     })
   }
+}
 
-  const useData = (row, callback) => {
-    const { data } = row
-    return callback(data)
+/** Class that handles the types of medias and how to generate them */
+class MediaGenerator {
+  /** Determine output media from the page name */
+  constructor (page) {
+    this.media = MediaGenerator.medias[page].id
+    this.isSeries = this.media === 'series'
+    Object.assign(this, { page })
   }
 
-  const filterUnused = (use, callback) => {
-    if (!use.isUnused) return callback(use)
+  /**
+   * Get all the OST list page names
+   * @returns {string[]} Array with all the page names
+   */
+  static getPages () {
+    return Object.keys(MediaGenerator.medias)
   }
 
-  // iterate through every `use`, filter for unused and run a callback
-  const iterateUsesNoUnused = (uses, callback) => {
-    iterateUsePushInstance(uses, use => {
-      return filterUnused(use, callback)
-    })
-  }
-
-  const iterateData = (i, callback) => {
-    tables[i].forEach(row => {
-      useData(row, callback)
-    })
-  }
-
-  const iterateUsesInTable = (base) => (i, key, callback) => {
-    iterateData(i, data => {
-      base(data[key], use => callback(use, data))
-    })
-  }
-
-  const filterUsed = (use, callback) => {
-    if (use.isUnused) return callback(use)
-  }
-
-  // iterate through every row of a table
-  // and process its use checking for unused
-  // calling a callback after
-  // `i` is the index of a table
-  // `key` is the property to access the `use` in the `data`
-  const iterateTableNoUnused = iterateUsesInTable(iterateUsesNoUnused)
-
-  const iterateTableUsed = iterateUsesInTable((uses, callback) => {
-    iterateUsePushInstance(uses, use => {
-      return filterUsed(use, callback)
-    })
-  })
-
-  // gets a callback for getting a callback
-  // to get the arguments for the song instance
-  // using a certain key for the date
-  const getKeyDateCallback = key => (use, data) => [data.name, use[key].start]
-
-  // gets a callback for getting the arguments
-  // when the date is in the key `available`
-  const getAvailableDateCallback = getKeyDateCallback('available')
-
-  const iterateUsesWithName = (namecallback) =>
-    (i, key, callback) => iterateUsesInTable(iterateUsePushInstance)(i, key, (use, data) => {
-      const date = callback(data, use)
-      if (date) return [namecallback(data), date]
-    })
-
-  const iterateUsesWithCallback = iterateUsesWithName(data => data.name)
-
-  const iterateTableUseParent = (i, key, useKey, dateKey) => iterateUsesWithCallback(i, key, (data, use) => {
-    return filterUnused(use, () => {
-      const useParent = use[useKey]
-      const date = useParent
-        ? data[dateKey].start
-        : use.available.start
-      return date
-    })
-  })
-
-  const iterateUnusedWithParent = (i, key) => iterateUsesWithCallback(i, key, (data, use) => {
-    return filterUsed(use, () => {
-      return getComposedDate(use.song)
-    })
-  })
-
-  const iterateUsedMisc = i => iterateUsesWithCallback(i, 'songs', (data, use) => {
-    return filterUnused(use, () => {
-      const date = use.useOwnDate
-        ? use.available.start
-        : data.available.start
-      return date
-    })
-  })
-
-  const getComposedDate = song => {
-    const date = findId(songs, song).data.composedDate
-    if (!date.date) date.isEstimate = true
-    return date
-  }
-
-  const iterateUnusedMisc = i => iterateUsesWithCallback(i, 'songs', (data, use) => {
-    return filterUsed(use, () => { return getComposedDate(use.song) })
-  })
-
-  const iterateAppearances = (i, callback) => {
-    iterateUsesWithCallback(i, 'appearances', callback)
-  }
-
-  const iterateStatic = (i, callback) => {
-    tables[i].data.songs.forEach(callback)
-  }
-
-  const medias = {
-    flash: new MediaInfo(
-      'Club Penguin (Flash)',
-      () => {
-        // room music
-        iterateTableNoUnused(0, 'songUses', getAvailableDateCallback)
-
-        // party music
-        iterateTableUseParent(1, 'partySongs', 'usePartyDate', 'active')
-
-        // igloo music
-        iterateData(2, data => {
-          data.songs.forEach(gridRow => {
-            iterateUsesNoUnused(gridRow, () => ['Igloo', data.launch])
-          })
-        })
-
-        // stage music
-        iterateData(3, data => {
-          instances.push(new SongInstance(data.name, data.appearances[0].start, data.themeSong))
-        })
-
-        // minigame music
-        iterateTableUseParent(4, 'songs', 'useMinigameDates', 'available')
-
-        // misc music
-        iterateUsedMisc(5, data => data.name)
-      },
-      'flash-ost',
-      'flash_room',
-      'flash_party',
-      'music_catalogue',
-      'stage_play',
-      'flash_minigame',
-      'flash_misc'
-    ),
-    cpi: new MediaInfo(
-      'Club Penguin Island',
-      () => {
-        // screens
-        iterateUsesInTable(iterateUsePushInstance)(0, 'songUses', (use, data) => {
-          return [data.name, use.available.start]
-        })
-
-        // locations
-        iterateData(1, data => {
-          data.areas.forEach(area => {
-            const name = data.name
-            iterateUsePushInstance(area.songUses, use => {
-              const areaName = area.name
-              const finalName = areaName
-                ? `${name} - ${areaName}`
-                : name
-              return [finalName, use.available.start]
-            })
-          })
-        })
-
-        // quests
-        iterateUsesInTable(iterateUsePushInstance)(2, 'questSongs', (use, data) => {
-          return [`${data.character} Quest`, data.releaseDate]
-        })
-
-        // party
-        iterateUsesInTable(iterateUsePushInstance)(3, 'songs', (use, data) => {
-          return [data.name, data.active.start]
-        })
-
-        // minigame
-        iterateData(4, data => {
-          instances.push(new SongInstance(data.name, data.releaseDate, data.song))
-        })
-      },
-      'cpi-ost',
-      'cpi_screen',
-      'cpi_location',
-      'cpi_quest',
-      'cpi_party',
-      'cpi_minigame'
-    ),
-    misc: new MediaInfo(
-      'Misc',
-      () => {
-        // youtube
-        iterateAppearances(0, data => ({ date: data.publishDate }))
-
-        // tv
-        iterateAppearances(1, data => data.earliest)
-
-        // series misc
-        iterateUsedMisc(2, data => data.name)
-      },
-      'misc-ost',
-      'youtube_video',
-      'tv_video',
-      'series_misc'
-    ),
-    mobile: new MediaInfo(
-      'Mobile Apps',
-      () => {
-        iterateTableUseParent(0, 'songUses', 'useMinigameDates', 'available')
-      },
-      'mobile-ost',
-      'mobile_apps'
-    ),
-    gd: new MediaInfo(
-      'Game Day',
-      () => {
-        const date = { date: '2010-09-16' }
-        iterateStatic(0, song => {
-          if (song.uses.length === 0) {
-            instances.push(new SongInstance('Unknown', date, song))
-          } else {
-            iterateUsePushInstance(song.uses, use => {
-              return [use, date, song]
-            })
-          }
-        })
-      },
-      'game-day-ost',
-      'game_day_ost'
-    ),
-    ds: new MediaInfo(
-      'DS Games',
-      () => {
-        iterateStatic(0, song => {
-          let date
-          let use
-          const est = false
-          if (song.game === 'epf') {
-            date = '2008-11-25'
-            use = 'Club Penguin: Elite Penguin Force'
-          } else if (song.game === 'hr') {
-            date = '2010-05-25'
-            use = "Club Penguin: Elite Penguin Force: Herbert's Revenge"
-          }
-          if (song.isUnused) {
-            date = getComposedDate(song.song)
-            use += ' (Unused)'
-          } else {
-            date = { date, isEstimate: est }
-          }
-          instances.push(new SongInstance(use, date, song))
-        })
-      },
-      'ds-ost',
-      'ds_ost'
-    ),
-    pc: new MediaInfo(
-      'Penguin Chat',
-      () => {
-        // pc misc
-        iterateUsedMisc(0, data => `${data.name} (Penguin Chat)`)
-
-        // pc 3 misc
-        iterateUsedMisc(1, data => `${data.name} (Penguin Chat 3)`)
-
-        // pc 3 rooms
-        iterateUsesWithName(data => `${data.name} (Penguin Chat 3)`)(2, 'songUses', (data, use) => use.available.start)
-      },
-      'penguin-chat-ost',
-      'penguin_chat_misc',
-      'penguin_chat_three_misc',
-      'penguin_chat_three_room'
-    ),
-    unusedf: new MediaInfo(
-      'Unused Club Penguin (Flash)',
-      () => {
-        // rooms
-        iterateTableUsed(0, 'songUses', (use, data) => [data.name, getComposedDate(use.song)])
-
-        // party
-        iterateUnusedWithParent(1, 'partySongs')
-
-        // stage
-        iterateData(2, data => {
-          const stageName = findId(plays, data.stagePlay).data.name
-          instances.push(new SongInstance(stageName, getComposedDate(data.song), data.song))
-        })
-
-        // minigame
-        iterateUnusedWithParent(3, 'songs')
-
-        // misc
-        iterateUnusedMisc(4)
-      },
-      'unused-flash-ost',
-      'flash_room',
-      'flash_party',
-      'unused_stage',
-      'flash_minigame',
-      'flash_misc'
-    )
-  }
-
-  /** Populate the `tables` variable with a given media */
-  const getTables = async media => {
-    tables = medias[media].tables
-    for (let i = 0; i < tables.length; i++) {
-      const isStatic = clsys.isStaticClass(tables[i])
-      tables[i] = await clsys.selectAllInClass(tables[i])
-      if (isStatic) tables[i] = tables[i][0]
+  /**
+   * Get the output for the `parser` method of the generator inside the generator lists
+   * @returns {object} Object following the specifications of the page renderer
+   */
+  async parse () {
+    return {
+      rows: await this.createRows(),
+      isSeries: this.isSeries,
+      categories: [1],
+      name: this.page
     }
   }
 
-  /** Sorts all the song instances based on their date and priority */
-  const sortInstances = () => {
-    instances.sort((a, b) => {
-      const ab = [a, b]
-      const dates = ab.map(instance => Date.parse(instance.date))
+  /**
+   * Object that maps the name of pages to a `MediaInfo` object for the respective media
+   * @type {Object.<string, MediaInfo>}
+   */
+  static medias = {
+    'Series OST': {
+      id: 'series'
+    },
+    'Club Penguin OST': {
+      id: 'flash',
+      sheets: [
+        new OptionsSheet('used-only data-name use-song range-available start-date', {
+          cls: 'flash_room',
+          usesProp: 'songUses'
+        }),
+        new OptionsSheet('used-only data-name use-song range-available start-date', {
+          cls: 'flash_party',
+          usesProp: 'partySongs',
+          dateOriginProp: 'usePartyDate',
+          rowRangeProp: 'active',
+          rowDateProp: 'start'
+        }),
+        new OptionsSheet('', {
+          cls: 'music_catalogue',
+          predefinedName: 'Igloo',
+          usesProp: 'songs',
+          is2dUses: true,
+          useSongProp: 'song',
+          rowDateProp: 'launch'
+        }),
+        new OptionsSheet('', {
+          cls: 'stage_play',
+          dataNameProp: 'name',
+          usesProp: 'appearances',
+          useDateProp: 'start',
+          dataSongProp: 'themeSong'
+        }),
+        new OptionsSheet('', {
+          cls: 'flash_minigame',
+          dataNameProp: 'name',
+          usesProp: 'songs',
+          rowRangeProp: 'available',
+          rowDateProp: 'start',
+          usedOnly: true,
+          dateOriginProp: 'useMinigameDates',
+          useRangeProp: 'available',
+          useDateProp: 'start',
+          useSongProp: 'song'
+        }),
+        new OptionsSheet('', {
+          cls: 'flash_misc',
+          dataNameProp: 'name',
+          usesProp: 'songs',
+          useSongProp: 'song',
+          rowRangeProp: 'available',
+          rowDateProp: 'start',
+          usedOnly: true,
+          dateOriginProp: 'useOwnDate',
+          invertOriginBool: true,
+          useRangeProp: 'available',
+          useDateProp: 'start'
+        })
+      ],
+      mediaName: 'Club Penguin'
+    },
+    'Club Penguin Island OST': {
+      id: 'cpi',
+      sheets: [
+        new OptionsSheet('', {
+          cls: 'cpi_screen',
+          dataNameProp: 'name',
+          usesProp: 'songUses',
+          useRangeProp: 'available',
+          useDateProp: 'start',
+          useSongProp: 'song'
+        })
+      ],
+      mediaName: 'Club Penguin Island'
+    }
+  }
 
-      const difference = dates[0] - dates[1] || 0
-      if (difference === 0) {
-        const priorities = [a, b].map(instance => priorityIndex[instance.song])
-        return priorities[0] - priorities[1] || 0
-      } else {
-        return difference
-      }
+  /** Array will keep all the song instances, and gets reset for each media in the case of the series list */
+  instances = []
+
+  /** Save all general purpose data required to create the rows */
+  async dataFetcher () {
+    // general data
+    this.songs = await clsys.selectAllInClass('song')
+    this.authors = await clsys.selectAllInClass('author')
+    this.sources = await clsys.selectAllInClass('source')
+
+    // specialized data
+    if (this.media === 'unusedf') this.plays = await clsys.selectAllInClass('stage_play')
+  }
+
+  /** Create a map of the priorities of each song for a simpler execution */
+  createPrioryIndex () {
+    /** Map that takes a song's item id to its priority value */
+    this.priorityIndex = {}
+    this.songs.forEach(song => {
+      this.priorityIndex[song.id] = song.data.priority
     })
   }
 
+  /** Create the two-dimensional array representation of the data that composes the list, that will be used to render it */
+  async createRows () {
+    await this.dataFetcher()
+    this.createPrioryIndex()
+
+    return this.media === 'series'
+      ? (await this.getSeriesRows())
+      : (await this.getMediaRows())
+  }
+
   /**
-   * Creates the 2-dimensional array with all the data to be used in the final list
-   * @param {string} dest - The name of the file
-   * @param {boolean} isSeries - True if the list is for the series, false if for a media
+   * Get the `MediaInfo` object for a media using the media identifier
+   * @param {string} id - String identifier
+   * @returns {MediaInfo} Media info
    */
-  const outputList = (isSeries) => {
-    /** The 2d array for the HTML table that will get created */
+  getMediaInfo (id) {
+    for (const page in MediaGenerator.medias) {
+      const info = MediaGenerator.medias[page]
+      if (info.id === id) return info
+    }
+  }
+
+  /** Update `instances` with all of the instances from a media */
+  async getMediaInstances (media) {
+    await forEachAsync(this.getMediaInfo(media).sheets, async sheet => {
+      await this.iterateInstances(sheet)
+    })
+  }
+
+  /** Get the array of list rows for for a specific media */
+  async getMediaRows () {
+    await this.getMediaInstances(this.media)
+    this.sortInstances()
+    return this.outputList()
+  }
+
+  /** Get the array of list rows for the series list */
+  async getSeriesRows () {
+    /** Similar as the `instances` property, but will be used to save all instances from all medias into one */
+    const serieInstances = []
+
+    // go through every media to assemble the list
+    for (const page in MediaGenerator.medias) {
+      const mediaInfo = MediaGenerator.medias[page]
+
+      // series must be skipped
+      if (mediaInfo.id === 'series') continue
+
+      this.instances = []
+      await this.getMediaInstances(mediaInfo.id)
+
+      // create series instances based on the current media
+      // store the info for every song in this media to later add to series instances
+      const mediaAddedSongs = {}
+      this.instances.forEach(instance => {
+        if (instance.song) {
+          const dateInfo = {
+            date: instance.date,
+            isEstimate: instance.estimate
+          }
+
+          if (!Object.keys(mediaAddedSongs).includes(instance.song + '')) {
+            mediaAddedSongs[instance.song] = dateInfo
+          } else {
+            // decide whether should use this instance date or not (pick oldest)
+            const dates = [
+              mediaAddedSongs[instance.song].date,
+              instance.date
+            ].map(date => Date.parse(date))
+
+            if (dates[0] > dates[1]) {
+              mediaAddedSongs[instance.song] = dateInfo
+            }
+          }
+        }
+      })
+
+      for (const song in mediaAddedSongs) {
+        serieInstances.push(new SongInstance(
+          mediaInfo.mediaName,
+          mediaAddedSongs[song],
+          song
+        ))
+      }
+    }
+
+    this.instances = serieInstances
+
+    this.sortInstances()
+    return this.outputList()
+  }
+
+  /**
+   * Iterate through all rows of a class to find its song instances
+   * @param {OptionsSheet} options - Object with the option properties that define what each iteration will do
+   */
+  async iterateInstances (options) {
+    const rows = await clsys.selectAllInClass(options.cls)
+
+    // this function is the last to be called on each iteration and acts on an object said to be a `use`
+    // because it contains song instance specific information and adds this information
+    // to `instances` at the end of the execution
+    const useAction = (use, row) => {
+      const instance = new SongInstance()
+      // filtering
+      if (options.usedOnly && use.isUnused) return
+
+      // `name` property
+      if (options.dataNameProp) instance.name = row.data[options.dataNameProp]
+      if (options.predefinedName) instance.name = options.predefinedName
+
+      // `song` property
+      if (options.dataSongProp) instance.addSong(row.data[options.dataSongProp])
+      if (options.useSongProp) instance.addSong(use[options.useSongProp])
+
+      // `date` property
+      /** Variable will be`true` if not using the boolean to decide where date comes from, `false if using */
+      const noOriginBool = Boolean(!options.dateOriginProp)
+      // convert values into boolean
+      const dateOriginBool = Boolean(use[options.dateOriginProp])
+      const invertOriginBool = Boolean(options.invertOriginBool)
+
+      let date
+      // check the definitions of `dateOriginProp` and `invertOriginBool` to understand the expressions in the statements
+      if (noOriginBool || dateOriginBool === !invertOriginBool) {
+        if (options.rowRangeProp || options.rowDateProp) date = row.data
+        if (options.rowRangeProp) date = date[options.rowRangeProp]
+        if (options.rowDateProp) date = date[options.rowDateProp]
+      }
+      if (noOriginBool || dateOriginBool === invertOriginBool) {
+        if (!date) date = use
+        if (options.useRangeProp) date = date[options.useRangeProp]
+        if (options.useDateProp) date = date[options.useDateProp]
+      }
+      instance.addDate(date)
+
+      this.instances.push(instance)
+    }
+
+    // this function is called for each row found in the class
+    const rowAction = row => {
+      // iterating through array of uses
+      if (options.usesProp) {
+        row.data[options.usesProp].forEach(use => {
+          if (options.is2dUses) {
+            use.forEach(use2 => useAction(use2, row))
+          } else useAction(use, row)
+        })
+      }
+    }
+
+    rows.forEach(rowAction)
+  }
+
+  /** Sort all the instances in `instances` by date, from oldest to newest */
+  sortInstances () {
+    this.instances.sort((a, b) => {
+      const ab = [a, b]
+      if (!a.date) return 1
+      else if (!b.date) return -1
+
+      const dates = ab.map(instance => Date.parse(instance.date))
+      const difference = dates[0] - dates[1] || 0
+
+      // priorities are used as a tie-breaker
+      if (difference === 0) {
+        const priorities = ab.map(instance => this.priorityIndex[instance.song])
+        return priorities[0] - priorities[1] || 0
+      } else return difference
+    })
+  }
+
+  /** Process the `instances` into the two dimensional array that will be sent to the OST generator */
+  outputList () {
+    /** Row array to output */
     const list = []
 
-    /** Object with every song that was added
+    /**
+     * Object with every song that was added
+     *
      * Maps the song ID to its order number
      */
     const addedSongs = {}
@@ -410,45 +443,46 @@ async function generateOSTList (media) {
     // iterating through every instance to either
     // add a new row to the `list` array or to add more information
     // to an existing row
-    instances.forEach(instance => {
-      const { song } = instance
-
-      if (song) {
+    this.instances.forEach(instance => {
       // filter out instances with no song
-        if (!Object.keys(addedSongs).includes(song + '')) {
+      if (instance.song) {
+        if (!Object.keys(addedSongs).includes(instance.song + '')) {
           // add row if the song wasn't added yet
           order++
-          const songRow = findId(songs, song)
-          addedSongs[song] = order
+          const songRow = findId(this.songs, instance.song)
+          addedSongs[instance.song] = order
           const songData = songRow.data
 
+          // get the list of all author names for the song
           const authorsList = songData.authors.map(author => {
-            // author might not have ID if it was deleted
-            const searchRes = findId(authors, author.author)
-            if (searchRes) return searchRes.data.name
-            else return ''
+            return findId(this.authors, author.author).data.name
           })
-          authorsList.filter(name => name)
 
+          // get all names that aren't first one
           const altNames = (songData.names.slice(1)).map(name => name.name)
 
+          // save all HQ sources
           const hqSources = []
           songData.files.forEach(file => {
             if (file.isHQ) {
-              const sourceName = findId(sources, file.source).data.name
+              const sourceName = findId(this.sources, file.source).data.name
 
               hqSources.push(sourceName)
             }
           })
+
+          // earliest date
           const date = instance.estimate
             ? 'est'
             : instance.date
 
-          const isOfficial = Boolean(songData.names[0])
-          const name = isOfficial
-            ? [songData.names[0].name, true]
+          // main name
+          const officialName = songData.names[0]
+          const name = officialName
+            ? [officialName.name, true]
             : [songData.unofficialNames[0].name, false]
 
+          // yt link
           const link = songData.link
 
           const newLine = {
@@ -464,103 +498,22 @@ async function generateOSTList (media) {
 
           list.push(newLine)
         } else {
-          const relatedIndex = isSeries ? 6 : 4
-          list[addedSongs[song] - 1][relatedIndex] += `, ${instance.name}`
+          list[addedSongs[instance.song] - 1].related += `, ${instance.name}`
         }
       }
     })
 
     return list
   }
-
-  async function getMediaInstances (media) {
-    await getTables(media)
-    instances = []
-    medias[media].updateMethod()
-  }
-
-  async function getMediaOutput (media) {
-    await getMediaInstances(media)
-    sortInstances()
-    return outputList()
-  }
-
-  async function getSeriesOutput () {
-    /** Instances array but for the entire series */
-    const serieInstances = []
-
-    // go through every media to assemble series list
-    for (const mediaName in medias) {
-      await getMediaInstances(mediaName)
-
-      // create instances for the series
-      const mediaAddedSongs = {}
-      instances.forEach(instance => {
-        const { song } = instance
-        if (song) {
-          const dateInfo = {
-            date: instance.date,
-            isEstimate: instance.estimate
-          }
-
-          if (!Object.keys(mediaAddedSongs).includes(song + '')) {
-            mediaAddedSongs[song] = dateInfo
-          } else {
-            const dates = [
-              mediaAddedSongs[song].date,
-              instance.date
-            ].map(date => Date.parse(date))
-
-            if (dates[0] > dates[1]) {
-              mediaAddedSongs[song] = dateInfo
-            }
-          }
-        }
-      })
-
-      for (const song in mediaAddedSongs) {
-        serieInstances.push(new SongInstance(
-          medias[mediaName].name,
-          mediaAddedSongs[song],
-          song
-        ))
-      }
-    }
-    instances = serieInstances
-
-    sortInstances()
-    return outputList(true)
-  }
-
-  return media === 'series'
-    ? (await getSeriesOutput())
-    : (await getMediaOutput(media))
-}
-
-/**
- * In an array of objects, find which object has the property `id` matching a value
- * @param {object[]} array - Array with the objects
- * @param {number} id - Value the `id` property needs to match
- * @returns {object | undefined} The matched object if it exists
- */
-function findId (array, id) {
-  for (let i = 0; i < array.length; i++) {
-    if (array[i].id === id) return array[i]
-  }
 }
 
 module.exports = {
   getter () {
-    return Object.keys(medias)
+    return MediaGenerator.getPages()
   },
   async parser (value) {
-    const name = medias[value]
-    return {
-      rows: await generateOSTList(name),
-      isSeries: name === 'series',
-      categories: [1],
-      name: value
-    }
+    const creator = new MediaGenerator(value)
+    return await creator.parse()
   },
   file: 'OstGen'
 }

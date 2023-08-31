@@ -14,9 +14,10 @@ class CommonUtils {
   /**
    * Get the (first) name of an item from the string in the `querywords` column
    * @param {string} querywords - String from `querywords`
-   * @returns {}
+   * @returns {string | undefined} - First name if it exists, undefined otherwise
    */
   static getName (querywords) {
+    if (typeof querywords !== 'string') return
     return CommonUtils.getMatch(querywords, /^.*(&|$)/)
   }
 
