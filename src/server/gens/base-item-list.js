@@ -1,18 +1,24 @@
-const clsys = require('../database/class-system')
 const sql = require('../database/sql-handler')
+const { getName } = require('../misc/common-utils')
 
+/** Base object to build simple page generators that are based in a class */
 module.exports = {
+  /**
+   * Get a method that returns all names from a class
+   * @param {string} cls - Item class name
+   * @returns {async function () : string[]} Asynchronous function that gets all the names
+   */
   getGetter (cls) {
     return async () => {
-      const allIds = (await sql.selectWithColumn('items', 'cls', cls)).map(row => row.id)
-      const names = []
-      for (let i = 0; i < allIds.length; i++) {
-        names.push(await clsys.getQueryNameById(allIds[i]))
-      }
-
-      return names
+      return (await sql.selectWithColumn('items', 'cls', cls)).map(row => getName(row.querywords))
     }
   },
+
+  /**
+   * Get a method that returns the data for rendering a class based page
+   * @param {string} cls - Item class name
+   * @returns {async function(string) : object} Asynchronous function that returns an object containing the item row and more info
+   */
   getParser (cls) {
     return async (name) => {
       const row = (await sql.selectRegex('items', 'querywords', `^${name}(&&|$)`, 'cls', cls))[0]

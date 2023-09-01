@@ -516,6 +516,7 @@ class MediaGenerator {
   }
 }
 
+/** Page generator for OST lists */
 module.exports = {
   getter () {
     return MediaGenerator.getPages()
