@@ -105,6 +105,15 @@ class ServerUtils {
   }
 
   /**
+   * Get a random element from an array
+   * @param {any[]} arr - Array to choose from
+   * @returns {any} Picked element
+   */
+  static getRandomElement (arr) {
+    return arr[ServerUtils.getRandomInt(0, arr.length)]
+  }
+
+  /**
    * Get the last element of an array
    * @param {any[]} arr - Target array
    * @returns {any} Last element of the array

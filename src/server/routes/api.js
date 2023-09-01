@@ -6,7 +6,7 @@ const user = require('../database/user')
 const rev = require('../database/revisions')
 const clsys = require('../database/class-system')
 const del = require('../database/deletions')
-const gen = require('../gens/gen-list')
+const PageGenerator = require('../gens/gen-list')
 const ApiMiddleware = require('../misc/api-middleware')
 const JSONErrorSender = require('../misc/json-error-sender')
 const { getToken, isObject } = require('../misc/server-utils')
@@ -220,7 +220,7 @@ router.post('/recent-changes', async (req, res) => {
 router.post('/get-page-names', ApiMiddleware.checkKeyword, async (req, res) => {
   const { keyword } = req.body
 
-  res.status(200).send(await gen.searchPages(keyword))
+  res.status(200).send(await PageGenerator.searchPages(keyword))
 })
 
 module.exports = router

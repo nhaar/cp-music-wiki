@@ -23,7 +23,7 @@ const bridge = require('../database/class-frontend')
 const clsys = require('../database/class-system')
 const user = require('../database/user')
 const del = require('../database/deletions')
-const gens = require('../gens/gen-list')
+const PageGenerator = require('../gens/gen-list')
 const { getToken, isStringNumber } = require('../misc/server-utils')
 
 /**
@@ -107,7 +107,7 @@ router.get('/:value', async (req, res) => {
       }
       // random wiki page
       case 'Random': {
-        res.status(302).redirect(`/${await gens.getRandomName()}`)
+        res.status(302).redirect(`/${await PageGenerator.getRandomName()}`)
         break
       }
       // page for comparing revisions
@@ -213,18 +213,17 @@ router.get('/:value', async (req, res) => {
     // the category display is capped at 200 listed pages per page
     /** Number to start displaying the pages in the list, starts at 1 */
     const cur = req.query.cur || 1
-    const pages = await gens.getPagesInCategory(value)
+    const pages = await PageGenerator.getPagesInCategory(value)
     sendView(req, res, 'Category', `Pages in category "${value}"`, { pages, cur, name: value })
   } else {
     // normal wiki page, which is generated from the page generators
-    /** Generator that handles the page with the given name */
-    const gen = await gens.findName(converUrlToName(value))
-    if (gen) {
-      const data = await gens.parseWithCategoryNames(gen.parser, value)
-      sendView(req, res, `gens/${gen.file}`, value, { name: value, data })
-    } else {
+    const gen = new PageGenerator(value)
+    const data = await gen.parse()
+    if (data === undefined) {
       res.sendStatus(404)
+      return
     }
+    sendView(req, res, `gens/${gen.gen.file}`, value, { name: value, data })
   }
 })
 
@@ -331,15 +330,6 @@ async function sendDiffView (req, res, cur, old) {
 
   const diff = rev.getRevDiff(...diffData)
   sendView(req, res, 'Diff', 'Difference between revisions', diff)
-}
-
-/**
- * Convert a string extracted from an URL that represents a page into a valid page name
- * @param {string} value - Extracted URL
- * @returns {string} Valid page name
- */
-function converUrlToName (value) {
-  return value.replace(/_/g, ' ')
 }
 
 module.exports = router
