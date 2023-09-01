@@ -1,10 +1,10 @@
 const { Pool } = require('pg')
 
 const config = require('../../../config')
+const { trimSplit } = require('../misc/common-utils')
 
 /**
- * Class that connects to the Postgres database and runs
- * the SQL queries
+ * Class that connects to the Postgres database and runs the SQL queries
  */
 class SQLHandler {
   /** Connects to the database */
@@ -12,14 +12,14 @@ class SQLHandler {
     this.pool = new Pool({
       user: config.PG_USER,
       password: config.PG_PASSWORD,
-      database: 'musicwiki',
+      database: config.PG_DATABASE,
       port: config.PG_PORT
     })
   }
 
   /**
    * Create a table if it doesn't exist
-   * @param {string} query - A string that looks like `TABLENAME (...)` where the parenthesis is what would be in parenthesis in SQL
+   * @param {string} query - A regular SQL table create query, except instead of `CREATE TABLE tablename (...)`, only include `tablename (...)`
    */
   async create (query) { await this.pool.query(`CREATE TABLE IF NOT EXISTS ${query}`) }
 
@@ -37,7 +37,7 @@ class SQLHandler {
       `
         SELECT ${selecting}
         FROM ${table}
-        ${getConditional(condition)}
+        ${this.getConditional(condition)}
         ${extra}
       `,
       values
@@ -54,20 +54,22 @@ class SQLHandler {
   }
 
   /**
-   * Use select with the condition having all mentioned columns to be equal to a specified value
-   * and orders by ascending id
+   * Use select with the condition having all mentioned columns to be equal to a specified value, possibly ordering
+   * by id
    * @param {string} table - Table to select in
    * @param {string} conditions - A string of all the columns to check, comma separated
    * @param {any[]} values - All the values the columns need to be equal to, in the order of `conditions`
    * @param {string} selecting - The columns to select, comma separated, leave blank for all
+   * @param {boolean} order - `true` if the selected rows should be ordered by ascending id, `false` otherwise
    * @returns {object[]} All selected rows
    */
   async selectAndEquals (table, conditions, values, selecting, order = true) {
-    return await this.select(table, getAndEquals(conditions), values, selecting, order ? 'ORDER BY id ASC' : '')
+    return await this.select(table, this.getAndEquals(conditions), values, selecting, order ? 'ORDER BY id ASC' : '')
   }
 
   /**
-   * Use select where a column is greater than a value and other columns need to be equal to certain values and order by descending
+   * Use select where a column is greater than a value and other columns need to be equal to certain values
+   * and order by descending
    * @param {string} table - Table to select in
    * @param {string} greaterColumn - The column that needs to be greater than a value
    * @param {any} greaterValue - The value the column needs to be greater than
@@ -78,7 +80,7 @@ class SQLHandler {
   async selectGreaterAndEqual (table, greaterColumn, greaterValue, equalColumns = '', equalValues = []) {
     return await this.select(
       table,
-      getAndCompares(
+      this.getAndCompares(
         `${greaterColumn} > ${trimSplit(equalColumns).map(col => `, ${col} =`)}`
       ), [greaterValue].concat(equalValues),
       '*',
@@ -116,13 +118,22 @@ class SQLHandler {
    * @param {string} column - Name of the column to check the condition
    * @param {any} value - Value that the checking column needs to have
    * @param {string} selecting - Name of the column to extract the value
-   * @returns {any | undefined}
+   * @returns {any | undefined} Found row or `undefined` if nothing was found
    */
   async selectColumn (table, column, value, selecting) {
     const row = await this.selectRowWithColumn(table, column, value, selecting)
     return row && row[selecting]
   }
 
+  /**
+   * Select all rows where a column is like a value and another column is equal to another value
+   * @param {string} table - Table name
+   * @param {string} likeCol - Name of column that needs to be like value
+   * @param {string} likeVal - Value the column that needs to be like
+   * @param {string} matchCol - Name of column that needs to be equal to a value
+   * @param {any} matchVal - Value of the column that needs to be equal
+   * @returns {object[]} Found rows
+   */
   selectLike = async (table, likeCol, likeVal, matchCol, matchVal) => {
     return await this.select(table, `${likeCol} ILIKE $1 AND ${matchCol} = $2`, [`%${likeVal}%`, matchVal])
   }
@@ -135,7 +146,7 @@ class SQLHandler {
    * @returns {object} Row data matched
    */
   async selectId (table, id, selecting) {
-    return (await this.selectWithColumn(table, 'id', id, selecting))[0]
+    return await this.selectRowWithColumn(table, 'id', id, selecting)
   }
 
   /**
@@ -173,7 +184,7 @@ class SQLHandler {
     `
       UPDATE ${table}
       SET ${setting.split(',').map((setter, i) => `${setter.trim()} = $${i + 1 + conditionValues.length}`).join(', ')}
-      ${getConditional(condition)}
+      ${this.getConditional(condition)}
     `, values
     )
   }
@@ -185,10 +196,9 @@ class SQLHandler {
    * @param {any[]} values - Array of values to update each column in the order the columns are written
    * @param {string} matchColumn - Name of the column to match
    * @param {any} matchValue - Value to match
-   *
   */
   async updateOneCondition (table, setting, values, matchColumn, matchValue) {
-    await this.update(table, setting, getAndEquals(matchColumn), values, [matchValue])
+    await this.update(table, setting, this.getAndEquals(matchColumn), values, [matchValue])
   }
 
   /**
@@ -221,54 +231,54 @@ class SQLHandler {
     await this.pool.query(`DELETE FROM ${table} WHERE ${column} = $1`, [value])
   }
 
+  /**
+   * Select rows from a table where a first column is matched by a `RegExp` and a second column is equal to a value
+   * @param {string} table - Table name
+   * @param {string} column - First column
+   * @param {string} pattern - String containing a `RegExp` to be matched
+   * @param {string} matchCol - Second column
+   * @param {any} matchValue - Value to match in second column
+   * @returns {object[]} Found rows
+   */
   async selectRegex (table, column, pattern, matchCol, matchValue) {
-    return (await this.pool.query(`SELECT * FROM ${table} WHERE ${column} ~ $1 AND  ${matchCol} = $2`, [pattern, matchValue])).rows
+    return await this.select(table, `${column} ~ $1 AND  ${matchCol} = $2`, [pattern, matchValue])
   }
-}
 
-/**
- * Get the proper `pg` condition that consists of `AND` separated conditions of the
- * format `column operator $n`, where `n` is an integer, `column` is a name of a column and `operator` is a comparison operator
- * @param {string} conditions - A comma separated list of conditions of the format `column operator`, where column is the name of the column and operator is any comparison operator
- * @param {number} start - The offset for the first `$n` number to be, eg if `start = 0` then it will start at `$1`
- * @returns {string} The string for the condition
- */
-function getAndCompares (conditions, start = 0) {
-  conditions = trimSplit(conditions)
-  conditions.forEach((cond, i) => {
-    conditions[i] = `${cond} $${i + 1 + start}`
-  })
-  return conditions.join(' AND ')
-}
+  /**
+   * Get the proper `pg` condition that consists of `AND` separated conditions of the
+   * format `column operator $n`, where `n` is an integer, `column` is a name of a column and `operator` is a comparison operator
+   * @param {string} conditions - A comma separated list of conditions of the format `column operator`, where column is the name of the column and operator is any comparison operator
+   * @param {number} start - The offset for the first `$n` number to be, eg if `start = 0` then it will start at `$1`
+   * @returns {string} The string for the condition
+   */
+  getAndCompares (conditions, start = 0) {
+    conditions = trimSplit(conditions)
+    conditions.forEach((cond, i) => {
+      conditions[i] = `${cond} $${i + 1 + start}`
+    })
+    return conditions.join(' AND ')
+  }
 
-/**
- * Get a `pg` condition that consists of `AND` separated conditions of the format `column = $n`, where `column` is a name of a column and `n` is an integer
- * @param {string} conditions - The columns to compare, comma separated
- * @param {number} start - The offset for the first `$n` number to be, eg if `start = 0` then it will start at `$1`
- * @returns {string} The string for the condition
- */
-function getAndEquals (conditions, start) {
-  return getAndCompares(trimSplit(conditions).map(cond => `${cond} = `).join(', '), start)
-}
+  /**
+   * Get a `pg` condition that consists of `AND` separated conditions of the format `column = $n`, where `column` is a name of a column and `n` is an integer
+   * @param {string} conditions - The columns to compare, comma separated
+   * @param {number} start - The offset for the first `$n` number to be, eg if `start = 0` then it will start at `$1`
+   * @returns {string} The string for the condition
+   */
+  getAndEquals (conditions, start) {
+    return this.getAndCompares(trimSplit(conditions).map(cond => `${cond} = `).join(', '), start)
+  }
 
-/**
- * Get a SQL conditional based on a condition
- * @param {string} condition - String to be tested, or blank if no condition
- * @returns {string} Valid conditional based on the input
- */
-function getConditional (condition) {
-  return condition
-    ? `WHERE ${condition}`
-    : ''
-}
-
-/**
- * Split a string separated by comma and trim every element
- * @param {string} str
- * @returns
- */
-function trimSplit (str) {
-  return str.split(',').map(segment => segment.trim()).filter(segment => segment)
+  /**
+   * Get a SQL conditional based on a condition
+   * @param {string} condition - String to be tested, or blank if no condition
+   * @returns {string} Valid conditional based on the input
+   */
+  getConditional (condition) {
+    return condition
+      ? `WHERE ${condition}`
+      : ''
+  }
 }
 
 module.exports = new SQLHandler()

@@ -48,6 +48,15 @@ class CommonUtils {
    * @returns {object} Copied object
    */
   static deepcopy (object) { return JSON.parse(JSON.stringify(object)) }
+
+  /**
+   * Split a string separated by comma and trim every element
+   * @param {string} str
+   * @returns
+   */
+  static trimSplit (str) {
+    return str.split(',').map(segment => segment.trim()).filter(segment => segment)
+  }
 }
 
 module.exports = CommonUtils
