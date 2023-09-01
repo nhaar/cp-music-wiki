@@ -1,41 +1,69 @@
+const jsondiffpatch = require('jsondiffpatch')
+const Diff = require('diff')
+
 const sql = require('./sql-handler')
 const clsys = require('./class-system')
 const user = require('./user')
 const del = require('./deletions')
-
-const Diff = require('diff')
-const jsondiffpatch = require('jsondiffpatch')
 const { getLastElement } = require('../misc/server-utils')
 
+/** Handles a revision's tags */
 class Tagger {
+  /** Build instance linked to revision */
   constructor (rev) {
     this.id = rev
   }
 
+  /**
+   * Get the tag string from a list of tags
+   * @param  {...text} tags - Tags
+   * @returns {string} Tags string
+   */
   static getTagString (...tags) {
     return tags.join('%')
   }
 
+  /**
+   * Check if the instance's revision has a tag
+   * @param {string} tag - Tag to find
+   * @returns {boolean} `true` if it includes the tag, `false` otherwise
+   */
   async hasTag (tag) {
     const tags = await this.getTags()
     return tags.split('%').includes(tag + '')
   }
 
+  /**
+   * Update the instance's revision tags with an update function
+   * @param {function(string) : string} updatefn - Function that takes as an argument the tags text in the database and returns the new tags text
+   */
   async updateTags (updatefn) {
     const tags = updatefn(await this.getTags())
     await sql.update('revisions', 'tags', 'id = $1', [tags], [this.id])
   }
 
+  /**
+   * Get the tags text from the instance's revision
+   * @returns {}
+   */
   async getTags () {
-    return (await sql.selectId('revisions', this.id)).tags
+    return await sql.selectColumn('revisions', 'id', this.id, 'tags')
   }
 
+  /**
+   * Add a tag to this instance's revision
+   * @param {text} tag - New tag
+   */
   async addTag (tag) {
     await this.updateTags(old => {
       return `${old}%${tag}`
     })
   }
 
+  /**
+   * Remove a tag from this instance's revision
+   * @param {text} tag - Tag to remove
+   */
   async removeTag (tag) {
     if (typeof tag === 'string') tag = Number(tag)
     await this.updateTags(old => {
@@ -44,13 +72,13 @@ class Tagger {
   }
 }
 
+/** Class that handles revisions of items */
 class RevisionHandler {
   /** Create the database if it doesn't exist */
   constructor () {
     sql.create(`
       revisions (
         id SERIAL PRIMARY KEY,
-        cls TEXT,
         item_id INT,
         patch JSONB,
         wiki_user INT,
@@ -65,57 +93,47 @@ class RevisionHandler {
 
   /**
    * Add a revision for a change or creation to the revisions table
-   * @param {ClassName} cls - Class of the data being changed
    * @param {Row} row - Row for the data being changed
    * @param {string} token - Session token for the user submitting the revision
+   * @param {boolean} isMinor - Whether this revision is a minor edit or not
+   * @param {text[]} tags - Array of tags to add to the revision
    */
   async addChange (row, token, isMinor, tags = []) {
     let oldRow = await clsys.getItem(row.id)
     let id = row.id
     let created = false
     if (!oldRow) {
-      if (!clsys.isStaticClass(row.cls)) {
-        // figure out id of new item by seeing biggest serial
-        id = (await sql.getBiggestSerial('items')) + 1
-        created = true
-      }
+      // figure out id of new item by seeing biggest serial
+      id = (await sql.getBiggestSerial('items')) + 1
+      created = true
       oldRow = { data: clsys.getDefault(row.cls) }
     }
     const userId = await user.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
-    await this.insertRev(row.cls, id, userId, delta, isMinor, created, tags)
-  }
-
-  /**
-   * Add a revision that represents an item deletion
-   * @param {ClassName} cls - Class of the deleted item
-   * @param {number} id - ID of the deleted item
-   * @param {string} token - Session token for the user submitting the revision
-   */
-  async addDeletion (cls, id, token) {
-    const userId = await user.getUserId(token)
-    await this.insertRev(cls, id, userId)
+    await this.insertRev(id, userId, delta, isMinor, created, tags)
   }
 
   /**
    * Insert a revision in the table
-   * @param {import('./class-system').ClassName} cls - Class of the item being revised
    * @param {number} itemId - Id of the item being revised
    * @param {string} user - Id of the user submitting the revision
-   * @param {jsondiffpatch.DiffPatcher} patch - The patch of the revision, if it is not a deletion
+   * @param {jsondiffpatch.DiffPatcher} patch - The patch of the revision
+   * @param {boolean} isMinor - Whether the edit is a minor edit or not
+   * @param {boolean} created - `true` if this change created an item, `false` otherwise
+   * @param {text[]} tags - Array with all tags to include in revision
    */
-  async insertRev (cls, itemId, user, patch = null, isMinor = false, created = false, tags = []) {
+  async insertRev (itemId, user, patch = null, isMinor = false, created = false, tags = []) {
     if (patch) patch = JSON.stringify(patch)
     await sql.insert(
       'revisions',
-      'cls, item_id, wiki_user, timestamp, patch, minor_edit, created, tags',
-      [cls, itemId, user, Date.now(), patch, Number(isMinor), Number(created), Tagger.getTagString(...tags)]
+      'item_id, wiki_user, timestamp, patch, minor_edit, created, tags',
+      [itemId, user, Date.now(), patch, Number(isMinor), Number(created), Tagger.getTagString(...tags)]
     )
   }
 
   /**
-   * Get what the data object for an item looked like AFTER a certain revision
+   * Get what the data object for an item looked like **AFTER** a certain revision
    * @param {number} revId - Id of the revision
    * @returns {ItemData} What the data was
    */
@@ -126,7 +144,7 @@ class RevisionHandler {
 
     const itemId = row.item_id
 
-    const revisions = (await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', itemId))
+    const revisions = await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', itemId)
 
     const data = (await del.getItemIncludeDeleted(itemId)).data
     for (let i = 0; i < revisions.length; i++) {
@@ -147,9 +165,9 @@ class RevisionHandler {
     const itemId = cur.item_id
 
     const previous = await sql.pool.query(`
-    SELECT MIN(id)
-    FROM revisions
-    WHERE id > ${revId} AND cls = $1 AND item_id = $2
+      SELECT MIN(id)
+      FROM revisions
+      WHERE id > ${revId} AND cls = $1 AND item_id = $2
     `, [cls, itemId])
 
     return previous.rows[0].min
@@ -180,12 +198,7 @@ class RevisionHandler {
           groups.push(['remove', statement])
         }
       } else if (statement.added) {
-        if (next.removed) {
-          i++
-          groups.push(['addremove', statement, next, charDiff])
-        } else {
-          groups.push(['add', statement])
-        }
+        groups.push(['add', statement])
       }
     }
 
@@ -193,11 +206,9 @@ class RevisionHandler {
   }
 
   /**
-   * Select all the revisions in chronological order tied to a class item and get one of its columns
-   * @param {ClassName} cls - Name of the class of the item
-   * @param {number} id - Id of item or 0 for static classes
-   * @param {string} column - Name of the column to get
-   * @returns {string[] | number[]} Array with all the column values
+   * Select all the revisions in chronological order tied to a class item
+   * @param {number} id - Item id
+   * @returns {object[]} Array with all revisions
    */
   async selectRevisions (id) {
     return (
@@ -209,23 +220,33 @@ class RevisionHandler {
     )
   }
 
-  async rollback (user, item, token) {
+  /**
+   * Perform a rollback on an item
+   *
+   * A rollback entails reversing all the last edits in an item that were done by the same user
+   * @param {number} item - Item id
+   * @param {string} token - Session token of the user peforming the rollback
+   */
+  async rollback (item, token) {
     const revisions = await this.selectRevisions(item)
+    const lastUser = revisions[0]
     const lastUserRevisions = []
     const lastRev = getLastElement(revisions)
     const isRollback = await (new Tagger(lastRev.id)).hasTag(1)
+    // if last revision is a rollback, undoing everything as normal would do nothing
     if (isRollback) {
       lastUserRevisions.push(lastRev)
     } else {
       for (let i = revisions.length - 1; i >= 0; i--) {
         const revision = revisions[i]
-        if (revision.wiki_user === user) {
+        if (revision.wiki_user === lastUser) {
           lastUserRevisions.push(revision)
         } else break
       }
     }
 
     const row = await clsys.getItem(item)
+    // delete if first revision is a creation, else undo changes
     if (getLastElement(lastUserRevisions).created) {
       await del.deleteItem(item, token, 0, 'Rollback')
     } else {
