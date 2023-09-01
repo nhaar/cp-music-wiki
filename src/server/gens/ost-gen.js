@@ -105,11 +105,15 @@ class OptionsSheet {
           break
         }
         case 'standard-used-multi': {
-          this.parseClasses('standard-used standard-data-date')
+          this.parseClasses('standard-used standard-data-date simple-uses')
           break
         }
         case 'standard-data-date': {
           this.parseClasses('data-range data-date')
+          break
+        }
+        case 'simple-uses': {
+          this.usesProp = 'songs'
           break
         }
         case 'used-only': {
