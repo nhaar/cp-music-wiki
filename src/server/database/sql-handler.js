@@ -98,6 +98,31 @@ class SQLHandler {
     return await this.selectAndEquals(table, column, [value], selecting, column === 'id')
   }
 
+  /**
+   * Select a single row from a table in which a column is equal to a value
+   * @param {string} table - Table
+   * @param {string} column - Name of the column to check
+   * @param {any} value - Value to match the column
+   * @param {string} selecting - The columns to include, separated by commas, or leave out for al columns
+   * @returns {object | undefined} Found row if it exists or `undefined` otherwise
+   */
+  async selectRowWithColumn (table, column, value, selecting) {
+    return (await this.selectWithColumn(table, column, value, selecting))[0]
+  }
+
+  /**
+   * Select the value of a column from a single row, searching the row that has a column that matches a value
+   * @param {string} table - Table
+   * @param {string} column - Name of the column to check the condition
+   * @param {any} value - Value that the checking column needs to have
+   * @param {string} selecting - Name of the column to extract the value
+   * @returns {any | undefined}
+   */
+  async selectColumn (table, column, value, selecting) {
+    const row = await this.selectRowWithColumn(table, column, value, selecting)
+    return row && row[selecting]
+  }
+
   selectLike = async (table, likeCol, likeVal, matchCol, matchVal) => {
     return await this.select(table, `${likeCol} ILIKE $1 AND ${matchCol} = $2`, [`%${likeVal}%`, matchVal])
   }

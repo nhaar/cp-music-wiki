@@ -1,16 +1,18 @@
-const sql = require('./sql-handler')
-const validator = require('validator')
-const { MIN_PASSWORD_LENGTH } = require('../misc/common-utils')
-const mailer = require('../misc/email')
-const { URL } = require('../../../config')
-
 const crypto = require('crypto')
 
-const { SALT, ITERATIONS, KEYLEN, DIGEST } = require('../../../config')
-const { formatCookies } = require('../misc/common-utils')
+const validator = require('validator')
 
+const sql = require('./sql-handler')
+const { MIN_PASSWORD_LENGTH } = require('../misc/common-utils')
+const mailer = require('../misc/email')
+const { URL, SALT, ITERATIONS, KEYLEN, DIGEST } = require('../../../config')
+const { getToken } = require('../misc/server-utils')
+
+/** Class that manages everything related to the wiki user accounts */
 class UserHandler {
+  /** Create user related SQL tables if they don't exist */
   constructor () {
+    // regular user table
     sql.create(`
       wiki_users (
         id SERIAL PRIMARY KEY,
@@ -23,6 +25,7 @@ class UserHandler {
       )
     `)
 
+    // table registers all the IPs an user has logged in with, encrpyted
     sql.create(`
       user_ip (
         user_id INT,
@@ -30,6 +33,7 @@ class UserHandler {
       )
     `)
 
+    // table registers all generated password reset links
     sql.create(`
       pass_reset_link (
         user_id INT,
@@ -45,43 +49,57 @@ class UserHandler {
    * @returns {number} ID of the user
    */
   async getUserId (token) {
-    return (await sql.selectWithColumn('wiki_users', 'session_token', token, 'id'))[0].id
+    return await sql.selectColumn('wiki_users', 'session_token', token, 'id')
   }
 
   /**
-   * Check if a user is an admin
-   * @param {string} session - The session token
-   * @returns {boolean} True if is an admin
+   * Check if an user is an admin
+   * @param {string} session - Session token of the user
+   * @returns {boolean} `true` if the user is an admin, `false` otherwise
    */
   async isAdmin (session) {
-    const account = (await sql.selectWithColumn('wiki_users', 'session_token', session))[0]
+    const account = await sql.selectRowWithColumn('wiki_users', 'session_token', session)
     return account && account.perms === 'admin'
   }
 
+  /**
+   * Check if an incoming HTTP request is being sent by an admin
+   * @param {import('express').Request} req - Express request
+   * @returns {boolean} `true` if an admin sent the request, `false` otherwise
+   */
   async isAdminRequest (req) {
-    return await this.isAdmin(this.getToken(req))
-  }
-
-  getToken (req) {
-    return formatCookies(req.headers.cookie).session
+    return await this.isAdmin(getToken(req))
   }
 
   /**
- * Encrypt a value using the configuration for the password encryption
- * @param {string} value - Text to encrypt
- * @returns {string} Encrypted hash
- */
+   * Encrypt a value using the `config` encryption values
+   * @param {string} value - Text to encrypt
+   * @returns {string} Encrypted hash
+   */
   getHash (value) {
     return crypto.pbkdf2Sync(value, SALT, ITERATIONS, KEYLEN, DIGEST).toString('hex')
   }
 
   /**
- * Generate a random token
- * @returns {string}
- */
+   * Generate a random token
+   * @returns {string} Token
+   */
   generateToken () {
-    const token = crypto.randomBytes(256)
-    return token.toString('hex')
+    return crypto.randomBytes(256).toString('hex')
+  }
+
+  /**
+   * Confirm if an user's credentials are correct
+   * @param {string} user - Username
+   * @param {string} password - Password
+   * @returns {number | null} Returns the user's id if the credentials are correct, `null` otherwise
+   */
+  async confirmCredentials (user, password) {
+    const internalData = await sql.selectRowWithColumn('wiki_users', 'name', user)
+    if (!internalData) return
+
+    if (internalData.user_password === this.getHash(password)) return internalData.id
+    else return null
   }
 
   /**
@@ -91,27 +109,23 @@ class UserHandler {
    * @returns {string | undefined} The session token if the credentials are correct or undefined if they aren't
    */
   async checkCredentials (user, password, ip) {
-    const internalData = (await sql.selectWithColumn('wiki_users', 'name', user))[0]
-    if (!internalData) return
+    const userId = await this.confirmCredentials(user, password)
+    if (userId === null) return
 
-    const hash = this.getHash(password)
+    const sessionToken = this.generateToken()
+    sql.updateById('wiki_users', 'session_token', [sessionToken], userId)
+    const previousIps = (await sql.selectWithColumn('user_ip', 'user_id', userId)).map(row => row.ip)
 
-    if (internalData.user_password === hash) {
-      const sessionToken = this.generateToken()
-      sql.updateById('wiki_users', 'session_token', [sessionToken], internalData.id)
-      const previousIps = (await sql.selectWithColumn('user_ip', 'user_id', internalData.id))
-        .map(row => row.ip)
-
-      if (!previousIps.includes(this.getHash(ip))) await this.insertIp(internalData.id, ip)
-      return sessionToken
-    }
+    if (!previousIps.includes(this.getHash(ip))) await this.insertIp(userId, ip)
+    return sessionToken
   }
 
   /**
    * Create an account in the database
    * @param {string} name - Username of the account
    * @param {string} password - Password of the account
-   * @param {string} display - The display name of the account
+   * @param {string} email - Email address being registered
+   * @param {string} ip - IP address requesting the account creation
    */
   async createAccount (name, password, email, ip) {
     const hash = this.getHash(password)
@@ -120,30 +134,49 @@ class UserHandler {
     await this.insertIp(id, ip)
   }
 
+  /**
+   * Log an IP address with its user
+   * @param {number} user - User ID
+   * @param {text} ip - IP address
+   */
   async insertIp (user, ip) {
     await sql.insert('user_ip', 'user_id, ip', [user, this.getHash(ip)])
   }
 
+  /**
+   * Check if a session token is valid and belongs to an user
+   * @param {string} session - Session token
+   * @returns {object | null} User row from the database or `null` if the token is not valid
+   */
   async checkUser (session) {
-    const row = (await sql.selectWithColumn('wiki_users', 'session_token', session))[0]
-    if (row) {
-      return {
-        user: row.name
-      }
-    } else {
-      return false
-    }
+    return await sql.selectRowWithColumn('wiki_users', 'session_token', session) || null
   }
 
+  /**
+   * Terminates an user's session, disconnecting them
+   * @param {string} session - Session token
+   */
   async disconnectUser (session) {
     const id = await this.getUserId(session)
     await sql.updateById('wiki_users', 'session_token', [''], id)
   }
 
+  /**
+   * Check if a name is taken as a wiki account username
+   * @param {string} name
+   * @returns {boolean} `true` if the name is taken, `false` otherwise
+   */
   async isNameTaken (name) {
     return (await sql.selectWithColumn('wiki_users', 'name', name)).length !== 0
   }
 
+  /**
+   * Check if an account can be created with the given credentials
+   * @param {string} name - Account's username
+   * @param {string} password - Accounts's password
+   * @param {string} email - Account's email
+   * @returns {boolean} `true` if the account can be created, `false` otherwise
+   */
   async canCreate (name, password, email) {
     return (
       typeof name === 'string' &&
@@ -156,6 +189,10 @@ class UserHandler {
     )
   }
 
+  /**
+   * Send a reset password email for an account
+   * @param {string} username - Target account's username
+   */
   async sendResetPassEmail (username) {
     const row = (await sql.selectWithColumn('wiki_users', 'name', username))[0]
     const expirationTime = 15 // in minutes
@@ -165,19 +202,28 @@ class UserHandler {
         row.id, linkToken, Date.now() + expirationTime * 60000 // convert to ms
       ])
 
-      await mailer.sendEmail(row.email, 'Change your Club Penguin Music Wiki password', `
-Someone requested a password reset for your account.
+      await mailer.sendEmail(row.email, 'Change your Club Penguin Music Wiki password', `Someone requested a password reset for your account.
 
-If this was you, you can reset your password via the following link
-${URL}Special:ResetPassword?t=${linkToken}
-      `)
+If this was you, you can reset your password via the following link:
+
+${URL}Special:ResetPassword?t=${linkToken}`)
     }
   }
 
+  /**
+   * Check if a reset password link is valid
+   * @param {string} token - Password link token
+   * @returns {boolean} `true` if the link is valid, `false` otherwise
+   */
   async resetLinkIsValid (token) {
     return Boolean(await this.getResetLink(token))
   }
 
+  /**
+   * Override an user's account password
+   * @param {string} token - Password link token
+   * @param {string} newPass - New password
+   */
   async resetPassword (token, newPass) {
     const row = await this.getResetLink(token)
     if (row) {
@@ -185,6 +231,11 @@ ${URL}Special:ResetPassword?t=${linkToken}
     }
   }
 
+  /**
+   * Generate a new password reset link for an account
+   * @param {string} token - Account's session token
+   * @returns {string} Password reset link token
+   */
   async getResetLink (token) {
     return (await sql.selectGreaterAndEqual(
       'pass_reset_link',

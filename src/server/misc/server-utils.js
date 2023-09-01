@@ -1,5 +1,5 @@
 const fs = require('fs')
-const { getMatch } = require('./common-utils')
+const { formatCookies } = require('./common-utils')
 
 /** Class with helper methods to be used in the server side code */
 class ServerUtils {
@@ -89,7 +89,7 @@ class ServerUtils {
    */
   static getToken (req) {
     if (req.headers.cookie) {
-      return getMatch(req.headers.cookie, /(?<=(session=))[\d\w]+(?=(;|$))/)
+      return formatCookies(req.headers.cookie).session
     }
     return ''
   }

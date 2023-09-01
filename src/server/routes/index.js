@@ -261,7 +261,8 @@ router.use('*', (req, res) => {
  */
 async function sendView (req, res, scriptName, title, arg) {
   /** Data so the frontend knows who is navigating */
-  const userData = await user.checkUser(getToken(req))
+  const userRow = await user.checkUser(getToken(req))
+  const userData = userRow ? { user: userRow.name } : undefined
 
   /** Variables to turn into browser globals */
   const vars = { title, arg, user: userData }
