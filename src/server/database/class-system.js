@@ -1,19 +1,13 @@
-const { removeBraces, matchGroup, compareObjects } = require('../misc/server-utils')
+const { removeBraces, matchGroup, compareObjects, isObject } = require('../misc/server-utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
 const predef = require('./predefined')
-const { getName, deepcopy } = require('../misc/common-utils')
+const { getName, deepcopy, keysInclude, removeBrackets } = require('../misc/common-utils')
 
 /**
  * An object that maps database class names to their
  * respective definition object
  * @typedef {object} DefMap
- */
-
-/**
- * An array of definitions, where the first element is for main classes,
- * the second is for helper classes and the third is for static classes
- * @typedef {DefMap[]} DataDef
  */
 
 /**
@@ -23,58 +17,44 @@ const { getName, deepcopy } = require('../misc/common-utils')
 
 /**
  * An object of the row of a database item
- * @typedef {object} Row
- * @property {number} id - Id in table
+ * @typedef {object} ItemRow
+ * @property {number} id - Item id
+ * @property {string} cls - Item class
  * @property {ItemData} data - Item data
- * @property {string} querywords - String with words to be matched
+ * @property {string} querywords - A string with all the names of an item separated by `&&`
  */
 
 /**
- * Represents the name of a database class
- * @typedef {string} ClassName
- */
-
-/**
- * An object that contains the data for an item of a class
+ * Object for a class item's data
  * @typedef {object} ItemData
  */
 
 /**
- * An array containing values for a row in the following order:
- *
- * * Index 0 is the JSON string of `ItemData`
- * * Index 1 is the string for the query words
- * @typedef {string[]} ItemValues
- */
-
-/**
- * Object mapping classes to an array of property paths
+ * Object mapping item classes to an array of property paths
  * @typedef {object} PathMap
  */
 
-/**
- * Class that handles the system that relates to the classes of data
- */
+/** Class for the system that handles everything that relates to item classes */
 class ClassSystem {
-  /**
-   * Create the system with a database definition
-   * @param {DataDef} def - Data definition
-   */
-  constructor (def) {
+  /** Initiate the system based on the defined item classes */
+  constructor () {
     ['main', 'helper', 'static'].forEach((category, i) => {
       this[this.getDefName(category)] = def[i]
     })
 
-    /** Columns for main class tables */
-    this.columns = 'data, querywords'
-
     this.assignDefaults()
     this.queryIndexing()
     this.findIdReferences()
+
+    this.majorClasses = { ...this.mainClasses, ...this.staticClasses }
+    this.allClasses = { ...this.majorClasses, ...this.helperClasses }
   }
 
+  /** Columns for main class tables */
+  columns = 'data, querywords'
+
+  /** Creates the table for items and adds the static and predefined items */
   async createTables () {
-    // create table for all items
     await handler.create(`
       items (
         id SERIAL PRIMARY KEY,
@@ -101,12 +81,21 @@ class ClassSystem {
     }
   }
 
+  /**
+   * Create a new item and insert it into the databae
+   * @param {string} cls - Item class
+   * @param {ItemData} data - Initial item data
+   * @param {number} predefined - Predefined item id
+   */
   async insertItem (cls, data, predefined = null) {
-    await handler.insert('items', 'cls, data, querywords, predefined', [cls, JSON.stringify(data), await this.getQueryWords(cls, data), predefined])
+    await handler.insert(
+      'items', 'cls, data, querywords, predefined',
+      [cls, JSON.stringify(data), await this.getQueryWords(cls, data), predefined]
+    )
   }
 
   /**
-   * Create and save the default object structure for each database class, where every array is
+   * Create and save the default object structure for each item class, where every array is
    * replaced with an empty array, every helper class is expanded with its defined properties,
    * and every base property is kept to their standard value
    */
@@ -164,16 +153,14 @@ class ClassSystem {
       if (classesOnHold.length === 0) break
     }
 
-    const allClasses = this.getAllClasses()
-
-    for (const cls in allClasses) {
-      createDefault(cls, allClasses[cls].code)
+    for (const cls in this.allClasses) {
+      createDefault(cls, this.allClasses[cls].code)
     }
   }
 
   /**
    * Iterate through every property declaration in a CPT code snippet and run a function for each declaration
-   * @param {CPT} code - Code snippet
+   * @param {string} code - Code snippet
    * @param {function(string, string, string[]) : void} callbackfn - Callback function for each declaration which takes as the first argument the name of the property in the declaration, as the second argument the type declaration and as the third argument the array of the parameters declared
    */
   iterateDeclarations (code, callbackfn) {
@@ -195,22 +182,6 @@ class ClassSystem {
     })
   }
 
-  /**
-   * Get an object with all main, static and helper class definitions
-   * @returns {DefMap} Definition map for all classes
-   */
-  getAllClasses () {
-    return Object.assign(this.getMajorClasses(), this.helperClasses)
-  }
-
-  /**
-   * Get object with all main and static class definitions
-   * @returns {DefMap} Definition map for all main and static classes
-   */
-  getMajorClasses () {
-    return Object.assign({}, this.mainClasses, this.staticClasses)
-  }
-
   async isStaticItem (id) {
     return this.isStaticClass(await this.getClass(id))
   }
@@ -222,6 +193,11 @@ class ClassSystem {
    */
   isStaticClass = cls => keysInclude(this.staticClasses, cls)
 
+  /**
+   * Check if an item is predefined
+   * @param {number} id - Item id
+   * @returns {boolean} `true` if the item is predefined, `false` otherwise
+   */
   async isPredefined (id) {
     return Boolean((await this.getItem(id)).predefined)
   }
@@ -229,14 +205,14 @@ class ClassSystem {
   /**
    * Check if a value is the name of a main class
    * @param {any} type - Value to check
-   * @returns {boolean} True if it is the name of a main class
+   * @returns {boolean} `true` if it is the name of a main class, `false` otherwise
    */
   isMainClass = cls => keysInclude(this.mainClasses, cls)
 
   /**
    * Check if a CPT type declaration represents a declaration of an array type
    * @param {string} type - Type part of the declaration
-   * @returns {boolean} True if it represents an array
+   * @returns {boolean} `true` if it represents an array, `false` otherwise
    */
   isArrayType (type) {
     return type.includes('[]')
@@ -245,17 +221,17 @@ class ClassSystem {
   /**
    * Check if a CPT type declaration represents a declaration of a helper type
    * @param {string} type - Type declaration
-   * @returns {boolean} True if it represents a helper type
+   * @returns {boolean} `true` if it represents a helper type, `false` otherwise
    */
   isHelperType (type) {
     return type.includes('{')
   }
 
   /**
-   * Check if the object for a database class follows the rules defined for it
-   * @param {ClassName} cls - Class of the data to validate
-   * @param {ItemData} data - Data object to validate
-   * @returns {string[]} Array where each element is a string describing an error with the data
+   * Check if an item data follows the rules defined for it
+   * @param {string} cls - Item class of the data
+   * @param {ItemData} data - Item data to validate
+   * @returns {string[]} Array where each element is a string describing a validation error
    */
   validate (cls, data) {
     const errors = []
@@ -354,44 +330,51 @@ class ClassSystem {
 
   /**
    * Update an item in the database or add if it doesn't exist
-   * @param {Row} row - Row object for the item
+   * @param {ItemRow} row - Row object for the item
    */
   async updateItem (row) {
     const { data, id, cls } = row
 
     if (id === undefined) this.insertItem(cls, data)
-    else await handler.updateOneCondition('items', 'data, querywords', [JSON.stringify(data), this.getQueryWords(cls, data)], 'id', id)
+    else {
+      await handler.updateOneCondition(
+        'items', 'data, querywords', [JSON.stringify(data), this.getQueryWords(cls, data)], 'id', id
+      )
+    }
   }
 
   /**
    * Get an item from a main or static class
-   * @param {ClassName} cls - Class of the item
-   * @param {number} id - Id of the item if not a static class
+   * @param {number} id - Item id
    * @returns {Row} Row data for the item
    */
   async getItem (id) {
     return (await handler.selectWithColumn('items', 'id', id))[0]
   }
 
+  /**
+   * Get the class an item belongs to
+   * @param {number} id - Item id
+   * @returns {string} - Class name
+   */
   async getClass (id) {
     return (await this.getItem(id)).cls
   }
 
   /**
    * Get the default `ItemData` object for a given class
-   * @param {ClassName} cls - Class to target
+   * @param {string} cls - Item class
    * @returns {ItemData} Object representing the default structure
    */
   getDefault = cls => this.defaults[cls]
 
   /**
-   * Find all the paths in every class definition
-   * that leads to a type/param following a specific condition
+   * Find all the paths in every class definition that leads to a type/param following a specific condition
    * @param {PathMap} variable - Object to store the paths
    * @param {function(string, string[]) : boolean} condition - Function that takes as the first argument the type of a property and as the second argument the parameters of a property, and returns a boolean for whether the values meet the criteria
    */
   findPaths (variable, condition) {
-    const mainClasses = this.getMajorClasses()
+    const mainClasses = this.majorClasses
     for (const cls in mainClasses) {
       variable[cls] = []
 
@@ -415,8 +398,9 @@ class ClassSystem {
     }
   }
 
+  /** Create the object that maps for each class all the paths where other classes reference the class */
   findIdReferences () {
-    const classes = this.getMajorClasses()
+    const classes = this.majorClasses
     this.idPaths = {}
     for (const cls in classes) {
       this.idPaths[cls] = {}
@@ -426,24 +410,34 @@ class ClassSystem {
     }
   }
 
+  /**
+   * Select all items in a class
+   * @param {string} cls - Item class
+   * @returns {ItemRow[]} All founds rows
+   */
   async selectAllInClass (cls) {
     return handler.selectWithColumn('items', 'cls', cls)
   }
 
   /**
    * Get the row for a static class
-   * @param {cls} cls - Static class
+   * @param {string} cls - Static class
    * @returns {ItemRow} Row for the class
    */
   async getStaticClass (cls) {
     return (await this.selectAllInClass(cls))[0]
   }
 
+  /**
+   * Check all items that reference a target item within their data
+   * @param {number} id - Target item id
+   * @returns {string[][]} Array of arrays that contain as the first element the string for the class name and second element the string for the item name
+   */
   async checkReferences (id) {
     const cls = await this.getClass(id)
     const clsPaths = this.idPaths[cls]
     const encountered = []
-    const majorClasses = this.getMajorClasses()
+    const majorClasses = this.majorClasses
     for (const cls in clsPaths) {
       const paths = clsPaths[cls]
       const allElements = await this.selectAllInClass(cls)
@@ -479,7 +473,7 @@ class ClassSystem {
   }
 
   /**
-   * Create and save an object that maps each `ClassName` in the database
+   * Create and save an object that maps each class
    * onto an array representing paths that lead to the search query properties
    *
    * This object is created at the beginning to avoid repeating this operation each search query request
@@ -496,8 +490,8 @@ class ClassSystem {
   /**
    * Get the words that can be used in a search query to identify a class item
    * and return them in the query format stored in the database
-   * @param {ClassName} cls - Class of the item
-   * @param {ItemData} data - Data of the item
+   * @param {string} cls - Item class
+   * @param {ItemData} data - Item data
    * @returns {string} The useable expresions/words separated by "&&", the format stored in the database
    */
   getQueryWords (cls, data) {
@@ -525,6 +519,12 @@ class ClassSystem {
     return results.join('&&')
   }
 
+  /**
+   * Search all items within a row in which the name contains an expression and get a map of ids and the name that matches it
+   * @param {ItemRow[]} rows - Array with relevant rows
+   * @param {string} keyword - Expression to search in names
+   * @returns {object} Map of item ids to names
+   */
   getNameWithRows (rows, keyword) {
     const results = {}
     rows.forEach(row => {
@@ -542,10 +542,10 @@ class ClassSystem {
   }
 
   /**
-   * Get all rows that match a searcy query result in a given class
-   * @param {ClassName} cls - Class to search in
-   * @param {string} keyword - Word to match the search result
-   * @returns {object} Object that maps ids into pharses/names for the rows
+   * Get all rows that match a search query result in a given class
+   * @param {string} cls - Item class to search
+   * @param {string} keyword - Expression to match the search result
+   * @returns {object} Object that maps ids into names for the rows
    */
   async getByName (cls, keyword) {
     const response = await handler.selectLike('items', 'querywords', keyword, 'cls', cls)
@@ -564,23 +564,19 @@ class ClassSystem {
   }
 
   /**
-   * Get the first phrase/word in the query words for a row based on the id of the row and its class
-   * @param {ClassName} cls - Class to search
-   * @param {number} id - Id of the row to get
+   * Get the first name in the query words for a row based on the id of the row and its class
+   * @param {string} cls - Class to search
+   * @param {number} id - Item id
    * @returns {string} First query word in the row
    */
   getQueryNameById = async (id) => {
-    try {
-      return (await this.getItem(id)).querywords.split('&&')[0]
-    } catch (error) {
-      return ''
-    }
+    return getName((await this.getItem(id)).querywords) || ''
   }
 
   /**
    * Get the category of a class
-   * @param {ClassName} cls - Name of the class
-   * @returns {string} String with the name of the category
+   * @param {string} cls - Name of the class
+   * @returns {string} Name of the category
    */
   getClassCategory (cls) {
     if (this.isStaticClass(cls)) return 'static'
@@ -590,7 +586,7 @@ class ClassSystem {
 
   /**
    * Get the definition object for a class
-   * @param {ClassName} cls - Class name
+   * @param {string} cls - Class name
    * @returns {object} Definition object
    */
   getAnyClass (cls) {
@@ -598,18 +594,39 @@ class ClassSystem {
     return this.getDefObj(cat)[cls]
   }
 
+  /**
+   * Get the name of the definition object for a class category
+   * @param {string} cat - Category name
+   * @returns {string} Definition object name
+   */
   getDefName (cat) {
     return `${cat}Classes`
   }
 
+  /**
+   * Get the object with definitions for a class category
+   * @param {string} cat - Class category
+   * @returns {DefMap} Definition object
+   */
   getDefObj (cat) {
     return this[this.getDefName(cat)]
   }
 
+  /**
+   * Check if a class is a major class, ie a main class or a static class
+   * @param {string} cls - Class name
+   * @returns {boolean} `true` if is a major class, `false` if is a helper class
+   */
   isMajorClass (cls) {
     return this.isStaticClass(cls) || this.isMainClass(cls)
   }
 
+  /**
+   * Check if an item data object is different from the one in the database
+   * @param {number} id - Item id
+   * @param {ItemData} data - Item data to compare with the database one
+   * @returns {boolean} `true` if the data is different and `false` if it is the same
+   */
   async didDataChange (id, data) {
     const old = await this.getItem(id)
     if (!old) return true
@@ -636,24 +653,6 @@ function splitDeclarations (code) {
 }
 
 /**
- * Remove all bracket characters from a string
- * @param {string} str - String
- * @returns {string} Modified string
- */
-function removeBrackets (str) {
-  return str.replace(/\[|\]/g, '')
-}
-
-/**
- * Check if a value is a JS object
- * @param {any} value - Value
- * @returns {boolean} True if is a JS object
- */
-function isObject (value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-/**
  * Remove the argument of a property type declaration
  * @param {string} type - Type declaration
  * @returns {string} Declaration with no arguments
@@ -661,13 +660,5 @@ function isObject (value) {
 function removeArgs (type) {
   return type.replace(/\(.*\)/, '')
 }
-
-/**
- * Check if a string belongs to the keys of an object
- * @param {object} obj - Object to check
- * @param {string} key - String to find
- * @returns {boolean} True if the keys include the key
- */
-function keysInclude (obj, key) { return Object.keys(obj).includes(key) }
 
 module.exports = new ClassSystem(def)

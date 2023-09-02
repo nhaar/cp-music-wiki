@@ -18,7 +18,7 @@ class CommonUtils {
    */
   static getName (querywords) {
     if (typeof querywords !== 'string') return
-    return CommonUtils.getMatch(querywords, /^.*(&|$)/)
+    return querywords.split('&&')[0]
   }
 
   /**
@@ -56,6 +56,23 @@ class CommonUtils {
    */
   static trimSplit (str) {
     return str.split(',').map(segment => segment.trim()).filter(segment => segment)
+  }
+
+  /**
+   * Check if a string belongs to the keys of an object
+   * @param {object} obj - Object to check
+   * @param {string} key - String to find
+   * @returns {boolean} `true` if the keys include the key, `false` if it doesn't
+   */
+  static keysInclude (obj, key) { return Object.keys(obj).includes(key) }
+
+  /**
+   * Remove all bracket characters from a string
+   * @param {string} str - String
+   * @returns {string} Modified string
+   */
+  static removeBrackets (str) {
+    return str.replace(/\[|\]/g, '')
   }
 }
 

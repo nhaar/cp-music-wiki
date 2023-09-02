@@ -82,7 +82,7 @@ class DatabaseManipulator {
     /** The original default class data before being updated */
     const originalDefaults = {}
 
-    const allClasses = clsys.getAllClasses()
+    const allClasses = clsys.allClasses
     for (const cls in allClasses) {
       originalDefaults[cls] = deepcopy(clsys.defaults[cls])
     }
@@ -362,7 +362,7 @@ class DatabaseManipulator {
     let type = cls
     // unify all classes because the cls will be first
     // assigned the given class and it can then point to helper classes
-    const allClasses = clsys.getAllClasses()
+    const allClasses = clsys.allClasses
     steps.forEach(step => {
       // ignore if it is a number or it's just the *
       // because that represents an array element ie there is no type of interest

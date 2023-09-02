@@ -94,7 +94,7 @@ class FrontendBridge {
       return obj
     }
 
-    const classes = clsys.getMajorClasses()
+    const classes = clsys.majorClasses
     const modelObjects = {}
     for (const cls in classes) {
       const code = classes[cls].code
@@ -164,7 +164,7 @@ class FrontendBridge {
     const rows = revs.concat(dels).sort((a, b) => {
       return b.timestamp - a.timestamp
     })
-    const classes = clsys.getMajorClasses()
+    const classes = clsys.majorClasses
     const latest = []
 
     for (let i = 0; i < rows.length && i < number + 1; i++) {

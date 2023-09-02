@@ -1,9 +1,7 @@
-/**
- * Class to validate an assigned part of a class
- */
+/** Class objects are containers of methods to validate data from a class using a rule */
 class Validator {
   /**
-   * @param {function(ItemData) : boolean} f - Takes as argument an object that follows a class data's structure, and returns true if the object is following the rule assigned to this validator, else it returns false, indicating the data is not valid
+   * @param {function(ItemData) : boolean} f - A function that takes as argument an item's `data` object, and returns `true` if the object is following the rule assigned to this validator, else it returns `false`, indicating the data is not valid
    * @param {string} msg - Error message to display for the data if it is invalid
    */
   constructor (f, msg) {
@@ -11,33 +9,38 @@ class Validator {
   }
 }
 
-/** Class for a database class definition */
+/** Class which objects contain everything needed to define an item class */
 class ClassDef {
   /**
-   * Assign both values to the object
-   * @param {import("./database").CPT} code - The code snippet which contains the declaration for all properties within the class
-   * @param {Validator[]} validators - A list of all data validators for the class
+   * Construct the definition object
+   * @param {string} code - The "CPT" code snippet which contains the declaration for all properties within the item class
+   * @param {Validator[]} validators - A list of all data validators for the item class
    */
   constructor (code, validators = []) {
     Object.assign(this, { code, validators })
   }
 }
 
-/** Class for a class definition that has a name (for main and static classes) */
-class NameDef {
+/** Extension of `ClassDef` for item classes that have a name, ie all major classes */
+class NameDef extends ClassDef {
   /**
-   * Assign both values to the object
-   * @param {string} name - The "pretty name" for the class
-   * @param {import("./database").CPT} code - The code snippet which contains the declaration for all properties within the class
-   * @param {Validator[]} validators - A list of all data validators for the class
+   * Construct the definition object
+   * @param {string} name - The "pretty name" for the item class
+   * @param {string} code - The "CPT" code snippet which contains the declaration for all properties within the item class
+   * @param {Validator[]} validators - A list of all data validators for the item class
    */
   constructor (name, code, validators = []) {
-    Object.assign(this, { name, code, validators })
+    super(code, validators)
+    Object.assign(this, { name })
   }
 }
 
-/** Array with the three `DefMap`s for main, helper and static classes */
-const def = [{
+/**
+ * Array with three `DefMap`s, which map item class names into their definition
+ *
+ * The first element is for main item classes, the second element is for helper classes and the third is for static classes
+*/
+module.exports = [{
   song: new NameDef(
     'Song', `
     names {NAME}[]
@@ -508,5 +511,3 @@ const def = [{
     `
   )
 }]
-
-module.exports = def
