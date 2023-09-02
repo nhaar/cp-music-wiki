@@ -165,7 +165,7 @@ class CPTInterpreter {
   }
 
   /**
-   * Check if a `CPT` ty`pe declaration represents a declaration of a custom object type
+   * Check if a `CPT` type declaration represents a declaration of a custom object type
    * @param {string} type - `type` as declared
    * @returns {boolean} `true` if it represents a custom object type, `false` otherwise
    */
