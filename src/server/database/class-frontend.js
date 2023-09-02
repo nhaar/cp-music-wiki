@@ -2,8 +2,8 @@ const clsys = require('./class-system')
 const sql = require('./sql-handler')
 const rev = require('./revisions')
 const del = require('./deletions')
-const { capitalize, matchInside } = require('../misc/server-utils')
 const { deepcopy } = require('../misc/common-utils')
+const { getUIModel } = require('./cpt-interpreter')
 
 class FrontendBridge {
   constructor () {
@@ -42,63 +42,11 @@ class FrontendBridge {
    * @returns {object} An object that maps classes to "editor models", which are objects that represent the structure of a class, each property in the editor model is a property in a class, if the property is a helper class, then the editor model shows the editor model for that class, if it is a normal type, it shows the string, and if it is an array, it shows what type the array is of and what its dimension is
    */
   createEditorModels () {
-    // the function takes a CPT snippet, presumed to be
-    // what defines the object, returns the model following the snippet
-    const getModel = code => {
-      const obj = {}
-      clsys.iterateDeclarations(code, (property, type, params) => {
-        const sandwichVariables = {}
-        const applySandwich = (param, char, name) => {
-          if (param.includes(char)) {
-            sandwichVariables[name] = param.match(`(?<=${char}).*(?=${char})`)[0]
-          }
-        }
-        params.forEach(param => {
-          [
-            ['"', 'header'],
-            ["'", 'description']
-          ].forEach(element => {
-            applySandwich(param, ...element)
-          })
-        })
-
-        // create automatically generated header if no header
-        const header = sandwichVariables.header || camelToPhrase(property)
-        const description = sandwichVariables.description || ''
-
-        // extrat arguments from type
-        let args = matchInside(type, '\\(', '\\)')
-        if (args) {
-          args = args[0].split(',')
-          if (args.length === 1) args = args[0]
-          type = type.replace(/\(.*\)/, '')
-        }
-
-        // if the value is a helper type, it will become an object recursivelly
-        // until the lowest level where the value will be a string
-        let value
-        if (clsys.isHelperType(type)) {
-          value = getModel(clsys.helperClasses[matchInside(type, '{', '}')[0]].code)
-        } else {
-          value = type.match(/\w+/)[0]
-        }
-        // array types will just include the value inside of an array to indicate it is
-        // an array type
-        if (clsys.isArrayType(type)) {
-          const dim = clsys.getDimension(type)
-          value = [value, dim]
-        }
-        obj[property] = [value, header, description, args]
-      })
-
-      return obj
-    }
-
     const classes = clsys.majorClasses
     const modelObjects = {}
     for (const cls in classes) {
       const code = classes[cls].code
-      modelObjects[cls] = getModel(code)
+      modelObjects[cls] = getUIModel(code)
     }
 
     return modelObjects
@@ -232,18 +180,6 @@ class FrontendBridge {
 
     return latest
   }
-}
-
-/**
- * Separates the words in a camel case name and capitalize the first letter
- * of each word
- * @param {string} str - Camel case string
- * @returns {string} Converted string
- */
-function camelToPhrase (str) {
-  const firstWord = str.match(/[a-z]+((?=[A-Z])|$)/)[0]
-  const otherWords = str.match(/[A-Z][a-z]*/g)
-  return [capitalize(firstWord)].concat(otherWords).join(' ')
 }
 
 module.exports = new FrontendBridge()

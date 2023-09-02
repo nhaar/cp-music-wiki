@@ -1,18 +1,14 @@
-const { removeBraces, matchGroup, compareObjects, isObject } = require('../misc/server-utils')
+const { removeBraces, compareObjects, isObject } = require('../misc/server-utils')
 const handler = require('./sql-handler')
 const def = require('./data-def')
 const predef = require('./predefined')
 const { getName, deepcopy, keysInclude, removeBrackets } = require('../misc/common-utils')
+const { iterateDeclarations, getDimension, removeArgs, isArrayType, isHelperType } = require('./cpt-interpreter')
 
 /**
  * An object that maps database class names to their
  * respective definition object
  * @typedef {object} DefMap
- */
-
-/**
- * Represents CPT code, used to define the properties of the database classes
- * @typedef {string} CPT
  */
 
 /**
@@ -42,12 +38,12 @@ class ClassSystem {
       this[this.getDefName(category)] = def[i]
     })
 
+    this.majorClasses = { ...this.mainClasses, ...this.staticClasses }
+    this.allClasses = { ...this.majorClasses, ...this.helperClasses }
+
     this.assignDefaults()
     this.queryIndexing()
     this.findIdReferences()
-
-    this.majorClasses = { ...this.mainClasses, ...this.staticClasses }
-    this.allClasses = { ...this.majorClasses, ...this.helperClasses }
   }
 
   /** Columns for main class tables */
@@ -104,10 +100,10 @@ class ClassSystem {
 
     const createDefault = (cls, code) => {
       const defaultObject = {}
-      this.iterateDeclarations(code, (property, type) => {
-        if (this.isArrayType(type)) {
+      iterateDeclarations(code, (property, type) => {
+        if (isArrayType(type)) {
           defaultObject[property] = []
-        } else if (this.isHelperType(type)) {
+        } else if (isHelperType(type)) {
           defaultObject[property] = this.getDefault(removeBraces(type))
         } else {
           let value = {
@@ -131,8 +127,8 @@ class ClassSystem {
       for (const cls in this.helperClasses) {
         const { code } = this.helperClasses[cls]
         const helperClasses = []
-        this.iterateDeclarations(code, (property, type) => {
-          if (this.isHelperType(type)) helperClasses.push(removeBrackets(removeBraces(type)))
+        iterateDeclarations(code, (property, type) => {
+          if (isHelperType(type)) helperClasses.push(removeBrackets(removeBraces(type)))
         })
 
         let onHold = false
@@ -156,30 +152,6 @@ class ClassSystem {
     for (const cls in this.allClasses) {
       createDefault(cls, this.allClasses[cls].code)
     }
-  }
-
-  /**
-   * Iterate through every property declaration in a CPT code snippet and run a function for each declaration
-   * @param {string} code - Code snippet
-   * @param {function(string, string, string[]) : void} callbackfn - Callback function for each declaration which takes as the first argument the name of the property in the declaration, as the second argument the type declaration and as the third argument the array of the parameters declared
-   */
-  iterateDeclarations (code, callbackfn) {
-    const declarations = splitDeclarations(code)
-    declarations.forEach(declr => {
-      const property = declr.match(/\w+/)[0]
-      const typePattern = /(?:{)?\w+(?:\(.*\))?(?:})?(\[\])*/
-      const type = matchGroup(declr, undefined, '(?<=\\w+\\s+)', typePattern.source)[0]
-
-      const rest = declr.replace(new RegExp('\\w+\\s+' + typePattern.source), '')
-      let params = []
-      if (rest) {
-        const quotePattern = /".*"|'.*'/g
-        const quoted = rest.match(quotePattern) || []
-        params = rest.replace(quotePattern, '').match(/\S+/g) || []
-        params = params.concat(quoted)
-      }
-      callbackfn(property, type, params)
-    })
   }
 
   async isStaticItem (id) {
@@ -210,24 +182,6 @@ class ClassSystem {
   isMainClass = cls => keysInclude(this.mainClasses, cls)
 
   /**
-   * Check if a CPT type declaration represents a declaration of an array type
-   * @param {string} type - Type part of the declaration
-   * @returns {boolean} `true` if it represents an array, `false` otherwise
-   */
-  isArrayType (type) {
-    return type.includes('[]')
-  }
-
-  /**
-   * Check if a CPT type declaration represents a declaration of a helper type
-   * @param {string} type - Type declaration
-   * @returns {boolean} `true` if it represents a helper type, `false` otherwise
-   */
-  isHelperType (type) {
-    return type.includes('{')
-  }
-
-  /**
    * Check if an item data follows the rules defined for it
    * @param {string} cls - Item class of the data
    * @param {ItemData} data - Item data to validate
@@ -246,11 +200,11 @@ class ClassSystem {
           errors.push(`Validation exception at ${path.join()}\n${error}`)
         }
       })
-      this.iterateDeclarations(code, (property, type, params) => {
+      iterateDeclarations(code, (property, type, params) => {
         // check if the type of a property is the same as it was defined
         const checkType = (value, type, path) => {
-          if (this.isArrayType(type)) {
-            const dimension = this.getDimension(type)
+          if (isArrayType(type)) {
+            const dimension = getDimension(type)
             const realType = removeBrackets(type)
 
             // iterate through all the nested arrays to find all destination paths
@@ -274,7 +228,7 @@ class ClassSystem {
             const errorMsg = indefiniteDescription => {
               errors.push(`${path.join('')} must be ${indefiniteDescription}`)
             }
-            if (this.isHelperType(type)) {
+            if (isHelperType(type)) {
               if (isObject(value)) {
                 const propertyType = this.helperClasses[removeBraces(type)]
                 iterateObject(propertyType, value, path)
@@ -366,7 +320,9 @@ class ClassSystem {
    * @param {string} cls - Item class
    * @returns {ItemData} Object representing the default structure
    */
-  getDefault = cls => this.defaults[cls]
+  getDefault (cls) {
+    return this.defaults[cls]
+  }
 
   /**
    * Find all the paths in every class definition that leads to a type/param following a specific condition
@@ -379,9 +335,9 @@ class ClassSystem {
       variable[cls] = []
 
       const iterate = (code, path) => {
-        this.iterateDeclarations(code, (property, type, params) => {
+        iterateDeclarations(code, (property, type, params) => {
           const newPath = deepcopy(path).concat([property])
-          const dimension = this.getDimension(type)
+          const dimension = getDimension(type)
           for (let i = 0; i < dimension; i++) {
             newPath.push('[]')
           }
@@ -502,7 +458,7 @@ class ClassSystem {
       const type = path[current]
       current++
       if (current === path.length + 1) results.push(value)
-      else if (this.isArrayType(type)) {
+      else if (isArrayType(type)) {
         value.forEach(element => {
           iterator(element, path, current)
         })
@@ -550,17 +506,6 @@ class ClassSystem {
   async getByName (cls, keyword) {
     const response = await handler.selectLike('items', 'querywords', keyword, 'cls', cls)
     return this.getNameWithRows(response, keyword)
-  }
-
-  /**
-   * Get the array dimension for a property type declaration in CPT
-   * @param {string} type - Type declaration
-   * @returns {number} Array dimension, 0 if not an array
-   */
-  getDimension (type) {
-    const matches = type.match(/\[\]/g)
-    if (matches) return matches.length
-    else return 0
   }
 
   /**
@@ -634,31 +579,6 @@ class ClassSystem {
       return !compareObjects(old.data, data)
     }
   }
-}
-
-/**
- * Split all declarations in a CPT code snippet
- * @param {CPT} code - CPT code
- * @returns {string[]} Array with declarations
- */
-function splitDeclarations (code) {
-  const trimAll = array => array.map(str => str.trim()).filter(str => str)
-  const allDeclrs = trimAll(code.split(';'))
-  const cleanedDeclrs = []
-  allDeclrs.forEach(declr => {
-    const cleaned = trimAll(declr.split('\n')).join(' ')
-    cleanedDeclrs.push(cleaned)
-  })
-  return cleanedDeclrs
-}
-
-/**
- * Remove the argument of a property type declaration
- * @param {string} type - Type declaration
- * @returns {string} Declaration with no arguments
- */
-function removeArgs (type) {
-  return type.replace(/\(.*\)/, '')
 }
 
 module.exports = new ClassSystem(def)

@@ -55,7 +55,11 @@ class CommonUtils {
    * @returns
    */
   static trimSplit (str) {
-    return str.split(',').map(segment => segment.trim()).filter(segment => segment)
+    return CommonUtils.trimArray(str.split(','))
+  }
+
+  static trimArray (arr) {
+    return arr.map(segment => segment.trim()).filter(segment => segment)
   }
 
   /**
