@@ -1,4 +1,4 @@
-const clsys = require('../database/class-system')
+const ItemClassDatabase = require('../item-class/item-class-database')
 const { forEachAsync, findId } = require('../misc/server-utils')
 
 /**
@@ -247,12 +247,12 @@ class MediaGenerator {
   /** Save all general purpose data required to create the rows */
   async dataFetcher () {
     // general data
-    this.songs = await clsys.selectAllInClass('song')
-    this.authors = await clsys.selectAllInClass('author')
-    this.sources = await clsys.selectAllInClass('source')
+    this.songs = await ItemClassDatabase.selectAllInClass('song')
+    this.authors = await ItemClassDatabase.selectAllInClass('author')
+    this.sources = await ItemClassDatabase.selectAllInClass('source')
 
     // specialized data
-    if (this.media === 'unusedf') this.plays = await clsys.selectAllInClass('stage_play')
+    if (this.media === 'unusedf') this.plays = await ItemClassDatabase.selectAllInClass('stage_play')
   }
 
   /** Create a map of the priorities of each song for a simpler execution */
@@ -361,7 +361,7 @@ class MediaGenerator {
    * @param {OptionsSheet} options - Object with the option properties that define what each iteration will do
    */
   async iterateInstances (options) {
-    const rows = await clsys.selectAllInClass(options.cls)
+    const rows = await ItemClassDatabase.selectAllInClass(options.cls)
 
     // this function is the last to be called on each iteration and acts on an object said to be a `use`
     // because it contains song instance specific information and adds this information

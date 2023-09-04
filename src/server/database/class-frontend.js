@@ -1,14 +1,13 @@
-const clsys = require('./class-system')
 const sql = require('./sql-handler')
-const rev = require('./revisions')
-const del = require('./deletions')
 const { deepcopy } = require('../misc/common-utils')
-const { getUIModel } = require('./cpt-interpreter')
+const { itemClassHandler } = require('../item-class/item-class-handler')
+const ItemClassDatabase = require('../item-class/item-class-database')
+const itemClassChanges = require('../item-class/item-class-changes')
 
 class FrontendBridge {
   constructor () {
     // save variables that will be requested by the frontend
-    this.createPreeditorData().then(() => this.createEditorData())
+    this.createPreeditorData()
   }
 
   /**
@@ -19,58 +18,26 @@ class FrontendBridge {
   async createPreeditorData () {
     this.preeditorData = []
 
-    const elements = [
-      ['main', false],
-      ['static', true]
-    ]
-    for (let i = 0; i < 2; i++) {
-      const [category, isStatic] = elements[i]
-
-      const classDefs = clsys.getDefObj(category)
-      for (const cls in classDefs) {
-        const data = { cls, name: classDefs[cls].name, isStatic }
-        if (isStatic) {
-          data.id = (await clsys.selectAllInClass(cls))[0].id
-        }
-        this.preeditorData.push(data)
+    for (const cls in itemClassHandler.classes) {
+      const isStatic = itemClassHandler.isStaticClass(cls)
+      const data = { cls, name: itemClassHandler.classes[cls].name, isStatic }
+      if (isStatic) {
+        data.id = (await ItemClassDatabase.getStaticClass(cls)).id
       }
+      this.preeditorData.push(data)
     }
-  }
-
-  /**
-   * Create the editor models, to be used by the editor in the frontend
-   * @returns {object} An object that maps classes to "editor models", which are objects that represent the structure of a class, each property in the editor model is a property in a class, if the property is a helper class, then the editor model shows the editor model for that class, if it is a normal type, it shows the string, and if it is an array, it shows what type the array is of and what its dimension is
-   */
-  createEditorModels () {
-    const classes = clsys.majorClasses
-    const modelObjects = {}
-    for (const cls in classes) {
-      const code = classes[cls].code
-      modelObjects[cls] = getUIModel(code)
-    }
-
-    return modelObjects
-  }
-
-  /** Create the editor data object, which is used by the frontend */
-  createEditorData () {
-    const modelObjects = this.createEditorModels()
-    this.editorData = {}
-    this.preeditorData.forEach(data => {
-      this.editorData[data.cls] = { main: modelObjects[data.cls] }
-    })
   }
 
   async getDeleteData (id) {
-    const cls = (await clsys.getItem(id)).cls
+    const cls = await ItemClassDatabase.getClass(id)
 
-    const deleteData = deepcopy(this.editorData[cls])
-    deleteData.refs = await clsys.checkReferences(cls, id)
+    const deleteData = deepcopy(itemClassHandler.classes[cls])
+    deleteData.refs = await itemClassChanges.checkReferences(id)
     return deleteData
   }
 
   async checkRevisionSize (revId) {
-    const text = JSON.stringify(await rev.getRevisionData(revId))
+    const text = JSON.stringify(await itemClassChanges.getRevisionData(revId))
     const encoder = new TextEncoder()
     return encoder.encode(text).length
   }
@@ -112,16 +79,16 @@ class FrontendBridge {
     const rows = revs.concat(dels).sort((a, b) => {
       return b.timestamp - a.timestamp
     })
-    const classes = clsys.majorClasses
+    const classes = itemClassHandler.classes
     const latest = []
 
     for (let i = 0; i < rows.length && i < number + 1; i++) {
       const row = rows[i]
-      const name = await del.getQueryNameById(row.item_id)
-      const cls = await del.getClass(row.item_id)
+      const name = await ItemClassDatabase.getQueryNameById(row.item_id)
+      const cls = await ItemClassDatabase.getClass(row.item_id)
       const className = classes[cls].name
       if (row.is_deletion === undefined) {
-        const next = await rev.getNextRev(row.id)
+        const next = await itemClassChanges.getNextRev(row.id)
         if (next) {
           const sizes = [row.id, next]
           for (let i = 0; i < 2; i++) {
@@ -133,35 +100,12 @@ class FrontendBridge {
 
           latest.push(this.createRevisionInfo(row, nextRow, delta, name, className, user))
         }
-        // latest.push({
-        //   delta,
-        //   timestamp: nextRow.timestamp,
-        //   cls: classes[cls].name,
-        //   name,
-        //   old: row.id,
-        //   cur: next,
-        //   user,
-        //   userId: nextRow.wiki_user,
-        //   id: row.item_id,
-        //   tags: nextRow.tags
-        // })
       } else {
         latest.push(this.createDeletionInfo(row, name, className))
       }
 
       if (row.created && row.timestamp > timestamp) {
         latest.push(this.createRevisionInfo(undefined, row, await this.checkRevisionSize(row.id), name, className, (await sql.selectId('wiki_users', row.wiki_user)).name))
-        // latest.push({
-        //   delta: await this.checkRevisionSize(row.id),
-        //   timestamp: row.timestamp,
-        //   cls: classes[cls].name,
-        //   name,
-        //   cur: row.id,
-        //   user: ,
-        //   userId: row.wiki_user,
-        //   id: row.item_id,
-        //   tags: row.tags
-        // })
       }
     }
 
@@ -172,7 +116,7 @@ class FrontendBridge {
       const change = latest[i]
       if (!foundItems.includes(change.id)) {
         foundItems.push(change.id)
-        if (!await del.isDeleted(change.id)) {
+        if (!await ItemClassDatabase.isDeleted(change.id)) {
           latest[i].rollback = true
         }
       }

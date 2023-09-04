@@ -78,6 +78,14 @@ class CommonUtils {
   static removeBrackets (str) {
     return str.replace(/\[|\]/g, '')
   }
+
+  static matchInArray (arr, pattern) {
+    return arr.map(e => CommonUtils.getMatch(e, pattern)).filter(e => e)[0]
+  }
+
+  static getExtremeCharEnclosurePattern (char) {
+    return `(?<=^${char}).*(?=${char}$)`
+  }
 }
 
 module.exports = CommonUtils

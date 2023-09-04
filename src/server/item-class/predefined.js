@@ -6,9 +6,7 @@ class Predefined {
   }
 }
 
-/**
- * List of all the predefined items in the database
- */
+/** List of all the predefined items in the database */
 module.exports = [
   new Predefined('category', { name: 'OST List' }, 1)
 ]

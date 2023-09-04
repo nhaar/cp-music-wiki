@@ -1,6 +1,5 @@
-const { trimArray } = require('../misc/common-utils')
+const { trimArray, getMatch, matchInArray, getExtremeCharEnclosurePattern } = require('../misc/common-utils')
 const { matchGroup, capitalize, matchInside } = require('../misc/server-utils')
-const def = require('./data-def')
 
 /**
  * "Cascading Property Types" is the syntax used to define how the item `data` object of items are structured in each item class
@@ -94,8 +93,39 @@ const def = require('./data-def')
  * @typedef {string} CPT
  */
 
+/**
+ * Array with all property info inside an object, in the order they should apear
+ * @typedef {PropertyInfo[]} ObjectStructure
+ */
+
+/**
+ * Object that contains the info for a `property` inside an item's `data`
+ * @typedef {object} PropertyInfo
+ * @property {string} property - Name of the property
+ * @property {boolean} array - `true` if the property is an array, `false` otherwise
+ * @property {number} dim - If array is `true`, this property is the dimension of the array
+ * @property {string | ObjectStructure} content - Either a string representing the base type or if it is an object type, an array of all `PropertyInfo`s for its properties
+ * @property {boolean} query - `true` if this property is a query property, `false` otherwise
+ * @property {string} name -
+ * @property {string} desc
+ * @property {ItemRuleValidator[]} validators
+ */
+
+/**
+ * An object with multiple object definitions as the value and the keys being their identifier name
+ * @typedef {Object.<string, CustomObjectDef>} DefSheet
+ */
+
 /** Class with methods to interprept `CPT` */
 class CPTInterpreter {
+  /**
+   * Store all object types
+   * @param {DefSheet} objectTypes - All the defined objects
+   */
+  constructor (objectTypes) {
+    Object.assign(this, { objectTypes })
+  }
+
   /**
    * Split all declarations in a `CPT` string
    * @param {CPT} cpt - `CPT` string
@@ -132,12 +162,12 @@ class CPTInterpreter {
   }
 
   /**
-   * Iterate through every property declaration in a CPT code snippet and run a function for each declaration
-   * @param {string} code - Code snippet
-   * @param {function(string, string, string[]) : void} callbackfn - Callback function for each declaration which takes as the first argument the name of the property in the declaration, as the second argument the type declaration and as the third argument the array of the parameters declared
+   * Iterate through every property declaration in a `CPT` striong and run a function for each statement
+   * @param {string} cpt - `CPT` string
+   * @param {function(string, string, string[]) : void} callbackfn - Callback function for each declaration which takes as the first argument the `property`, as the second argument the `type` and as the third an array of all `param`s
    */
-  static iterateDeclarations (code, callbackfn) {
-    const declarations = CPTInterpreter.splitDeclarations(code)
+  static iterateDeclarations (cpt, callbackfn) {
+    const declarations = CPTInterpreter.splitDeclarations(cpt)
     declarations.forEach(declr => {
       const property = declr.match(/\w+/)[0]
       const typePattern = /(?:{)?\w+(?:\(.*\))?(?:})?(\[\])*/
@@ -156,7 +186,7 @@ class CPTInterpreter {
   }
 
   /**
-   * Check if a `CPT` `type` declaration represents a declaration of an array type
+   * Check if a `CPT` `type` declaration represents a declaration of an array
    * @param {string} type - `type` as declared
    * @returns {boolean} `true` if it represents an array, `false` otherwise
    */
@@ -165,67 +195,12 @@ class CPTInterpreter {
   }
 
   /**
-   * Check if a `CPT` type declaration represents a declaration of a custom object type
+   * Check if a `CPT` `type` declaration represents a declaration of a custom object type
    * @param {string} type - `type` as declared
    * @returns {boolean} `true` if it represents a custom object type, `false` otherwise
    */
-  static isHelperType (type) {
+  static isObjectType (type) {
     return type.includes('{')
-  }
-
-  /**
-   * Transform a `CPT` string into a model for the frontend UI
-   * @param {CPT} cpt - `CPT` string
-   * @returns {object} An object that structurely maps the object defined by the `CPT` in a format understandood by the frontend
-   */
-  static getUIModel (cpt) {
-    const obj = {}
-    CPTInterpreter.iterateDeclarations(cpt, (property, type, params) => {
-      const sandwichVariables = {}
-      const applySandwich = (param, char, name) => {
-        if (param.includes(char)) {
-          sandwichVariables[name] = param.match(`(?<=${char}).*(?=${char})`)[0]
-        }
-      }
-      params.forEach(param => {
-        [
-          ['"', 'header'],
-          ["'", 'description']
-        ].forEach(element => {
-          applySandwich(param, ...element)
-        })
-      })
-
-      // create automatically generated header if no header
-      const header = sandwichVariables.header || CPTInterpreter.camelToPhrase(property)
-      const description = sandwichVariables.description || ''
-
-      // extrat arguments from type
-      let args = matchInside(type, '\\(', '\\)')
-      if (args) {
-        args = args[0].split(',')
-        if (args.length === 1) args = args[0]
-        type = type.replace(/\(.*\)/, '')
-      }
-
-      // if the value is a helper type, it will become an object recursivelly
-      // until the lowest level where the value will be a string
-      let value
-      if (CPTInterpreter.isHelperType(type)) {
-        value = CPTInterpreter.getUIModel(def[1][matchInside(type, '{', '}')[0]].code)
-      } else {
-        value = type.match(/\w+/)[0]
-      }
-      // array types will just include the value inside of an array to indicate it is
-      // an array type
-      if (CPTInterpreter.isArrayType(type)) {
-        const dim = CPTInterpreter.getDimension(type)
-        value = [value, dim]
-      }
-      obj[property] = [value, header, description, args]
-    })
-
-    return obj
   }
 
   /**
@@ -238,6 +213,68 @@ class CPTInterpreter {
     const otherWords = str.match(/[A-Z][a-z]*/g)
     return [capitalize(firstWord)].concat(otherWords).join(' ')
   }
+
+  /**
+   * Interpret all the `CPT` strings inside a `DefSheet`
+   * @param {DefSheet} classes - Object with `CPT` to interpret
+   * @returns {Object.<string, PropertyInfo>} Object of strings of class names mapped to their `PropertyInfo` object
+   */
+  interpretCPT (classes) {
+    const output = {}
+    for (const cls in classes) {
+      output[cls] = this.parseCPTString(classes[cls].code, this.objectTypes)
+      output[cls].validators = classes[cls].validators
+    }
+
+    return output
+  }
+
+  /**
+   * Parse a `CPT` string into the object representing the property's structure
+   * @param {CPT} cpt - `CPT` string
+   * @returns {PropertyInfo} Object with property structure
+   */
+  parseCPTString (cpt) {
+    const parsed = []
+    CPTInterpreter.iterateDeclarations(cpt, (prop, type, params) => {
+      const propObj = { property: prop }
+
+      if (CPTInterpreter.isArrayType(type)) {
+        propObj.array = true
+        propObj.dim = CPTInterpreter.getDimension(type)
+        type = getMatch(type, /.*?(?=\[\]+)/)
+      } else propObj.array = false
+
+      let content = type
+
+      const args = (getMatch(type, /(?<=\().*(?=\))/) || '').split(',')
+      propObj.args = args
+      type = CPTInterpreter.removeArgs(type)
+
+      if (CPTInterpreter.isObjectType(type)) {
+        propObj.object = true
+        type = matchInside(type, '{', '}')
+        content = this.parseCPTString(this.objectTypes[type].code, this.objectTypes)
+        propObj.validators = this.objectTypes[type].validators
+      } else propObj.object = false
+
+      Object.assign(propObj, { content })
+
+      // query param
+      propObj.query = params.includes('QUERY')
+
+      const matchEnclosure = char => matchInArray(params, getExtremeCharEnclosurePattern(char))
+
+      propObj.name = matchEnclosure('"') || CPTInterpreter.camelToPhrase(prop)
+      propObj.desc = matchEnclosure("'") || ''
+
+      parsed.push(propObj)
+    })
+
+    return parsed
+  }
 }
 
-module.exports = CPTInterpreter
+const cptIntrepreter = new CPTInterpreter(require('./custom-object-types'))
+
+module.exports = cptIntrepreter

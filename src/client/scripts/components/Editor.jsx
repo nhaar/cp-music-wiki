@@ -537,7 +537,7 @@ function getDefault (props) {
 
 function TableModule (props) {
   const [fullscreenPath, setFullscreenPath] = useContext(FullscreenContext)
-  const editorData = useContext(EditorDataContext)
+  const structure = useContext(EditorDataContext)
 
   const components = []
   props.declrs.forEach((declr, i) => {
@@ -559,16 +559,15 @@ function TableModule (props) {
 
     // add path displayer if at the exact start
     if (fullscreenPath && pathIncludes(fullscreenPath, path) && fullscreenPath.length === path.length) {
-      let main = editorData.main
       const prettyPath = []
+      let curStructure = structure
 
       path.forEach(step => {
         if (typeof step === 'number') {
           prettyPath.push(`Row #${step + 1}`)
         } else {
-          prettyPath.push(main[step][1])
-          main = main[step][0]
-          if (Array.isArray(main)) main = main[0]
+          prettyPath.push(curStructure[step].name)
+          curStructure = curStructure[step].content
         }
       })
 
@@ -661,7 +660,7 @@ function TableModule (props) {
             className='header--container'
             onClick={clickHeader}
           >
-            <div className='header--title'>{declr.header}</div>
+            <div className='header--title'>{declr.name}</div>
             {!fullscreenPath && <img src={Focus} className='four-arrows' onClick={clickHeader(path)} />}
             <img src={QuestionMark} className='question-mark' title={declr.desc} />
           </div>
@@ -704,41 +703,27 @@ export default function Editor (props) {
     const declrs = []
 
     for (const property in obj) {
-      const declr = {}
-      const [fullType, header, desc, args] = obj[property]
-      declr.property = property
-      declr.header = header
-      declr.desc = desc
+      const prop = obj[property]
+      const declr = { ...prop }
 
-      let type = fullType
-      let arrayModule
-      if (Array.isArray(type)) {
-        const dim = type[1]
-        type = type[0]
-        if (dim === 1) {
-          arrayModule = MoveableRowsModule
-        } else if (dim === 2) {
-          arrayModule = GridRowModule
-        }
-      }
-      if (typeof type === 'object') {
+      if (prop.object) {
         declr.Component = TableModule
-        declr.declrs = iterate(type)
+        declr.declrs = iterate(prop.content)
       } else {
         declr.Component = {
           TEXTLONG: TextAreaModule,
           INT: NumberInputModule,
-          ID: getSearchQueryModule(args),
-          SELECT: getOptionSelectModule(args),
+          ID: getSearchQueryModule(prop.args),
+          SELECT: getOptionSelectModule(prop.args),
           DATE: DateInputModule,
           BOOLEAN: CheckboxModule,
           FILE: MusicFileModule
-        }[type] || TextInputModule
+        }[prop.content] || TextInputModule
       }
 
-      if (arrayModule) {
+      if (prop.array) {
         declr.component = declr.Component
-        declr.Component = arrayModule
+        declr.Component = prop.dim === 1 ? MoveableRowsModule : GridRowModule
       }
 
       declrs.push(declr)
@@ -747,7 +732,7 @@ export default function Editor (props) {
     return declrs
   }
 
-  const declrs = iterate(props.arg.editorData.main)
+  const declrs = iterate(props.arg.structure)
 
   function updateData (path, value) {
     const root = { ...data }
@@ -773,8 +758,8 @@ export default function Editor (props) {
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.editorData.isStatic} id={props.arg.row.id} name={name} cls={props.arg.editorData.cls} deleted={props.arg.isDeleted} predefined={props.arg.row.predefined} n={props.arg.n} />
-      <EditorDataContext.Provider value={props.arg.editorData}>
+      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.isStatic} id={props.arg.row.id} name={name} cls={props.arg.cls} deleted={props.arg.isDeleted} predefined={props.arg.row.predefined} n={props.arg.n} />
+      <EditorDataContext.Provider value={props.arg.structure}>
         <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
           <EditorContext.Provider value={isEditor}>
             <ItemContext.Provider value={updateData}>
@@ -785,7 +770,7 @@ export default function Editor (props) {
           </EditorContext.Provider>
         </FullscreenContext.Provider>
       </EditorDataContext.Provider>
-      {isEditor && <SubmitOptions row={props.arg.row} cls={props.arg.editorData.cls} data={data} unsaved={hasUnsaved} />}
+      {isEditor && <SubmitOptions row={props.arg.row} cls={props.arg.cls} data={data} unsaved={hasUnsaved} />}
     </div>
   )
 }

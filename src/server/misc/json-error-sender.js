@@ -36,7 +36,7 @@ class JSONErrorSender {
    * @param {object} obj - Object to deliver in JSON format
    */
   static sendStatusJSON (res, status, obj) {
-    JSONErrorSender.res.status(status).send(obj)
+    res.status(status).send(obj)
   }
 }
 

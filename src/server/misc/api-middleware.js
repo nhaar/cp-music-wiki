@@ -2,10 +2,10 @@ const path = require('path')
 
 const multer = require('multer')
 
-const clsys = require('../database/class-system')
 const user = require('../database/user')
 const JSONErrorSender = require('./json-error-sender')
 const { getToken } = require('./server-utils')
+const { itemClassHandler } = require('../item-class/item-class-handler')
 
 /** Class with express middlewares used in the API routes */
 class ApiMiddleware {
@@ -46,7 +46,7 @@ class ApiMiddleware {
      * @param {import('express').Response} res - Express response
      * @param {import('express').NextFunction} - Express next function
      */
-  static checkClass = ApiMiddleware.getValidatorMiddleware(body => clsys.isMajorClass(body.cls), 'Invalid item class provided')
+  static checkClass = ApiMiddleware.getValidatorMiddleware(body => itemClassHandler.isClassName(body.cls), 'Invalid item class provided')
 
   /**
      * Middleware to check if the value of the `id` appended in the request body is valid

@@ -3,26 +3,27 @@ const router = express.Router()
 
 const bridge = require('../database/class-frontend')
 const user = require('../database/user')
-const rev = require('../database/revisions')
-const clsys = require('../database/class-system')
-const del = require('../database/deletions')
+const ItemQuery = require('../item-class/item-query')
 const PageGenerator = require('../gens/gen-list')
 const ApiMiddleware = require('../misc/api-middleware')
 const JSONErrorSender = require('../misc/json-error-sender')
 const { getToken, isObject } = require('../misc/server-utils')
 const { getMatch } = require('../misc/common-utils')
+const itemClassChanges = require('../item-class/item-class-changes')
+const ItemClassDatabase = require('../item-class/item-class-database')
+const { itemClassHandler } = require('../item-class/item-class-handler')
 
 /** Route for getting the default data object of a class */
 router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
   const { cls } = req.body
-  res.status(200).send(await clsys.getDefault(cls))
+  res.status(200).send(itemClassHandler.defaults[cls])
 })
 
 /** Route for getting the row for an item (not deleted) in the database */
 router.post('/get', ApiMiddleware.checkId, async (req, res) => {
   const { id } = req.body
 
-  const row = await clsys.getItem(id)
+  const row = await ItemClassDatabase.getUndeletedItem(id)
   if (row) {
     res.status(200).send(row)
   } else {
@@ -36,16 +37,16 @@ router.post('/get', ApiMiddleware.checkId, async (req, res) => {
  * Only admins have access to this route
  * */
 router.post('/update', ApiMiddleware.checkAdmin, ApiMiddleware.getValidatorMiddleware(body => {
-  return clsys.isMajorClass(body.row.cls) && isObject(body.row) && isObject(body.row.data)
+  return itemClassHandler.isClassName(body.row.cls) && isObject(body.row) && isObject(body.row.data)
 }, 'Invalid item provided'), async (req, res) => {
   // `row` is the item row and `isMinor` refers to whether the change is a minor edit
   const { row, isMinor } = req.body
 
-  if (await clsys.didDataChange(row.id, row.data)) {
-    const validationErrors = clsys.validate(row.cls, row.data)
+  if (await itemClassChanges.didDataChange(row.id, row.data)) {
+    const validationErrors = itemClassChanges.validate(row.cls, row.data)
     if (validationErrors.length === 0) {
-      await rev.addChange(row, getToken(req), isMinor)
-      clsys.updateItem(row)
+      await itemClassChanges.addChange(row, getToken(req), isMinor)
+      itemClassChanges.updateItem(row)
       res.sendStatus(200)
     } else JSONErrorSender.sendBadReqJSON(res, { errors: validationErrors })
   } else {
@@ -94,7 +95,7 @@ router.post('/reset-password', (req, res) => {
 router.post('/rollback', ApiMiddleware.checkAdmin, (req, res) => {
   // `user` is the name of the user and `item` is the id of the item of the rollback
   const { user, item } = req.body
-  rev.rollback(user, item, getToken(req))
+  itemClassChanges.rollback(user, item, getToken(req))
   res.sendStatus(200)
 })
 
@@ -108,13 +109,13 @@ router.post('/delete', ApiMiddleware.checkAdmin, async (req, res) => {
   const { id, reason, otherReason } = req.body
 
   // check if other items reference this item, if they do, send error
-  const refs = await clsys.checkReferences(id)
+  const refs = await itemClassChanges.checkReferences(id)
   if (refs.length === 0) {
     // static and predefined items are undeletable
-    if (await clsys.isStaticItem(id) || await clsys.isPredefined(id)) {
+    if (await itemClassHandler.isStaticItem(id) || await itemClassHandler.isPredefined(id)) {
       res.sendStatus(400)
     } else {
-      del.deleteItem(id, getToken(req), reason, otherReason)
+      itemClassChanges.deleteItem(id, getToken(req), reason, otherReason)
       res.sendStatus(200)
     }
   } else {
@@ -130,7 +131,7 @@ router.post('/delete', ApiMiddleware.checkAdmin, async (req, res) => {
 router.post('/undelete', ApiMiddleware.checkAdmin, ApiMiddleware.checkId, async (req, res) => {
   // `id` is the id of the item and `reason` is the reason for undeleting
   const { id, reason } = req.body
-  await del.undeleteItem(id, reason, user.getToken(req))
+  await itemClassChanges.undeleteItem(id, reason, user.getToken(req))
   res.sendStatus(200)
 })
 
@@ -158,7 +159,7 @@ router.post('/submit-file', ApiMiddleware.checkAdmin, ApiMiddleware.musicUpload.
   else if (!originalname) error('Could not get file name')
   else {
     // update item under the static class `file`
-    clsys.updateItem({ cls: 'file', data: { originalname, filename } })
+    itemClassChanges.updateItem({ cls: 'file', data: { originalname, filename } })
     res.sendStatus(200)
   }
 })
@@ -169,16 +170,14 @@ router.post('/get-by-name', ApiMiddleware.checkClass, ApiMiddleware.checkKeyword
   // and `withDeleted` is true if deleted items should be included
   const { keyword, cls, withDeleted } = req.body
 
-  let results
   // if using deleted results, the search will be delivered in the form `Deleted:KEYWORD`
   // and only admins can see the deleted results
   const deletedArg = getMatch(keyword, /(?<=^Deleted:).*/)
-  if (withDeleted && deletedArg && await user.isAdmin(user.getToken(req))) {
-    results = await del.getByName(cls, deletedArg)
-  } else {
-    results = await clsys.getByName(cls, keyword)
-  }
-  res.status(200).send(results)
+  const includeDeleted = withDeleted && deletedArg && await user.isAdmin(user.getToken(req))
+
+  res.status(200).send(
+    await ItemQuery.getByName(cls, includeDeleted ? deletedArg : keyword, !includeDeleted, includeDeleted)
+  )
 })
 
 /**
@@ -189,7 +188,7 @@ router.post('/get-by-name', ApiMiddleware.checkClass, ApiMiddleware.checkKeyword
 router.post('/get-name', ApiMiddleware.checkId, async (req, res) => {
   // `id` is the id of the item
   const { id } = req.body
-  res.status(200).send({ name: await del.getQueryNameById(id) })
+  res.status(200).send({ name: await ItemClassDatabase.getQueryNameById(id) })
 })
 
 /** Route for an user to start a session */

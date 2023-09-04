@@ -18,13 +18,13 @@ const express = require('express')
 const router = express.Router()
 
 const apiRouter = require('./api')
-const rev = require('../database/revisions')
 const bridge = require('../database/class-frontend')
-const clsys = require('../database/class-system')
 const user = require('../database/user')
-const del = require('../database/deletions')
 const PageGenerator = require('../gens/gen-list')
 const { getToken, isStringNumber } = require('../misc/server-utils')
+const { itemClassHandler } = require('../item-class/item-class-handler')
+const itemClassChanges = require('../item-class/item-class-changes')
+const ItemClassDatabase = require('../item-class/item-class-database')
 
 /**
  * Route for the homepage
@@ -37,7 +37,7 @@ const { getToken, isStringNumber } = require('../misc/server-utils')
  */
 router.get('/', async (req, res) => {
   // read the text from the static class `main_page`
-  const text = (await clsys.getStaticClass('main_page')).data.text
+  const text = (await ItemClassDatabase.getStaticClass('main_page')).data.text
   sendView(req, res, 'MainPage', 'Main Page', text || '')
 })
 
@@ -153,10 +153,10 @@ router.get('/:value', async (req, res) => {
         /** Item row */
         let row
         if (id === undefined) {
-          const data = await clsys.getDefault(cls)
+          const data = await itemClassHandler.defaults[cls]
           row = { data, cls }
         } else {
-          row = await clsys.getItem(id)
+          row = await ItemClassDatabase.getUndeletedItem(id)
         }
 
         /** True if the relevant item is deleted */
@@ -164,7 +164,7 @@ router.get('/:value', async (req, res) => {
 
         if (!row) {
           // could not find in normal items, search for deleted item and if can't find send an error
-          row = await del.getDeletedRow(id)
+          row = await ItemClassDatabase.getDeletedRow(id)
           if (row) {
             // overwrite deleted item id with normal item id
             row.id = id
@@ -197,7 +197,14 @@ router.get('/:value', async (req, res) => {
             const args = value === 'Editor'
               ? ['Editor', 'Editor']
               : ['ReadItem', 'Read']
-            sendView(req, res, ...args, { editorData: bridge.editorData[row.cls], row, isDeleted, n })
+            sendView(req, res, ...args, {
+              structure: itemClassHandler.classes[row.cls].structure,
+              isStatic: itemClassHandler.isStaticClass(row.cls),
+              cls: row.cls,
+              row,
+              isDeleted,
+              n
+            })
             break
           }
         }
@@ -315,7 +322,7 @@ async function sendView (req, res, scriptName, title, arg) {
 async function sendDiffView (req, res, cur, old) {
   const diffData = [old, cur]
   for (let i = 0; i < diffData.length; i++) {
-    diffData[i] = await rev.getRevisionData(Number(diffData[i]))
+    diffData[i] = await itemClassChanges.getRevisionData(Number(diffData[i]))
   }
   // send error if either revisions don't exist
   if (diffData.includes(null)) {
@@ -329,7 +336,7 @@ async function sendDiffView (req, res, cur, old) {
     return
   }
 
-  const diff = rev.getRevDiff(...diffData)
+  const diff = itemClassChanges.getRevDiff(...diffData)
   sendView(req, res, 'Diff', 'Difference between revisions', diff)
 }
 

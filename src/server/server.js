@@ -38,7 +38,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // make sure tables are created before running router
-require('../server/database/class-system').createTables().then(() => {
+require('./item-class/item-class-database').initDatabase().then(() => {
   app.use('/', require('./routes/index'))
 })
 
