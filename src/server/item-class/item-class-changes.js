@@ -99,21 +99,21 @@ class ItemClassChanges {
     const row = await ItemClassDatabase.getItem(id)
     sql.delete('items', 'id', id)
     sql.insert('deleted_items', 'cls, item_id, data, querywords', [row.cls, id, JSON.stringify(row.data), row.querywords])
-    this.insertDeletion(row, token, reason, true)
+    this.insertDeletion(id, token, reason, true)
   }
 
   /**
    * Add a deletion or undeletion into the deletion log
-   * @param {ItemRow} row - Row to delete/undelete
+   * @param {number} id - Item id to delete/undelete
    * @param {string} token - Session token for the user that performed the deletion/undeletion
    * @param {string} reason - Reason string
    * @param {boolean} isDeletion - `true` if this log entry pertains to a deletion, `false` if it pertains to an undeletion
    */
-  async insertDeletion (row, token, reason, isDeletion) {
+  async insertDeletion (id, token, reason, isDeletion) {
     await sql.insert(
       'deletion_log',
-      'cls, item_id, wiki_user, timestamp, reason, is_deletion',
-      [row.cls, row.id, (await user.getUserId(token)), Date.now(), reason, Number(isDeletion)]
+      'item_id, wiki_user, timestamp, reason, is_deletion',
+      [id, (await user.getUserId(token)), Date.now(), reason, Number(isDeletion)]
     )
   }
 
