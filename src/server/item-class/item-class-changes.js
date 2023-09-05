@@ -25,30 +25,40 @@ class Tagger {
   }
 
   /**
+   * Get the list of tages from the tag string
+   * @param {string} tagString - Tag string from a revision
+   * @returns {string[]} List of tags
+   */
+  static getTagList (tagString) {
+    return tagString.split('%')
+  }
+
+  /**
    * Check if the instance's revision has a tag
    * @param {string} tag - Tag to find
    * @returns {boolean} `true` if it includes the tag, `false` otherwise
    */
   async hasTag (tag) {
     const tags = await this.getTags()
-    return tags.split('%').includes(tag)
+    return tags.includes(tag)
   }
 
   /**
    * Update the instance's revision tags with an update function
-   * @param {function(string) : string} updatefn - Function that takes as an argument the tags text in the database and returns the new tags text
+   * @param {function(string) : string} updatefn - Function that takes as an argument the old list of tages and returns
+   * the new list of text
    */
   async updateTags (updatefn) {
     const tags = updatefn(await this.getTags())
-    await sql.update('revisions', 'tags', 'id = $1', [tags], [this.id])
+    await sql.update('revisions', 'tags', 'id = $1', [Tagger.getTagString(...tags)], [this.id])
   }
 
   /**
-   * Get the tags text from the instance's revision
-   * @returns {}
+   * Get the list of tags from the instance's revision
+   * @returns {string[]} List of tags
    */
   async getTags () {
-    return await sql.selectColumn('revisions', 'id', this.id, 'tags')
+    return Tagger.getTagList(await sql.selectColumn('revisions', 'id', this.id, 'tags'))
   }
 
   /**
@@ -57,7 +67,8 @@ class Tagger {
    */
   async addTag (tag) {
     await this.updateTags(old => {
-      return `${old}%${tag}`
+      old.push(tag)
+      return old
     })
   }
 
@@ -68,7 +79,7 @@ class Tagger {
   async removeTag (tag) {
     if (typeof tag === 'string') tag = Number(tag)
     await this.updateTags(old => {
-      return old.split('%').filter(t => Number(t) !== tag).join('%')
+      return old.filter(t => t !== tag)
     })
   }
 }
