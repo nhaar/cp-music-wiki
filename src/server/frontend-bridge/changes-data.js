@@ -122,6 +122,9 @@ class ChangesData {
       }
     }
 
+    latest.sort((a, b) => {
+      return Number(b.timestamp) - Number(a.timestamp)
+    })
     return latest
   }
 
