@@ -9,20 +9,25 @@ const { forEachAsync, findId } = require('../misc/server-utils')
  * @property {string} mediaName - Display name in the series list for this media
  */
 
+/**
+ * Object with the date information for a song instance
+ * @typedef {object} Date
+ * @property {string} date - Date string
+ * @property {boolean} isEstimate - `true` if the date is an estimate, `false` otherwise
+ */
+
 /** Class represents the use of a song in some media at some point in history, which are called instances */
 class SongInstance {
   /**
    * Save the instance properties
    * @param {string} name - Name of whatever the song was used in, as it will be displayed in the final list
-   * @param {object} dateEst - Object with data for the date of use
-   * @param {string} dateEst.date - String representing the date
-   * @param {boolean} dateEst.isEstimate - `true` if the date is an estimate, `false` if it is an exact date for the use
+   * @param {Date} date - Object with data for the date of use
    * @param {string | number} song - Item id of the song in either number or string representation
    */
-  constructor (name, dateEst, song) {
+  constructor (name, date, song) {
     Object.assign(this, { name })
     if (song) this.addSong(song)
-    if (dateEst) this.addDate(dateEst)
+    if (date) this.addDate(date)
   }
 
   /**
@@ -35,13 +40,10 @@ class SongInstance {
 
   /**
    * Save the date properties
-   * @param {object} dateEst - Object with data for the date of use
-   * @param {string} dateEst.date - String representing the date
-   * @param {boolean} dateEst.isEstimate - `true` if the date is an estimate, `false` if it is an exact date for the use
+   * @param {Date} date - Object with data for the date of use
    */
-  addDate (dateEst) {
-    this.date = dateEst.date
-    this.estimate = dateEst.isEstimate
+  addDate (date) {
+    Object.assign(this, { date })
   }
 }
 
@@ -320,22 +322,17 @@ class MediaGenerator {
       const mediaAddedSongs = {}
       this.instances.forEach(instance => {
         if (instance.song) {
-          const dateInfo = {
-            date: instance.date,
-            isEstimate: instance.estimate
-          }
-
           if (!Object.keys(mediaAddedSongs).includes(instance.song + '')) {
-            mediaAddedSongs[instance.song] = dateInfo
+            mediaAddedSongs[instance.song] = instance.date
           } else {
             // decide whether should use this instance date or not (pick oldest)
             const dates = [
-              mediaAddedSongs[instance.song].date,
+              mediaAddedSongs[instance.song],
               instance.date
             ].map(date => Date.parse(date))
 
             if (dates[0] > dates[1]) {
-              mediaAddedSongs[instance.song] = dateInfo
+              mediaAddedSongs[instance.song] = instance.date
             }
           }
         }
@@ -425,7 +422,7 @@ class MediaGenerator {
       if (!a.date) return 1
       else if (!b.date) return -1
 
-      const dates = ab.map(instance => Date.parse(instance.date))
+      const dates = ab.map(instance => Date.parse(instance.date.date))
       const difference = dates[0] - dates[1] || 0
 
       // priorities are used as a tie-breaker
@@ -481,9 +478,9 @@ class MediaGenerator {
           })
 
           // earliest date
-          const date = instance.estimate
+          const date = instance.date.isEstimate
             ? 'est'
-            : instance.date
+            : instance.date.date
 
           // main name
           const officialName = songData.names[0]

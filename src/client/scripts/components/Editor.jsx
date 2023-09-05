@@ -582,7 +582,7 @@ function TableModule ({ declrs, value, path }) {
 
     let childValue = value[declr.property]
     if (!childValue && declr.declrs) {
-      childValue = getDefault(declr)
+      childValue = getDefault(declr.declrs)
     }
 
     const mainComponent = (
@@ -748,8 +748,8 @@ export default function Editor ({ editor, structure, isStatic, row, isDeleted, n
         declr.Component = {
           TEXTLONG: TextAreaModule,
           INT: NumberInputModule,
-          ID: getSearchQueryModule(prop.args),
-          SELECT: getOptionSelectModule(prop.args),
+          ID: getSearchQueryModule(prop.args && prop.args[0]),
+          SELECT: getOptionSelectModule(prop.args && prop.args[0]),
           DATE: DateInputModule,
           BOOLEAN: CheckboxModule,
           FILE: MusicFileModule
