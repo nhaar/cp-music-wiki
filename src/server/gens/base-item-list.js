@@ -21,7 +21,7 @@ module.exports = {
    */
   getParser (cls) {
     return async (name) => {
-      const row = (await sql.selectRegex('items', 'querywords', `^${name}(&&|$)`, 'cls', cls))[0]
+      const row = (await sql.selectRegex('items', 'querywords', `^${name}(&&|$)`, 'cls', cls))[0] || {}
       return Object.assign(row, { categories: [], name })
     }
   }

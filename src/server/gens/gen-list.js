@@ -115,8 +115,8 @@ class PageGenerator {
    * @returns {string[]} Array with page names
    */
   static async getPagesInCategory (category) {
-    return (await PageGenerator.getAllParsed())
-      .filter(page => page.categories.includes(PageGenerator.getCategoryId(category))).map(page => page.name)
+    const id = await PageGenerator.getCategoryId(category)
+    return (await PageGenerator.getAllParsed()).filter(page => page.categories.includes(id)).map(page => page.name)
   }
 
   /**
