@@ -21,7 +21,7 @@ class WebpackSetup {
               console.log('====================== LINT ERRORS ======================')
               process.stdout.write(stdout)
               console.log('=========================================================')
-            }
+            } else console.log('############## NO LINT ERRORS #################')
           })
         })
       }
