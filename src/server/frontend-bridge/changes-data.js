@@ -75,8 +75,9 @@ class ChangesData {
     const timestamp = Date.now() - (days) * 86400000
     const revs = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
     const dels = await sql.selectGreaterAndEqual('deletion_log', 'timestamp', timestamp)
-    const rows = revs.concat(dels).sort((a, b) => {
-      return b.timestamp - a.timestamp
+    const rows = revs.concat(dels)
+    rows.sort((a, b) => {
+      return Number(b.timestamp) - Number(a.timestamp)
     })
     const classes = itemClassHandler.classes
     const latest = []
