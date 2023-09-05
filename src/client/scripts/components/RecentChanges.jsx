@@ -334,7 +334,7 @@ function getSingleLine (change, i) {
                 reverted: 'Reverted',
                 rollback: 'Rollback'
               }[tag]
-            })}&#41;
+            }).join(', ')}&#41;
             </span>
             )
           : undefined}
