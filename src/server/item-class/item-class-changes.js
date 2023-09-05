@@ -158,6 +158,17 @@ class ItemClassChanges {
   }
 
   /**
+   * Push a request for updating an item to the database
+   * @param {string} token - Session token for user submitting the update
+   * @param {string} row - Updated row object for the item
+   * @param {boolean} isMinor - `true` if it is a minor edit, `false` otherwise
+   */
+  async pushChange (token, row, isMinor) {
+    await this.addChange(row, token, isMinor)
+    await this.updateItem(row)
+  }
+
+  /**
    * Update an item in the database or add if it doesn't exist
    * @param {ItemRow} row - Row object for the item
    */

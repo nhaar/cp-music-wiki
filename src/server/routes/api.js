@@ -45,8 +45,7 @@ router.post('/update', ApiMiddleware.checkAdmin, ApiMiddleware.getValidatorMiddl
   if (await itemClassChanges.didDataChange(row.id, row.data)) {
     const validationErrors = itemClassChanges.validate(row.cls, row.data)
     if (validationErrors.length === 0) {
-      await itemClassChanges.addChange(row, getToken(req), isMinor)
-      itemClassChanges.updateItem(row)
+      await itemClassChanges.pushChange(getToken(req), row, isMinor)
       res.sendStatus(200)
     } else JSONErrorSender.sendBadReqJSON(res, { errors: validationErrors })
   } else {
