@@ -16,6 +16,16 @@ const { forEachAsync, findId } = require('../misc/server-utils')
  * @property {boolean} isEstimate - `true` if the date is an estimate, `false` otherwise
  */
 
+/**
+ * An array with a list of song instances, usually representing all the instances within a media or series
+ * @typedef {SongInstance[]} InstanceList
+ */
+
+/**
+ * A two dimensional array data format that represents a table, which defines how an OST list looks like
+ * @typedef {any[][]} ListRows
+ */
+
 /** Class represents the use of a song in some media at some point in history, which are called instances */
 class SongInstance {
   /**
@@ -266,7 +276,10 @@ class MediaGenerator {
     })
   }
 
-  /** Create the two-dimensional array representation of the data that composes the list, that will be used to render it */
+  /**
+   * Create the list of rows for this instance's target list
+   * @returns {ListRows}
+   */
   async createRows () {
     await this.dataFetcher()
     this.createPrioryIndex()
@@ -281,28 +294,38 @@ class MediaGenerator {
    * @param {string} id - String identifier
    * @returns {MediaInfo} Media info
    */
-  getMediaInfo (id) {
+  static getMediaInfo (id) {
     for (const page in MediaGenerator.medias) {
       const info = MediaGenerator.medias[page]
       if (info.id === id) return info
     }
   }
 
-  /** Update `instances` with all of the instances from a media */
-  async getMediaInstances (media) {
-    await forEachAsync(this.getMediaInfo(media).sheets, async sheet => {
-      await this.iterateInstances(sheet)
+  /**
+   * Get all song instances found inside a media
+   * @param {string} media - Media identifier
+   * @returns {InstanceList} Media instances
+   */
+  static async getMediaInstances (media) {
+    const instances = []
+    await forEachAsync(MediaGenerator.getMediaInfo(media).sheets, async sheet => {
+      instances.push(...await MediaGenerator.iterateInstances(sheet))
     })
+    return instances
   }
 
-  /** Get the array of list rows for for a specific media */
+  /**
+   * Get the list of rows for the instance's media
+   * @returns {ListRows} Rows for the media OST list
+   */
   async getMediaRows () {
-    await this.getMediaInstances(this.media)
-    this.sortInstances()
-    return this.outputList()
+    return this.outputList(await MediaGenerator.getMediaInstances(this.media))
   }
 
-  /** Get the array of list rows for the series list */
+  /**
+   * Get the list of rows for the series list
+   * @returns {ListRows} Rows for the series OST list
+   */
   async getSeriesRows () {
     /** Similar as the `instances` property, but will be used to save all instances from all medias into one */
     const serieInstances = []
@@ -314,13 +337,12 @@ class MediaGenerator {
       // series must be skipped
       if (mediaInfo.id === 'series') continue
 
-      this.instances = []
-      await this.getMediaInstances(mediaInfo.id)
+      const mediaInstances = await MediaGenerator.getMediaInstances(mediaInfo.id)
 
       // create series instances based on the current media
       // store the info for every song in this media to later add to series instances
       const mediaAddedSongs = {}
-      this.instances.forEach(instance => {
+      mediaInstances.forEach(instance => {
         if (instance.song) {
           if (!Object.keys(mediaAddedSongs).includes(instance.song + '')) {
             mediaAddedSongs[instance.song] = instance.date
@@ -347,18 +369,17 @@ class MediaGenerator {
       }
     }
 
-    this.instances = serieInstances
-
-    this.sortInstances()
-    return this.outputList()
+    return this.outputList(serieInstances)
   }
 
   /**
    * Iterate through all rows of a class to find its song instances
    * @param {OptionsSheet} options - Object with the option properties that define what each iteration will do
+   * @returns {InstanceList} Instances found in this class
    */
-  async iterateInstances (options) {
+  static async iterateInstances (options) {
     const rows = await ItemClassDatabase.selectAllInClass(options.cls)
+    const instances = []
 
     // this function is the last to be called on each iteration and acts on an object said to be a `use`
     // because it contains song instance specific information and adds this information
@@ -397,7 +418,7 @@ class MediaGenerator {
       }
       instance.addDate(date)
 
-      this.instances.push(instance)
+      instances.push(instance)
     }
 
     // this function is called for each row found in the class
@@ -413,11 +434,15 @@ class MediaGenerator {
     }
 
     rows.forEach(rowAction)
+    return instances
   }
 
-  /** Sort all the instances in `instances` by date, from oldest to newest */
-  sortInstances () {
-    this.instances.sort((a, b) => {
+  /**
+   * Sort all the instances in an instance list by date, from oldest to newest
+   * @param {InstanceList} instances - List of instances
+   */
+  sortInstances (instances) {
+    instances.sort((a, b) => {
       const ab = [a, b]
       if (!a.date) return 1
       else if (!b.date) return -1
@@ -433,8 +458,13 @@ class MediaGenerator {
     })
   }
 
-  /** Process the `instances` into the two dimensional array that will be sent to the OST generator */
-  outputList () {
+  /**
+   * Process an instance list into a list of rows
+   * @param {InstanceList} instances - Sorted instance list
+   * @returns {ListRows} Rows for a list
+   */
+  outputList (instances) {
+    this.sortInstances(instances)
     /** Row array to output */
     const list = []
 
@@ -449,7 +479,7 @@ class MediaGenerator {
     // iterating through every instance to either
     // add a new row to the `list` array or to add more information
     // to an existing row
-    this.instances.forEach(instance => {
+    instances.forEach(instance => {
       // filter out instances with no song
       if (instance.song) {
         if (!Object.keys(addedSongs).includes(instance.song + '')) {
