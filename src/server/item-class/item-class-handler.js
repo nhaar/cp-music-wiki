@@ -49,6 +49,7 @@ class ItemClassHandler {
     this.dynamicClasses = ItemClassHandler.getInterpretedClasses(itemClasses.dynamic)
     this.staticClasses = ItemClassHandler.getInterpretedClasses(itemClasses.static)
     this.classes = { ...this.dynamicClasses, ...this.staticClasses }
+    this.assignDefaults()
     Object.assign(this, { predef })
   }
 

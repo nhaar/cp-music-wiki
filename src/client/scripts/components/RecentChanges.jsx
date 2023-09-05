@@ -331,8 +331,8 @@ function getSingleLine (change, i) {
           ? (
             <span> &#40;Tags: {change.tags.split('%').map(tag => {
               return {
-                0: 'Reverted',
-                1: 'Rollback'
+                reverted: 'Reverted',
+                rollback: 'Rollback'
               }[tag]
             })}&#41;
             </span>

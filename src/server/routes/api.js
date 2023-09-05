@@ -93,8 +93,8 @@ router.post('/reset-password', (req, res) => {
  * */
 router.post('/rollback', ApiMiddleware.checkAdmin, (req, res) => {
   // `user` is the name of the user and `item` is the id of the item of the rollback
-  const { user, item } = req.body
-  itemClassChanges.rollback(user, item, getToken(req))
+  const { item } = req.body
+  itemClassChanges.rollback(item, getToken(req))
   res.sendStatus(200)
 })
 

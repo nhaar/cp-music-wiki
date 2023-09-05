@@ -31,7 +31,7 @@ class Tagger {
    */
   async hasTag (tag) {
     const tags = await this.getTags()
-    return tags.split('%').includes(tag + '')
+    return tags.split('%').includes(tag)
   }
 
   /**
@@ -53,7 +53,7 @@ class Tagger {
 
   /**
    * Add a tag to this instance's revision
-   * @param {text} tag - New tag
+   * @param {string} tag - New tag
    */
   async addTag (tag) {
     await this.updateTags(old => {
@@ -63,7 +63,7 @@ class Tagger {
 
   /**
    * Remove a tag from this instance's revision
-   * @param {text} tag - Tag to remove
+   * @param {string} tag - Tag to remove
    */
   async removeTag (tag) {
     if (typeof tag === 'string') tag = Number(tag)
@@ -158,11 +158,12 @@ class ItemClassChanges {
   /**
    * Push a request for updating an item to the database
    * @param {string} token - Session token for user submitting the update
-   * @param {string} row - Updated row object for the item
+   * @param {ItemRow} row - Updated row object for the item
    * @param {boolean} isMinor - `true` if it is a minor edit, `false` otherwise
+   * @param {string[]} tags - Tags to add to the revision
    */
-  async pushChange (token, row, isMinor) {
-    await this.addChange(row, token, isMinor)
+  async pushChange (token, row, isMinor, tags = []) {
+    await this.addChange(row, token, isMinor, tags)
     await this.updateItem(row)
   }
 
@@ -312,7 +313,7 @@ class ItemClassChanges {
    * @param {Row} row - Row for the data being changed
    * @param {string} token - Session token for the user submitting the revision
    * @param {boolean} isMinor - Whether this revision is a minor edit or not
-   * @param {text[]} tags - Array of tags to add to the revision
+   * @param {string[]} tags - Array of tags to add to the revision
    */
   async addChange (row, token, isMinor, tags = []) {
     let oldRow = await ItemClassDatabase.getUndeletedItem(row.id)
@@ -391,7 +392,9 @@ class ItemClassChanges {
       await sql.selectWithColumn(
         'revisions',
         'item_id',
-        id
+        id,
+        '*',
+        true
       )
     )
   }
@@ -405,10 +408,10 @@ class ItemClassChanges {
    */
   async rollback (item, token) {
     const revisions = await this.selectRevisions(item)
-    const lastUser = revisions[0]
-    const lastUserRevisions = []
     const lastRev = getLastElement(revisions)
-    const isRollback = await (new Tagger(lastRev.id)).hasTag(1)
+    const lastUser = lastRev.wiki_user
+    const lastUserRevisions = []
+    const isRollback = await (new Tagger(lastRev.id)).hasTag('rollback')
     // if last revision is a rollback, undoing everything as normal would do nothing
     if (isRollback) {
       lastUserRevisions.push(lastRev)
@@ -431,13 +434,12 @@ class ItemClassChanges {
         row.data = jsondiffpatch.unpatch(row.data, revision.patch)
       }
 
-      await this.addChange(row, token, true, [1])
-      await ItemClassDatabase.updateItem(row)
+      await this.pushChange(token, row, true, ['rollback'])
     }
     for (let i = 0; i < lastUserRevisions.length; i++) {
       const revision = lastUserRevisions[i]
       const tagger = new Tagger(revision.id)
-      await tagger.addTag(0)
+      await tagger.addTag('reverted')
     }
   }
 }

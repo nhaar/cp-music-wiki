@@ -1,6 +1,7 @@
 const { itemClassHandler } = require('./item-class-handler')
 const sql = require('../database/sql-handler')
 const { getName } = require('../misc/common-utils')
+const querywordsHandler = require('./querywords-handler')
 
 /** Class with methods to communicate with the item class related parts of the database */
 class ItemClassDatabase {
@@ -80,7 +81,7 @@ class ItemClassDatabase {
   static async insertItem (cls, data, predefined = null) {
     await sql.insert(
       'items', 'cls, data, querywords, predefined',
-      [cls, JSON.stringify(data), await this.getQueryWords(cls, data), predefined]
+      [cls, JSON.stringify(data), await querywordsHandler.getQueryWords(cls, data), predefined]
     )
   }
 
@@ -114,12 +115,13 @@ class ItemClassDatabase {
   /**
    * Get an item
    * @param {number} id - Item id
-   * @returns {ItemRow} Item's row object
+   * @returns {ItemRow | undefined} Item's row object or `undefined` if none found
    */
   static async getItem (id) {
     let row = await ItemClassDatabase.getUndeletedItem(id)
     if (!row) {
       row = await ItemClassDatabase.getDeletedRow(id)
+      if (!row) return undefined
       row.id = row.item_id
     }
     return row

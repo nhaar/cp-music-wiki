@@ -154,7 +154,7 @@ router.get('/:value', async (req, res) => {
         /** Item row */
         let row
         if (id === undefined) {
-          const data = await itemClassHandler.defaults[cls]
+          const data = itemClassHandler.defaults[cls]
           row = { data, cls }
         } else {
           row = await ItemClassDatabase.getUndeletedItem(id)

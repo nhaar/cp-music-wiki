@@ -94,10 +94,12 @@ class SQLHandler {
    * @param {string} column - Name of the column to look for
    * @param {any} value - Value for the column to match
    * @param {string} selecting - The columns to include, separated by commas, or leave blank for all columns
+   * @param {boolean} idSort - If `true`, the rows will be sorted by the `id` column
    * @returns {object[]} All the rows that match
    */
-  async selectWithColumn (table, column, value, selecting) {
-    return await this.selectAndEquals(table, column, [value], selecting, column === 'id')
+  async selectWithColumn (table, column, value, selecting, idSort) {
+    if (!idSort) idSort = column === 'id'
+    return await this.selectAndEquals(table, column, [value], selecting, idSort)
   }
 
   /**
