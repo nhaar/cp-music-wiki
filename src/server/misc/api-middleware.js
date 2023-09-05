@@ -29,11 +29,11 @@ class ApiMiddleware {
   }
 
   /**
-     * Middleware to check if the user requesting is a wiki admin
-     * @param {import('express').Request} req - Express request
-     * @param {import('express').Response} res - Express response
-     * @param {import('express').NextFunction} next - Express next function
-     */
+   * Middleware to check if the user requesting is a wiki admin
+   * @param {import('express').Request} req - Express request
+   * @param {import('express').Response} res - Express response
+   * @param {import('express').NextFunction} next - Express next function
+   */
   static async checkAdmin (req, res, next) {
     if (await user.isAdmin(getToken(req))) {
       next()
@@ -43,27 +43,27 @@ class ApiMiddleware {
   }
 
   /**
-     * Middleware to check if the `cls` appended in the request body is valid
-     * @param {import('express').Request} req - Express request
-     * @param {import('express').Response} res - Express response
-     * @param {import('express').NextFunction} - Express next function
-     */
+   * Middleware to check if the `cls` appended in the request body is valid
+   * @param {import('express').Request} req - Express request
+   * @param {import('express').Response} res - Express response
+   * @param {import('express').NextFunction} - Express next function
+   */
   static checkClass = ApiMiddleware.getValidatorMiddleware(body => itemClassHandler.isClassName(body.cls), 'Invalid item class provided')
 
   /**
-     * Middleware to check if the value of the `id` appended in the request body is valid
-     * @param {import('express').Request} req - Express request
-     * @param {import('express').Response} res - Express response
-     * @param {import('express').NextFunction} - Express next function
-     * */
+   * Middleware to check if the value of the `id` appended in the request body is valid
+   * @param {import('express').Request} req - Express request
+   * @param {import('express').Response} res - Express response
+   * @param {import('express').NextFunction} - Express next function
+   * */
   static checkId = ApiMiddleware.getValidatorMiddleware(body => Number.isInteger(body.id), 'Id is not an integer')
 
   /**
-     * Middleware to check if the value of a `keyword` appended in the request body is valid
-     * @param {import('express').Request} req - Express request
-     * @param {import('express').Response} res - Express response
-     * @param {import('express').NextFunction} - Express next function
-     * */
+   * Middleware to check if the value of a `keyword` appended in the request body is valid
+   * @param {import('express').Request} req - Express request
+   * @param {import('express').Response} res - Express response
+   * @param {import('express').NextFunction} - Express next function
+   * */
   static checkKeyword = ApiMiddleware.getValidatorMiddleware(body => typeof body.keyword === 'string', 'Invalid keyword')
 
   /** Middleware that receives and saves a music file */
@@ -90,6 +90,19 @@ class ApiMiddleware {
     if (isValid) next()
     else res.sendStatus(403)
   }
+
+  /**
+   * Middleware to check if the data for the changes list pages is valid
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @param {NextFunction} next - Express next function
+   */
+  static checkChanges = ApiMiddleware.getValidatorMiddleware(body => {
+    function validNumber (no) {
+      return no >= 0 && typeof no === 'number'
+    }
+    return validNumber(body.days) && validNumber(body.number)
+  }, 'Invalid change numbers given, both must be positive')
 }
 
 module.exports = ApiMiddleware

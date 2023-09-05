@@ -23,6 +23,7 @@ module.exports = [
   'ResetPassword',
   'RequestReset',
   'Block',
+  'ItemHistory',
   'gens/OstGen',
   'gens/SongGen',
   'gens/DisambigGen'

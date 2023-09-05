@@ -68,14 +68,15 @@ class ChangesData {
    * Get the last revisions in a time frame
    * @param {number} days - Number of days before today to include
    * @param {number} number - Maximum number of changes to include
+   * @param {function(object) : boolean} filterfn - Function that takes as argument a revision or deletion's row object and returns `true` if it should be used in the final list
    * @returns {object[]} Array where each object has data for a revision or deletion
    */
-  static async getLastRevisions (days, number) {
+  static async getLastRevisions (days, number, filterfn = () => true) {
     // days is converted to ms
     const timestamp = Date.now() - (days) * 86400000
     const revs = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
     const dels = await sql.selectGreaterAndEqual('deletion_log', 'timestamp', timestamp)
-    const rows = revs.concat(dels)
+    const rows = revs.concat(dels).filter(filterfn)
     rows.sort((a, b) => {
       return Number(b.timestamp) - Number(a.timestamp)
     })

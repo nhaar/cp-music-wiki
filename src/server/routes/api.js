@@ -220,7 +220,7 @@ router.post('/login', ApiMiddleware.checkIP, async (req, res) => {
 })
 
 /** Route for the frontend to fetch recent changes */
-router.post('/recent-changes', async (req, res) => {
+router.post('/recent-changes', ApiMiddleware.checkChanges, async (req, res) => {
   // `days` is the time period in days to consider and `number` is the maximum number of changes
   const { days, number } = req.body
   res.status(200).send(await ChangesData.getLastRevisions(days, number))
@@ -243,6 +243,14 @@ router.post('/block', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, async (re
   const blocker = new UserBlocker({ username: userName })
   blocker.swapBlock(reason)
   res.sendStatus(200)
+})
+
+/** Route for seeing an item's history */
+router.post('/item-history', ApiMiddleware.checkChanges, async (req, res) => {
+  const { id } = req.query
+  const { days, number } = req.body
+
+  res.status(200).send(await ChangesData.getLastRevisions(days, number, row => row.item_id === Number(id)))
 })
 
 module.exports = router

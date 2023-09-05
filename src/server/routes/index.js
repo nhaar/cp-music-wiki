@@ -153,6 +153,12 @@ router.get('/:value', async (req, res) => {
         send('PreEditor', 'Item browser', { preeditor: editorData.preeditor })
         break
       }
+      // page for seeing item history
+      case 'ItemHistory': {
+        const { id } = req.query
+        sendVal('Item history', { item: Number(id) })
+        break
+      }
       // pages for updating items (read, edit, delete and undelete)
       case 'Read': case 'Editor': case 'Delete': case 'Undelete': {
         // `id` is item id, used to read/edit/delete
