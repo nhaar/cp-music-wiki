@@ -1,9 +1,9 @@
 import React from 'react'
 
-export default function SongGen (props) {
+export default function SongGen ({ name }) {
   return (
     <div>
-      {props.arg.name} is a song used in Club Penguin.
+      {name} is a song used in Club Penguin.
     </div>
   )
 }
