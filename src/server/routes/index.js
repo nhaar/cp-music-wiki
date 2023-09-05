@@ -177,7 +177,7 @@ router.get('/:value', async (req, res) => {
         }
 
         // only admins can handle deleted items
-        if (isDeleted && !(await user.isAdmin(user.getToken(req)))) {
+        if (isDeleted && !(await user.isAdmin(getToken(req)))) {
           res.sendStatus(403)
           return
         }
