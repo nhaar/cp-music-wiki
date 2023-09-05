@@ -37,7 +37,7 @@ router.post('/get', ApiMiddleware.checkId, async (req, res) => {
  *
  * Only admins have access to this route
  * */
-router.post('/update', ApiMiddleware.checkAdmin, ApiMiddleware.getValidatorMiddleware(body => {
+router.post('/update', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, ApiMiddleware.getValidatorMiddleware(body => {
   return itemClassHandler.isClassName(body.row.cls) && isObject(body.row) && isObject(body.row.data)
 }, 'Invalid item provided'), async (req, res) => {
   // `row` is the item row and `isMinor` refers to whether the change is a minor edit
@@ -62,7 +62,7 @@ router.post('/check-username', async (req, res) => {
 })
 
 /** Route for creating a new wiki account */
-router.post('/create-account', async (req, res) => {
+router.post('/create-account', ApiMiddleware.checkIP, async (req, res) => {
   // `name`, `password` and `email` are the new account's username, password and email
   const { name, password, email } = req.body
   if (await user.canCreate(name, password, email)) {
@@ -72,7 +72,7 @@ router.post('/create-account', async (req, res) => {
 })
 
 /** Route for requesting a password reset */
-router.post('/send-reset-req', async (req, res) => {
+router.post('/send-reset-req', ApiMiddleware.checkIP, async (req, res) => {
   // `name` is the username of the account to reset the password
   const { name } = req.body
   user.sendResetPassEmail(name)
@@ -80,7 +80,7 @@ router.post('/send-reset-req', async (req, res) => {
 })
 
 /** Route for resetting an account's password */
-router.post('/reset-password', (req, res) => {
+router.post('/reset-password', ApiMiddleware.checkIP, (req, res) => {
   // `token` is the verification token included in the password reset link and `password` is the new password
   const { token, password } = req.body
   user.resetPassword(token, password)
@@ -92,7 +92,7 @@ router.post('/reset-password', (req, res) => {
  *
  * Only admins can perform a rollback
  * */
-router.post('/rollback', ApiMiddleware.checkAdmin, (req, res) => {
+router.post('/rollback', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, (req, res) => {
   // `user` is the name of the user and `item` is the id of the item of the rollback
   const { item } = req.body
   itemClassChanges.rollback(item, getToken(req))
@@ -104,7 +104,7 @@ router.post('/rollback', ApiMiddleware.checkAdmin, (req, res) => {
  *
  * Only admins can delete items
  */
-router.post('/delete', ApiMiddleware.checkAdmin, async (req, res) => {
+router.post('/delete', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, async (req, res) => {
   // `id` is the item to delete, `token`, `reason` is the id of the reason and `otherReason` is a string for the other reason
   const { id, reason, otherReason } = req.body
 
@@ -128,7 +128,7 @@ router.post('/delete', ApiMiddleware.checkAdmin, async (req, res) => {
  *
  * Only admins can undelete an item
  */
-router.post('/undelete', ApiMiddleware.checkAdmin, ApiMiddleware.checkId, async (req, res) => {
+router.post('/undelete', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, ApiMiddleware.checkId, async (req, res) => {
   // `id` is the id of the item and `reason` is the reason for undeleting
   const { id, reason } = req.body
   await itemClassChanges.undeleteItem(id, reason, getToken(req))
@@ -142,27 +142,30 @@ router.post('/undelete', ApiMiddleware.checkAdmin, ApiMiddleware.checkId, async 
  *
  * Only admins can submit files
  * */
-router.post('/submit-file', ApiMiddleware.checkAdmin, ApiMiddleware.musicUpload.single('file'), async (req, res) => {
-  function error (msg) {
-    return JSONErrorSender.sendBadReq(res, msg)
-  }
-  // The form must contain the file named as `file`
-  const { file } = req
-  if (!file) {
-    error('No file found')
-    return
-  }
-  // file variables are given via multer
-  const { originalname, filename } = req.file
+router.post(
+  '/submit-file', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, ApiMiddleware.musicUpload.single('file'),
+  async (req, res) => {
+    function error (msg) {
+      return JSONErrorSender.sendBadReq(res, msg)
+    }
+    // The form must contain the file named as `file`
+    const { file } = req
+    if (!file) {
+      error('No file found')
+      return
+    }
+    // file variables are given via multer
+    const { originalname, filename } = req.file
 
-  if (!filename) error('Could not get file path')
-  else if (!originalname) error('Could not get file name')
-  else {
-    // update item under the static class `file`
-    itemClassChanges.updateItem({ cls: 'file', data: { originalname, filename } })
-    res.sendStatus(200)
+    if (!filename) error('Could not get file path')
+    else if (!originalname) error('Could not get file name')
+    else {
+      // update item under the static class `file`
+      itemClassChanges.updateItem({ cls: 'file', data: { originalname, filename } })
+      res.sendStatus(200)
+    }
   }
-})
+)
 
 /** Route for getting all the items in a class filtered by a name */
 router.post('/get-by-name', ApiMiddleware.checkClass, ApiMiddleware.checkKeyword, async (req, res) => {
@@ -192,9 +195,17 @@ router.post('/get-name', ApiMiddleware.checkId, async (req, res) => {
 })
 
 /** Route for an user to start a session */
-router.post('/login', async (req, res) => {
+router.post('/login', ApiMiddleware.checkIP, async (req, res) => {
   // `password` is the user's password and `user` is the user's username
   const { password, user: username } = req.body
+
+  // blocked users can't log in
+  const blocker = new UserBlocker({ username })
+  if (await blocker.isBlocked()) {
+    res.sendStatus(401)
+    return
+  }
+
   if (typeof username !== 'string' || typeof password !== 'string') {
     JSONErrorSender.sendBadReq(res, 'Invalid data')
     return
@@ -223,13 +234,13 @@ router.post('/get-page-names', ApiMiddleware.checkKeyword, async (req, res) => {
 })
 
 /** Route for (un)blocking users */
-router.post('/block', ApiMiddleware.checkAdmin, async (req, res) => {
+router.post('/block', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, async (req, res) => {
   const { user: userName, reason } = req.body
   if (!user.isNameTaken(userName)) {
     res.sendStatus(400)
     return
   }
-  const blocker = new UserBlocker(userName)
+  const blocker = new UserBlocker({ username: userName })
   blocker.swapBlock(reason)
   res.sendStatus(200)
 })

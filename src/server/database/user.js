@@ -22,7 +22,7 @@ class UserHandler {
         session_token TEXT,
         created_timestamp NUMERIC,
         perms TEXT,
-        blocked INT
+        blocked INT DEFAULT 0
       )
     `)
 
@@ -168,7 +168,11 @@ class UserHandler {
    * @param {string} session - Session token
    */
   async disconnectUser (session) {
+    // prevent empty session overlap
+    if (session === '') return
     const id = await this.getUserId(session)
+    // do nothing if nothing was found
+    if (id === undefined) return
     await sql.updateById('wiki_users', 'session_token', [''], id)
   }
 

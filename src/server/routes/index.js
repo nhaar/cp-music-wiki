@@ -115,7 +115,7 @@ router.get('/:value', async (req, res) => {
       case 'Block': {
         const { user: userName } = req.query
         if (isAdmin && await user.isNameTaken(userName)) {
-          const blocker = new UserBlocker(userName)
+          const blocker = new UserBlocker({ username: userName })
           sendVal('Block user', { user: userName, blocked: await blocker.isBlocked() })
         } else {
           res.sendStatus(403)

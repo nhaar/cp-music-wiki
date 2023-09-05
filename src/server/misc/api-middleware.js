@@ -6,6 +6,8 @@ const user = require('../database/user')
 const JSONErrorSender = require('./json-error-sender')
 const { getToken } = require('./server-utils')
 const { itemClassHandler } = require('../item-class/item-class-handler')
+const UserBlocker = require('../database/user-blocker')
+const sql = require('../database/sql-handler')
 
 /** Class with express middlewares used in the API routes */
 class ApiMiddleware {
@@ -66,6 +68,28 @@ class ApiMiddleware {
 
   /** Middleware that receives and saves a music file */
   static musicUpload = multer({ dest: path.join(__dirname, '../../client/music/') })
+
+  /**
+   * Check if an IP address has been blocked
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @param {NextFunction} next - Express next function
+   */
+  static async checkIP (req, res, next) {
+    const hash = user.getHash(req.ip)
+    const users = (await sql.selectWithColumn('user_ip', 'ip', hash)).map(row => row.user_id)
+    let isValid = true
+    for (let i = 0; i < users.length; i++) {
+      const blocker = new UserBlocker({ id: users[i] })
+      if (await blocker.isBlocked()) {
+        isValid = false
+        break
+      }
+    }
+
+    if (isValid) next()
+    else res.sendStatus(403)
+  }
 }
 
 module.exports = ApiMiddleware
