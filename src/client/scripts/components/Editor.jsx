@@ -11,16 +11,32 @@ import EditorHeader from './EditorHeader'
 import { FullscreenContext } from '../contexts/FullscreenContext'
 import Unfocus from '../../images/four-corner-arrows.png'
 import { EditorDataContext } from '../contexts/EditorDataContext'
-// element modules
-// array modules
-// editor module
 
+/**
+ * All the `Declrs` that correspond to a table module's children modules
+ * @typedef {Declr[]} DeclrList
+ */
+
+/**
+ * An object that contains information for a child module of a table module
+ * @typedef {object} Declr
+ * @property {Component} Component - Module to be used by the child
+ * @property {ComponentClass} component - If the module is an array of modules, this is the module to be used by the children of the array
+ * @property {DeclrList} declrs - If either `Component` or `component` are table modules, this is the `DeclrList` to be used in that table module
+ */
+
+/**
+ * Get what the background color of a nested table member should be
+ * @param {string[]} path - Path to this table member
+ * @returns {string} `CSS` class name to assign to the component
+ */
 function getAlternatingClass (path) {
   return path.filter(e => typeof e === 'string').length % 2 === 1
     ? 'alternate-layer'
     : 'white-bg'
 }
 
+/** Component that represents a module with only text in it */
 function getSimpleTextModule (Tag, type) {
   return function ({ value, path }) {
     const getValue = value => value || ''
@@ -44,11 +60,19 @@ function getSimpleTextModule (Tag, type) {
   }
 }
 
+/** Component for a module that represents short text */
 const TextInputModule = getSimpleTextModule('input', 'text')
+
+/** Component for a module that represents long text */
 const TextAreaModule = getSimpleTextModule('textarea')
+
+/** Component for a module that represents a number */
 const NumberInputModule = getSimpleTextModule('input', 'number')
+
+/** Component for a module that represents a date */
 const DateInputModule = getSimpleTextModule('input', 'date')
 
+/** Component for a module that represents an item's id */
 function getSearchQueryModule (type) {
   return function ({ value, path }) {
     const [id, setId] = useState(value || '')
@@ -66,6 +90,7 @@ function getSearchQueryModule (type) {
   }
 }
 
+/** Component for a module that represents a select */
 function getOptionSelectModule (args) {
   return function ({ value, path }) {
     const [selectValue, setSelectValue] = useState(value || '')
@@ -93,6 +118,7 @@ function getOptionSelectModule (args) {
   }
 }
 
+/** Component for a module that represents a boolean */
 function CheckboxModule ({ value, path }) {
   const [checked, setChecked] = useState(typeof value === 'boolean' ? value : null)
   const updateData = useContext(ItemContext)
@@ -120,6 +146,7 @@ function CheckboxModule ({ value, path }) {
   )
 }
 
+/** Component for a module that represents a music file */
 function MusicFileModule ({ value, path }) {
   const [filenames, setFilenames] = useState('')
 
@@ -176,6 +203,7 @@ function MusicFileModule ({ value, path }) {
   )
 }
 
+/** Component for a module that represents a two-dimensional array, that lets it be displayed as a grid */
 function GridRowModule ({ value, Component, declrs, path }) {
   const [grid, setGrid] = useState(() => {
     if (value) {
@@ -350,6 +378,10 @@ function GridRowModule ({ value, Component, declrs, path }) {
   )
 }
 
+/**
+ * Component for a module that represents a one-dimensional array, that lets the elements of the array be displayed
+ * as moveable rows
+ */
 function MoveableRowsModule ({ value, Component, declrs, path }) {
   const [array, setArray] = useState(() => {
     if (value) {
@@ -522,6 +554,11 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
   )
 }
 
+/**
+ * Get a default `data` object based on a `DeclrList`
+ * @param {DeclrList} declrs - Children modules
+ * @returns {object} Default `data` object
+ */
 function getDefault (declrs) {
   const defaultValue = {}
   declrs.forEach(declr => {
@@ -534,6 +571,7 @@ function getDefault (declrs) {
   return defaultValue
 }
 
+/** Component for a module that represents an object, containing a map of "keys" (names) to "values" (other modules) */
 function TableModule ({ declrs, value, path }) {
   const [fullscreenPath, setFullscreenPath] = useContext(FullscreenContext)
   const structure = useContext(EditorDataContext)
@@ -689,6 +727,7 @@ function TableModule ({ declrs, value, path }) {
   )
 }
 
+/** Component for the reader and editor page */
 export default function Editor ({ editor, structure, isStatic, row, isDeleted, n }) {
   const [data, setData] = useState(row.data)
   const [fullscreenPath, setFullscreenPath] = useState(undefined)
