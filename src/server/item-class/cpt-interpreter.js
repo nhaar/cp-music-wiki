@@ -245,11 +245,11 @@ class CPTInterpreter {
         type = getMatch(type, /.*?(?=\[\]+)/)
       } else propObj.array = false
 
-      let content = type
-
       const args = (getMatch(type, /(?<=\().*(?=\))/) || '').split(',')
       propObj.args = args
       type = CPTInterpreter.removeArgs(type)
+
+      let content = type
 
       if (CPTInterpreter.isObjectType(type)) {
         propObj.object = true

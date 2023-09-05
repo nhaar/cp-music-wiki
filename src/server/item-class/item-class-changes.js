@@ -109,7 +109,7 @@ class ItemClassChanges {
   /** Create the object that maps for each class all the paths where other classes reference the class */
   assignIdRefMap () {
     this.idPaths = {}
-    for (const cls in itemClassHandler) {
+    for (const cls in itemClassHandler.classes) {
       this.idPaths[cls] = itemClassHandler.findPaths(prop => {
         return prop.content === 'ID' && prop.args[0] === cls
       })
