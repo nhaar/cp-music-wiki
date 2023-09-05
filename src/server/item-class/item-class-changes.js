@@ -368,16 +368,8 @@ class ItemClassChanges {
    */
   async getNextRev (revId) {
     const cur = await sql.selectId('revisions', revId)
-    const cls = cur.cls
-    const itemId = cur.item_id
 
-    const previous = await sql.pool.query(`
-      SELECT MIN(id)
-      FROM revisions
-      WHERE id > ${revId} AND cls = $1 AND item_id = $2
-    `, [cls, itemId])
-
-    return previous.rows[0].min
+    return Math.min((await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', cur.item_id)).map(row => row.id))
   }
 
   /**
