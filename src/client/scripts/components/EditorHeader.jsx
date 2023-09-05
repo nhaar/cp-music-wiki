@@ -34,7 +34,7 @@ export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, 
   const components = [
     <div key={-2} onClick={specialRedirect('Read')}>Read</div>,
     <div key={0} onClick={specialRedirect('Editor')}>Edit</div>,
-    <div key={1}>View history</div>,
+    <div key={1} onClick={specialRedirect('ItemHistory')}>View history</div>,
     <img
       key={-1}
       onMouseOver={fillStar}

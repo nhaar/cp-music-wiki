@@ -156,7 +156,12 @@ router.get('/:value', async (req, res) => {
       // page for seeing item history
       case 'ItemHistory': {
         const { id } = req.query
-        sendVal('Item history', { item: Number(id) })
+        sendVal('Item history', {
+          item: Number(id),
+          isStatic: await ItemClassDatabase.isStaticItem(id),
+          deleted: await ItemClassDatabase.isDeleted(id),
+          predefined: await itemClassChanges.isPredefined(id)
+        })
         break
       }
       // pages for updating items (read, edit, delete and undelete)

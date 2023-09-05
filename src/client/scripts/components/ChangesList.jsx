@@ -300,7 +300,9 @@ function getSingleLine (change, i) {
         ? (
           <a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}> diff </a>
           )
-        : ' diff '} | hist &#41;
+        : ' diff '} |
+        &nbsp;<a href={`/Special:ItemHistory?id=${change.id}`}>hist</a>&nbsp;
+        &#41;
         . .
         {change.old
           ? undefined
