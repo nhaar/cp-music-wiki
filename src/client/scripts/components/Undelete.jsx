@@ -12,7 +12,8 @@ export default function ({ row }) {
   }
 
   function handleClick () {
-    postJSON('api/undelete', { id: row.id, reason })
+    postJSON('api/undelete', { id: Number(row.id), reason })
+    window.alert('Item undeleted')
     window.location.href = '/Special:Items'
   }
 

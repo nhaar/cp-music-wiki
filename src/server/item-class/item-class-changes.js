@@ -316,7 +316,7 @@ class ItemClassChanges {
     const row = await ItemClassDatabase.getDeletedRow(id)
     sql.delete('deleted_items', 'id', row.id)
     sql.insert('items', 'id, cls, data, querywords', [id, row.cls, row.data, row.querywords])
-    this.insertDeletion(id, token, null, reason, false)
+    this.insertDeletion(id, token, reason, false)
   }
 
   /**

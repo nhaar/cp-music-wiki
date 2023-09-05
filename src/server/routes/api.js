@@ -130,7 +130,7 @@ router.post('/delete', ApiMiddleware.checkAdmin, async (req, res) => {
 router.post('/undelete', ApiMiddleware.checkAdmin, ApiMiddleware.checkId, async (req, res) => {
   // `id` is the id of the item and `reason` is the reason for undeleting
   const { id, reason } = req.body
-  await itemClassChanges.undeleteItem(id, reason, user.getToken(req))
+  await itemClassChanges.undeleteItem(id, reason, getToken(req))
   res.sendStatus(200)
 })
 
