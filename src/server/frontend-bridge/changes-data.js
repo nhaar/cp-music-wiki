@@ -23,9 +23,10 @@ class ChangesData {
    * @param {object} row - Row object for the deletion in the `deletion_log`
    * @param {string} name - Name of the item
    * @param {string} cls - Item's class name
+   * @param {string} user - Name of user performing change
    * @returns {object} Object with the data
    */
-  static createDeletionInfo (row, name, cls) {
+  static createDeletionInfo (row, name, cls, user) {
     return {
       deletionLog: true,
       deletion: row.is_deletion,
@@ -33,6 +34,7 @@ class ChangesData {
       cls,
       name,
       row,
+      user,
       userId: row.wiki_user,
       id: row.item_id,
       tags: row.tags
@@ -62,6 +64,15 @@ class ChangesData {
       id: cur.item_id,
       tags: cur.tags
     }
+  }
+
+  /**
+   * Get the name from the user performing a change
+   * @param {object} row - Change's row object
+   * @returns {string} Username
+   */
+  static async getUser (row) {
+    return (await sql.selectId('wiki_users', row.wiki_user)).name
   }
 
   /**
@@ -97,12 +108,12 @@ class ChangesData {
           }
           const nextRow = await sql.selectId('revisions', next)
           const delta = sizes[1] - sizes[0]
-          const user = (await sql.selectId('wiki_users', nextRow.wiki_user)).name
+          const user = await ChangesData.getUser(nextRow)
 
           latest.push(ChangesData.createRevisionInfo(row, nextRow, delta, name, className, user))
         }
       } else {
-        latest.push(ChangesData.createDeletionInfo(row, name, className))
+        latest.push(ChangesData.createDeletionInfo(row, name, className, await ChangesData.getUser(row)))
       }
 
       if (row.created && row.timestamp > timestamp) {

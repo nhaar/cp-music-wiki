@@ -83,15 +83,6 @@ function ChangesSetting ({ config }) {
   )
 }
 
-/** Component for a single line of grouped deletions */
-function DeletionGroup () {
-  return (
-    <div>
-      Deletion!
-    </div>
-  )
-}
-
 /** Component for a single line of grouped changes */
 function GroupedChange ({ info }) {
   const [expanded, setExpanded] = useState(false)
@@ -123,8 +114,14 @@ function GroupedChange ({ info }) {
             fontWeight: 'bold'
           }} href={`/Special:Read?id=${info.id}`}
         >{info.name}
-        </a> &#40;{info.changes.length} changes | history&#41; . .&nbsp;
-        <span className={getDeltaClass(info.size)}>{info.size}&#41;</span> . .
+        </a> &#40;{info.changes.length} {info.deletionLog ? 'deletions' : 'changes'} | history&#41; . .&nbsp;
+        {info.deletionLog
+          ? undefined
+          : (
+            <span>
+              <span className={`${getDeltaClass(info.size)} diff-number`}>{info.size}</span> . .&nbsp;
+            </span>
+            )}
         &#91;
         {Object.entries(userCount).map(userCount => {
           const count = userCount[1]
@@ -184,10 +181,7 @@ function GroupedChanges ({ data }) {
     const items = groupedData[day]
     for (const item in items) {
       const info = items[item]
-      lis.push(info.deletionLog
-        ? <DeletionGroup key={i} />
-        : <GroupedChange {...{ info }} key={i} />
-      )
+      lis.push(<GroupedChange {...{ info }} key={i} />)
       i++
     }
     components.push(
@@ -278,10 +272,10 @@ function getSingleLine (change, i) {
   if (change.deletionLog) {
     return (
       <li>
-        (Deletion log); {time} . . {change.user}
+        (Deletion log); {time} . . {change.user}&nbsp;
         {change.deletion
-          ? 'Deleted '
-          : 'Undeleted '}
+          ? 'deleted '
+          : 'undeleted '}
         {itemLink}
       </li>
     )
@@ -296,14 +290,13 @@ function getSingleLine (change, i) {
 
     return (
       <li key={`-${i}`}>
-        &#40;{change.old
+        &#40;&nbsp;{change.old
         ? (
-          <a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}> diff </a>
+          <a href={`/Special:Diff?old=${change.old}&cur=${change.cur}`}>diff</a>
           )
-        : ' diff '} |
-        &nbsp;<a href={`/Special:ItemHistory?id=${change.id}`}>hist</a>&nbsp;
-        &#41;
-        . .
+        : ' diff '} |&nbsp;
+        <a href={`/Special:ItemHistory?id=${change.id}`}>hist</a>&nbsp;&#41;
+        . .&nbsp;
         {change.old
           ? undefined
           : (
@@ -321,7 +314,7 @@ function getSingleLine (change, i) {
             </span>
             )}
         {itemLink}; {time}
-        . . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
+        &nbsp;. . <span className={`${deltaClass} diff-number`}>{change.delta}</span> . . {change.user}
         {change.rollback
           ? (
             <span>
