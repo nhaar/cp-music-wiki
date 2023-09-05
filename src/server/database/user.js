@@ -21,7 +21,8 @@ class UserHandler {
         email TEXT,
         session_token TEXT,
         created_timestamp NUMERIC,
-        perms TEXT
+        perms TEXT,
+        blocked INT
       )
     `)
 
@@ -39,6 +40,16 @@ class UserHandler {
         user_id INT,
         link TEXT,
         expiration_timestamp NUMERIC
+      )
+    `)
+
+    // table for registering blocks
+    sql.create(`
+      block_log (
+        id SERIAL PRIMARY KEY,
+        user_id INT,
+        timestamp NUMERIC,
+        reason TEXT
       )
     `)
   }
@@ -242,6 +253,15 @@ ${URL}Special:ResetPassword?t=${linkToken}`)
       'expiration_timestamp', Date.now(),
       'link', [token]
     ))[0]
+  }
+
+  /**
+   * Get an user's row based on their name
+   * @param {string} name - Username
+   * @returns {object} User's row object
+   */
+  async getUserFromName (name) {
+    return await sql.selectRowWithColumn('wiki_users', 'name', name)
   }
 }
 

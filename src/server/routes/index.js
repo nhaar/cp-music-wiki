@@ -26,6 +26,7 @@ const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const editorData = require('../frontend-bridge/editor-data')
 const ChangesData = require('../frontend-bridge/changes-data')
+const UserBlocker = require('../database/user-blocker')
 
 /**
  * Route for the homepage
@@ -61,11 +62,30 @@ router.get('/:value', async (req, res) => {
 
   /** Page name, without page discriminant (eg `Special:`) */
   const value = specialMatch || categoryMatch || req.params.value
+
+  /**
+   * Shorthand for using `sendView` without retyping `req` and `res`
+   * @param {string} scriptName - `sendView` argument
+   * @param {string} title `sendView` argument
+   * @param {object} arg - `sendView` argument
+   */
+  function send (scriptName, title, arg) { sendView(req, res, scriptName, title, arg) }
+
+  /**
+   * Shorthand for using `sendView` without retyping `value`
+   * @param {string} title - `sendView` argument
+   * @param {object} arg - `sendView` argument
+   */
+  function sendVal (title, arg) { send(value, title, arg) }
+
+  const token = getToken(req)
+  const isAdmin = await user.isAdmin(token)
+
   if (specialMatch) {
     switch (value) {
       // log in page
       case 'UserLogin': {
-        sendView(req, res, value, 'Log In')
+        sendVal('Log In')
         break
       }
       // page for request password reset and for resetting password
@@ -75,35 +95,46 @@ router.get('/:value', async (req, res) => {
         if (t) {
           // token existence -> password reset page
           if (await user.resetLinkIsValid(t)) {
-            sendView(req, res, value, 'Reset password', { token: t })
+            sendVal('Reset password', { token: t })
           } else {
             res.status(400).send('The link is expired or invalid')
           }
         } else {
           // token absence -> request password page
-          sendView(req, res, 'RequestReset', 'Request password reset')
+          send('RequestReset', 'Request password reset')
         }
         break
       }
       // route for logging out
       case 'UserLogout': {
-        await user.disconnectUser(getToken(req))
+        await user.disconnectUser()
         res.status(302).redirect('/')
+        break
+      }
+      // page for (un)blocking users
+      case 'Block': {
+        const { user: userName } = req.query
+        if (isAdmin && await user.isNameTaken(userName)) {
+          const blocker = new UserBlocker(userName)
+          sendVal('Block user', { user: userName, blocked: await blocker.isBlocked() })
+        } else {
+          res.sendStatus(403)
+        }
         break
       }
       // page for creating an account
       case 'CreateAccount': {
-        sendView(req, res, value, 'Create an account')
+        sendVal('Create an account')
         break
       }
       // page with the recent wiki changes
       case 'RecentChanges': {
-        sendView(req, res, value, 'Recent Changes')
+        sendVal('Recent Changes')
         break
       }
       // page for uploading files to the wiki
       case 'FileUpload': {
-        sendView(req, res, value, 'Upload a file')
+        sendVal('Upload a file')
         break
       }
       // random wiki page
@@ -119,7 +150,7 @@ router.get('/:value', async (req, res) => {
       }
       // page for picking items
       case 'Items': {
-        sendView(req, res, 'PreEditor', 'Item browser', { preeditor: editorData.preeditor })
+        send('PreEditor', 'Item browser', { preeditor: editorData.preeditor })
         break
       }
       // pages for updating items (read, edit, delete and undelete)
@@ -177,7 +208,7 @@ router.get('/:value', async (req, res) => {
         }
 
         // only admins can handle deleted items
-        if (isDeleted && !(await user.isAdmin(getToken(req)))) {
+        if (isDeleted && !isAdmin) {
           res.sendStatus(403)
           return
         }
@@ -185,12 +216,12 @@ router.get('/:value', async (req, res) => {
         switch (value) {
           // page for undeleting items
           case 'Undelete': {
-            sendView(req, res, value, 'Undelete item', { row })
+            sendVal('Undelete item', { row })
             break
           }
           // page for deleting items
           case 'Delete': {
-            sendView(req, res, value, 'Delete item', { deleteData: (await editorData.getDeleteData(Number(id))), row })
+            sendVal('Delete item', { deleteData: (await editorData.getDeleteData(Number(id))), row })
             break
           }
           // read and edit item pages
@@ -198,7 +229,7 @@ router.get('/:value', async (req, res) => {
             const args = value === 'Editor'
               ? ['Editor', 'Editor']
               : ['ReadItem', 'Read']
-            sendView(req, res, ...args, {
+            send(...args, {
               structure: itemClassHandler.classes[row.cls].structure,
               isStatic: itemClassHandler.isStaticClass(row.cls),
               row,
@@ -221,7 +252,7 @@ router.get('/:value', async (req, res) => {
     /** Number to start displaying the pages in the list, starts at 1 */
     const cur = req.query.cur || 1
     const pages = await PageGenerator.getPagesInCategory(value)
-    sendView(req, res, 'Category', `Pages in category "${value}"`, { pages, cur, name: value })
+    send('Category', `Pages in category "${value}"`, { pages, cur, name: value })
   } else {
     // normal wiki page, which is generated from the page generators
     const gen = new PageGenerator(value)
@@ -230,7 +261,7 @@ router.get('/:value', async (req, res) => {
       res.sendStatus(404)
       return
     }
-    sendView(req, res, `gens/${gen.gen.file}`, value, { name: value, data })
+    send(`gens/${gen.gen.file}`, value, { name: value, data })
   }
 })
 

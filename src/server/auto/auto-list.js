@@ -22,6 +22,7 @@ module.exports = [
   'CreateAccount',
   'ResetPassword',
   'RequestReset',
+  'Block',
   'gens/OstGen',
   'gens/SongGen',
   'gens/DisambigGen'

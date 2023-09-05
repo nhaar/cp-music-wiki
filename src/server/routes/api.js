@@ -12,6 +12,7 @@ const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
 const ChangesData = require('../frontend-bridge/changes-data')
+const UserBlocker = require('../database/user-blocker')
 
 /** Route for getting the default data object of a class */
 router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
@@ -219,6 +220,18 @@ router.post('/get-page-names', ApiMiddleware.checkKeyword, async (req, res) => {
   const { keyword } = req.body
 
   res.status(200).send(await PageGenerator.searchPages(keyword))
+})
+
+/** Route for (un)blocking users */
+router.post('/block', ApiMiddleware.checkAdmin, async (req, res) => {
+  const { user: userName, reason } = req.body
+  if (!user.isNameTaken(userName)) {
+    res.sendStatus(400)
+    return
+  }
+  const blocker = new UserBlocker(userName)
+  blocker.swapBlock(reason)
+  res.sendStatus(200)
 })
 
 module.exports = router
