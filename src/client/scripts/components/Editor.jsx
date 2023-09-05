@@ -72,8 +72,12 @@ const NumberInputModule = getSimpleTextModule('input', 'number')
 /** Component for a module that represents a date */
 const DateInputModule = getSimpleTextModule('input', 'date')
 
-/** Component for a module that represents an item's id */
-function getSearchQueryModule (type) {
+/**
+ * Get a search query for the ids of a given class
+ * @param {string} cls - Class name
+ * @returns {Component} `QueryInput` for the class
+ */
+function getSearchQueryModule (cls) {
   return function ({ value, path }) {
     const [id, setId] = useState(value || '')
     const updateData = useContext(ItemContext)
@@ -85,7 +89,7 @@ function getSearchQueryModule (type) {
     }
 
     return (
-      <QueryInput cls={type} passInfo={updateValue} id={id} readonly={!isEditor} />
+      <QueryInput cls={cls} passInfo={updateValue} id={id} readonly={!isEditor} />
     )
   }
 }

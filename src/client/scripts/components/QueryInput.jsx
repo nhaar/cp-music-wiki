@@ -6,7 +6,7 @@ import '../../stylesheets/query.css'
 import SearchQuery from './SearchQuery'
 
 /** Component for a search query that looks for all items inside a class */
-export default function QueryInput ({ id, cls, withDeleted, passInfo }) {
+export default function QueryInput ({ id, cls, withDeleted, passInfo, readonly }) {
   async function setText () {
     if (id) {
       const { name } = await postAndGetJSON('api/get-name', { cls, id: Number(id) })
@@ -29,6 +29,6 @@ export default function QueryInput ({ id, cls, withDeleted, passInfo }) {
   }
 
   return (
-    <SearchQuery text={setText} iterateData={updateFunction} getter={getter} passInfo={passInfoUp} />
+    <SearchQuery text={setText} iterateData={updateFunction} getter={getter} passInfo={passInfoUp} readonly={readonly} />
   )
 }
