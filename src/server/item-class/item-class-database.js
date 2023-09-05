@@ -49,8 +49,7 @@ class ItemClassDatabase {
       item_id INT,
       wiki_user INT,
       timestamp NUMERIC,
-      reason INT,
-      additional_reason TEXT,
+      reason TEXT,
       is_deletion INT,
       tags TEXT
     )

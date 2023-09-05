@@ -82,29 +82,27 @@ class ItemClassChanges {
    * Delete an item from the database
    * @param {number} id - Item id
    * @param {string} token - Session token of the user performing deletion
-   * @param {number} reason - Identifier for reason
-   * @param {string} otherReason - String with other reason
+   * @param {string} reason - Reason string
    */
-  async deleteItem (id, token, reason, otherReason) {
+  async deleteItem (id, token, reason) {
     const row = await ItemClassDatabase.getItem(id)
     sql.delete('items', 'id', id)
     sql.insert('deleted_items', 'cls, item_id, data, querywords', [row.cls, id, JSON.stringify(row.data), row.querywords])
-    this.insertDeletion(row, token, reason, otherReason, true)
+    this.insertDeletion(row, token, reason, true)
   }
 
   /**
    * Add a deletion or undeletion into the deletion log
    * @param {ItemRow} row - Row to delete/undelete
    * @param {string} token - Session token for the user that performed the deletion/undeletion
-   * @param {number} reason - Reason id
-   * @param {string} other - Other reason text
+   * @param {string} reason - Reason string
    * @param {boolean} isDeletion - `true` if this log entry pertains to a deletion, `false` if it pertains to an undeletion
    */
-  async insertDeletion (row, token, reason, other, isDeletion) {
+  async insertDeletion (row, token, reason, isDeletion) {
     await sql.insert(
       'deletion_log',
-      'cls, item_id, wiki_user, timestamp, reason, additional_reason, is_deletion',
-      [row.cls, row.id, (await user.getUserId(token)), Date.now(), reason, other, Number(isDeletion)]
+      'cls, item_id, wiki_user, timestamp, reason, is_deletion',
+      [row.cls, row.id, (await user.getUserId(token)), Date.now(), reason, Number(isDeletion)]
     )
   }
 

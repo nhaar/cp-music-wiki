@@ -111,7 +111,7 @@ router.post('/delete', ApiMiddleware.checkAdmin, async (req, res) => {
   const refs = await itemClassChanges.checkReferences(id)
   if (refs.length === 0) {
     // static and predefined items are undeletable
-    if (await itemClassHandler.isStaticItem(id) || await itemClassHandler.isPredefined(id)) {
+    if (await ItemClassDatabase.isStaticItem(id) || await itemClassChanges.isPredefined(id)) {
       res.sendStatus(400)
     } else {
       itemClassChanges.deleteItem(id, getToken(req), reason, otherReason)

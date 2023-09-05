@@ -40,7 +40,12 @@ export default function Delete ({ deleteData, row }) {
 
   async function clickDelete () {
     const token = getCookies().session
-    await postJSON('api/delete', { cls: deleteData.cls, id: Number(row.id), token, reason, otherReason: other })
+    await postJSON('api/delete', {
+      cls: deleteData.cls,
+      id: Number(row.id),
+      token,
+      reason: Number(reason) === 0 ? other : reason
+    })
     window.alert('Item deleted')
     window.location.href = '/Special:Items'
   }
@@ -70,14 +75,19 @@ export default function Delete ({ deleteData, row }) {
             <span>Reason:</span>
             <select value={reason} onChange={handleSelect}>
               <option value={0}>Other reason</option>
-              <option value={1}>Spam</option>
-              <option value={2}>Vandalism</option>
+              <option>Spam</option>
+              <option>Vandalism</option>
             </select>
           </div>
-          <div className='delete--reason'>
-            <span>Other/additional reason:</span>
-            <input type='text' value={other} onChange={handleInput} />
-          </div>
+          {Number(reason) === 0
+            ? (
+              <div className='delete--reason'>
+                <span>Other/additional reason:</span>
+                <input type='text' value={other} onChange={handleInput} />
+              </div>
+              )
+            : undefined}
+
           <div className='delete--watch'>
             <input type='checkbox' />
             <span>Watch this page</span>
