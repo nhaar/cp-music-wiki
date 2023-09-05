@@ -108,7 +108,7 @@ class UserHandler {
    * @param {string} password - Password
    * @returns {string | undefined} The session token if the credentials are correct or undefined if they aren't
    */
-  async checkCredentials (user, password, ip) {
+  async startSession (user, password, ip) {
     const userId = await this.confirmCredentials(user, password)
     if (userId === null) return
 

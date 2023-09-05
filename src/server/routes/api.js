@@ -199,7 +199,7 @@ router.post('/login', async (req, res) => {
     return
   }
 
-  const token = await user.checkCredentials(username, password, req.ip)
+  const token = await user.startSession(username, password, req.ip)
   if (token) {
     res.status(200).send({ token })
   } else {
