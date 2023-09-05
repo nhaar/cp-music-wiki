@@ -1,5 +1,4 @@
 const jsondiffpatch = require('jsondiffpatch')
-const Diff = require('diff')
 
 const { getName, deepcopy } = require('../misc/common-utils')
 const ItemClassDatabase = require('./item-class-database')
@@ -379,38 +378,6 @@ class ItemClassChanges {
     `, [cls, itemId])
 
     return previous.rows[0].min
-  }
-
-  /**
-   * Get the difference between two revisions
-   * @param {import('./class-system').ItemData} old - Data for the older revision
-   * @param {import('./class-system').ItemData} cur - Data for the newer revision
-   * @returns {any[][]} An array where each element is an array containing the diff information
-   */
-  getRevDiff (old, cur) {
-    const strs = [old, cur].map(data => JSON.stringify(data, null, 2))
-    const diff = Diff.diffLines(...strs)
-
-    const groups = []
-
-    for (let i = 0; i < diff.length; i++) {
-      const statement = diff[i]
-      const next = diff[i + 1]
-      let charDiff
-      if (next) charDiff = Diff.diffChars(statement.value, next.value)
-      if (statement.removed) {
-        if (next.added) {
-          i++
-          groups.push(['removeadd', statement, next, charDiff])
-        } else {
-          groups.push(['remove', statement])
-        }
-      } else if (statement.added) {
-        groups.push(['add', statement])
-      }
-    }
-
-    return groups
   }
 
   /**

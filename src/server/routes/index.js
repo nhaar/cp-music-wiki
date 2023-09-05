@@ -18,13 +18,14 @@ const express = require('express')
 const router = express.Router()
 
 const apiRouter = require('./api')
-const bridge = require('../database/class-frontend')
 const user = require('../database/user')
 const PageGenerator = require('../gens/gen-list')
 const { getToken, isStringNumber } = require('../misc/server-utils')
 const { itemClassHandler } = require('../item-class/item-class-handler')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
+const editorData = require('../frontend-bridge/editor-data')
+const ChangesData = require('../frontend-bridge/changes-data')
 
 /**
  * Route for the homepage
@@ -118,7 +119,7 @@ router.get('/:value', async (req, res) => {
       }
       // page for picking items
       case 'Items': {
-        sendView(req, res, 'PreEditor', 'Item browser', bridge.preeditorData)
+        sendView(req, res, 'PreEditor', 'Item browser', editorData.preeditor)
         break
       }
       // pages for updating items (read, edit, delete and undelete)
@@ -138,7 +139,7 @@ router.get('/:value', async (req, res) => {
 
         // if creating an item, figure out the class
         // otherwise it is unnecessary as the class will be embeded in the item row
-        const clsData = n && bridge.preeditorData[n]
+        const clsData = n && editorData.preeditor[n]
 
         /** Class of the item (variable only used for creating item) */
         const cls = clsData && clsData.cls
@@ -189,7 +190,7 @@ router.get('/:value', async (req, res) => {
           }
           // page for deleting items
           case 'Delete': {
-            sendView(req, res, value, 'Delete item', { deleteData: (await bridge.getDeleteData(Number(id))), row })
+            sendView(req, res, value, 'Delete item', { deleteData: (await editorData.getDeleteData(Number(id))), row })
             break
           }
           // read and edit item pages
@@ -336,7 +337,7 @@ async function sendDiffView (req, res, cur, old) {
     return
   }
 
-  const diff = itemClassChanges.getRevDiff(...diffData)
+  const diff = ChangesData.getRevDiff(...diffData)
   sendView(req, res, 'Diff', 'Difference between revisions', diff)
 }
 

@@ -90,7 +90,7 @@ class ItemClassDatabase {
    * @param {number} id - Item id
    * @returns {boolean} `true` if item is deleted, `false` if not
    */
-  async isDeleted (id) {
+  static async isDeleted (id) {
     return Boolean(await ItemClassDatabase.getDeletedRow(id))
   }
 
@@ -167,7 +167,7 @@ class ItemClassDatabase {
    * @param {number} id - Item id
    * @returns {string} Found name, or empty string if no item was found
    */
-  async getQueryNameById (id) {
+  static async getQueryNameById (id) {
     try {
       return getName((await ItemClassDatabase.getItem(id)).querywords)
     } catch (error) {

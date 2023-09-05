@@ -1,7 +1,6 @@
 const express = require('express')
 const router = express.Router()
 
-const bridge = require('../database/class-frontend')
 const user = require('../database/user')
 const ItemQuery = require('../item-class/item-query')
 const PageGenerator = require('../gens/gen-list')
@@ -12,6 +11,7 @@ const { getMatch } = require('../misc/common-utils')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
+const ChangesData = require('../frontend-bridge/changes-data')
 
 /** Route for getting the default data object of a class */
 router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
@@ -212,7 +212,7 @@ router.post('/login', async (req, res) => {
 router.post('/recent-changes', async (req, res) => {
   // `days` is the time period in days to consider and `number` is the maximum number of changes
   const { days, number } = req.body
-  res.status(200).send(await bridge.getLastRevisions(days, number))
+  res.status(200).send(await ChangesData.getLastRevisions(days, number))
 })
 
 /** Route for getting the names of the wiki pages filtered by a keyword */
