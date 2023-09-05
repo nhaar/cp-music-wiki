@@ -1,28 +1,12 @@
 import React from 'react'
 import '../../stylesheets/diff.css'
 
+/** Component for the difference between revisions pge */
 export default function Diff ({ diff }) {
-  function formatValue (value, info) {
+  function formatValue (value) {
     // convert whitespaces
 
     return value.replace(/\s/g, '\u00A0')
-    // const lastChars = line.substring(line.length - 2)
-    // if (lastChars.match(/}|\]/)) {
-    //   info.indent -= 1
-    // }
-    // const indents = []
-    // for (let j = 0; j < info.indent; j++) {
-    //   for (let k = 0; k < info.INDENT_SIZE; k++) {
-    //     indents.push()
-    //   }
-    // }
-    // const newLine = `${indents.join('')}${line}`
-
-    // if (lastChars.match(/{|\[/)) {
-    //   info.indent += 1
-    // }
-
-    // return newLine
   }
 
   const diffChildren = []

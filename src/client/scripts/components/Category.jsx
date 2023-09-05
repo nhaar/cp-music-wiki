@@ -1,6 +1,7 @@
 import React from 'react'
 import '../../stylesheets/category.css'
 
+/** Component for the category pages */
 export default function Category ({ pages, cur, name }) {
   const onDisplay = Math.max(0, pages.length - cur + 1)
   const displayedPages = pages.sort().slice(cur - 1, onDisplay + 1)

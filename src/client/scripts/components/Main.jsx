@@ -12,6 +12,7 @@ import Login from '../../images/login.png'
 import { getCookies, postAndGetJSON } from '../client-utils'
 import SearchQuery from './SearchQuery'
 
+/** Component for the left portion of the header, which contains the logo */
 function HeaderAside ({ sidebar, swapSidebar }) {
   const imgPath = sidebar ? Arrow : Menu
   function click () {
@@ -26,6 +27,7 @@ function HeaderAside ({ sidebar, swapSidebar }) {
   )
 }
 
+/** Component for the searchbar in the header */
 function Searchbar () {
   const [query, setQuery] = useState('')
 
@@ -50,6 +52,7 @@ function Searchbar () {
   )
 }
 
+/** Component for the right portion of the header, which contains user related elements */
 function UserArea ({ user }) {
   const [showOptions, setShowOptions] = useState(false)
 
@@ -128,6 +131,7 @@ function UserArea ({ user }) {
   )
 }
 
+/** Component for the page's header */
 function Header ({ swapSidebar, sidebar, user }) {
   return (
     <div className='header'>
@@ -138,6 +142,7 @@ function Header ({ swapSidebar, sidebar, user }) {
   )
 }
 
+/** Component for the page's left sidebar */
 function Sidebar ({ sidebar }) {
   return (
     <div className={`sidebar ${sidebar ? '' : 'hidden'}`}>
@@ -149,6 +154,7 @@ function Sidebar ({ sidebar }) {
   )
 }
 
+/** Component for the page's body (everything besides the header and footer) */
 function Middle ({ Content, sidebar, title, arg }) {
   return (
     <div className='content'>
@@ -179,6 +185,7 @@ function Middle ({ Content, sidebar, title, arg }) {
   )
 }
 
+/** Component for the page's footer */
 function Footer () {
   return (
     <div className='footer'>
@@ -187,6 +194,7 @@ function Footer () {
   )
 }
 
+/** Component representing a wiki page */
 export default function Main ({ Content, arg, title, user }) {
   const [sidebar, setSidebar] = React.useState(Number(getCookies().sidebar))
 

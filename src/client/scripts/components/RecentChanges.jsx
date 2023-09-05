@@ -4,6 +4,7 @@ import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
 
+/** Component with the settings menu for the changes */
 function Settings ({ showSettings, settings }) {
   const className = `settings--options ${showSettings ? '' : 'hidden'}`
 
@@ -57,6 +58,7 @@ function Settings ({ showSettings, settings }) {
   )
 }
 
+/** Component for the button for changing the settings */
 function ChangesSetting ({ config }) {
   const [showSettings, setShowSettings] = React.useState(false)
   function click () {
@@ -81,6 +83,7 @@ function ChangesSetting ({ config }) {
   )
 }
 
+/** Component for a single line of grouped deletions */
 function DeletionGroup () {
   return (
     <div>
@@ -89,6 +92,7 @@ function DeletionGroup () {
   )
 }
 
+/** Component for a single line of grouped changes */
 function GroupedChange ({ info }) {
   const [expanded, setExpanded] = useState(false)
   const userCount = {}
@@ -141,6 +145,7 @@ function GroupedChange ({ info }) {
   )
 }
 
+/** Component that lists all the changes in a grouper manner */
 function GroupedChanges ({ data }) {
   const groupedData = {}
   for (const day in data) {
@@ -199,6 +204,7 @@ function GroupedChanges ({ data }) {
   )
 }
 
+/** Component that lits all the changes in an ungrouped manner */
 function UngroupedChanges ({ data }) {
   const elements = []
   let i = 0
@@ -222,6 +228,11 @@ function UngroupedChanges ({ data }) {
   )
 }
 
+/**
+ * Get a timestamp's time in the local timezone
+ * @param {number} timestamp - Epoch timestamp
+ * @returns {string} Time in the format `HH:MM`
+ */
 function getTime (timestamp) {
   const date = new Date(Number(timestamp))
   const hours = date.getHours().toString().padStart(2, '0')
@@ -229,6 +240,11 @@ function getTime (timestamp) {
   return `${hours}:${minutes}`
 }
 
+/**
+ * Get the `CSS` class name for the element that store the size
+ * @param {number} size - Size number
+ * @returns {string} Class name
+ */
 function getDeltaClass (size) {
   let className = ''
   if (size > 0) {
@@ -242,6 +258,12 @@ function getDeltaClass (size) {
   return className
 }
 
+/**
+ * Create a component for a single change
+ * @param {object} change - Object with the change's data
+ * @param {number} i - Index of the line
+ * @returns {Component} Component for a line
+ */
 function getSingleLine (change, i) {
   const time = getTime(change.timestamp)
   const itemLink = (
@@ -321,6 +343,7 @@ function getSingleLine (change, i) {
   }
 }
 
+/** Component for the portion that contains the list of changes */
 function Changes ({ config }) {
   const [data, setData] = useState({})
 
@@ -356,6 +379,7 @@ function Changes ({ config }) {
       )
 }
 
+/** Component for the recent changes page */
 export default function RecentChanges () {
   const cookies = getCookies()
   const [results, setResults] = useState(Number(cookies.recentChangeResults) || 0)

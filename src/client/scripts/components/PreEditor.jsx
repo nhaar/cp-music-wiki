@@ -2,6 +2,7 @@ import React from 'react'
 import '../../stylesheets/pre-editor.css'
 import QueryInput from './QueryInput'
 
+/** Component for the button for viewing an item */
 function EditButton ({ info }) {
   function handleClick () {
     if (isNaN(info.id)) {
@@ -13,6 +14,7 @@ function EditButton ({ info }) {
   return <button className='blue-button' onClick={handleClick}> View </button>
 }
 
+/** Component for the button for creating a new item */
 function CreateButton ({ info }) {
   function handleClick () {
     window.location.href = `/Special:Editor?n=${info.n}`
@@ -20,6 +22,7 @@ function CreateButton ({ info }) {
   return <button className='blue-button' onClick={handleClick}> CREATE NEW </button>
 }
 
+/** Component for the item selector/item browser */
 export default function PreEditor ({ preeditor }) {
   const [buttonInfo, setButtonInfo] = React.useState({})
   const [clsInfo, setClsInfo] = React.useState({})

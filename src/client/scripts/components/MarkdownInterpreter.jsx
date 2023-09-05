@@ -2,6 +2,7 @@ import React from 'react'
 import '../../stylesheets/md.css'
 import MarkdownParser from '../markdown-parser'
 
+/** Component for an element that will display text converted from markdown */
 export default function MarkdownInterpreter ({ markdown }) {
   const parser = new MarkdownParser(markdown)
   parser.parse()

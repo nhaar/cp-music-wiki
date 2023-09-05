@@ -2,6 +2,7 @@ import React from 'react'
 import '../../stylesheets/user-login.css'
 import { postAndGetJSON } from '../client-utils.js'
 
+/** Component for the user login page */
 export default function UserLogin () {
   const [values, setValues] = React.useState({
     user: '',

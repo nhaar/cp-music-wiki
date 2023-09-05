@@ -5,6 +5,7 @@ import '../../stylesheets/query.css'
 
 import SearchQuery from './SearchQuery'
 
+/** Component for a search query that looks for all items inside a class */
 export default function QueryInput ({ id, cls, withDeleted, passInfo }) {
   async function setText () {
     if (id) {

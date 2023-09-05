@@ -1,6 +1,7 @@
 import React from 'react'
 import '../../../stylesheets/disambig.css'
 
+/** Component for a disambiguation page */
 export default function DisambigGen ({ data }) {
   return (
     <div>

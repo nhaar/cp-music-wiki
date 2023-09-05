@@ -1,4 +1,4 @@
 import { createContext } from 'react'
 
-// variable isEditor
+/** Context used to know if the current page is the read page (`false`) or the editor page (`true`) */
 export const EditorContext = createContext(true)

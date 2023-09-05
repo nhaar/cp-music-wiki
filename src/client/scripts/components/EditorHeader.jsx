@@ -3,6 +3,13 @@ import '../../stylesheets/editor-header.css'
 import StarEmpty from '../../images/star-empty.png'
 import StarFull from '../../images/star-full.png'
 
+/**
+ * Component for the small header that shows up in the top of the following pages:
+ * * Read page
+ * * Edit page
+ * * Delete page
+ * * Undelete page
+ * */
 export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, n }) {
   const [isEmpty, setIsEmpty] = useState(true)
 

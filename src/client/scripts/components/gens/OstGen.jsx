@@ -1,13 +1,14 @@
 import React from 'react'
 import '../../../stylesheets/ost-list.css'
 
-export default function OstGen ({data}) {
+/** Component for a wiki's OST list page */
+export default function OstGen ({ data }) {
   const grid = [
     <tr key={-1}>
       <th>Name</th>
       <th>Author(s)</th>
       <th>Order</th>
-      <th>Link</th> 
+      <th>Link</th>
       <th>{data.isSeries ? 'HQ source(s)' : 'Related to'}</th>
       <th>Alternate Names</th>
       <th>{data.isSeries ? 'Medias' : 'HQ Source(s)'}</th>

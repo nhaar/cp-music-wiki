@@ -5,6 +5,7 @@ import { createWarning } from '../react-utils'
 const validator = require('validator')
 const { MIN_PASSWORD_LENGTH } = require('../../../server/misc/common-utils')
 
+/** Component for the create account page */
 export default function CreateAccount () {
   const inputs = [
     ['Username', 'Write your username', 'text'],

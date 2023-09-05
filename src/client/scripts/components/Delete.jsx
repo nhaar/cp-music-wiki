@@ -4,6 +4,7 @@ import { getCookies, postJSON } from '../client-utils'
 import { getName } from '../../../server/misc/common-utils'
 import EditorHeader from './EditorHeader'
 
+/** Component for the warning for item references */
 function ReferenceWarning ({ refs }) {
   const components = refs.map((ref, i) => {
     const [cls, name] = ref
@@ -24,6 +25,7 @@ function ReferenceWarning ({ refs }) {
   )
 }
 
+/** Component for the delete page */
 export default function Delete ({ deleteData, row }) {
   const [reason, setReason] = useState(0)
   const [other, setOther] = useState('')

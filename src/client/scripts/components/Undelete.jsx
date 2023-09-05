@@ -3,6 +3,7 @@ import '../../stylesheets/undelete.css'
 import { postJSON } from '../client-utils'
 import EditorHeader from './EditorHeader'
 
+/** Component for the undelete page */
 export default function ({ row }) {
   const [reason, setReason] = useState('')
 

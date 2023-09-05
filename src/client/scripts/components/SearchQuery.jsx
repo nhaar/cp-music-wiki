@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 import '../../stylesheets/query.css'
 
+/** Component for a search query */
 export default function SearchQuery ({ text: textSetter, readonly, getter, iterateData, passInfo, placeholder }) {
   const [text, setText] = useState(typeof textSetter === 'function' ? null : textSetter)
   const [isHovering, setIsHovering] = useState(false)

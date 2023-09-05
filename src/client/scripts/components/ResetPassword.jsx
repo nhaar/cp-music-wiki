@@ -3,6 +3,7 @@ import { postJSON, setNthValue } from '../client-utils'
 import { MIN_PASSWORD_LENGTH } from '../../../server/misc/common-utils'
 import { createWarning } from '../react-utils'
 
+/** Component for the password reset page */
 export default function ({ token }) {
   const [values, setValues] = useState(['', ''])
 

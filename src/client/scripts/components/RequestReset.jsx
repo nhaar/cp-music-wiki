@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { postJSON } from '../client-utils'
 
+/** Component for the request password reset page */
 export default function RequestReset () {
   const [name, setName] = useState('')
 

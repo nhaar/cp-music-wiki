@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 
+/** Component for the file upload page */
 export default function FileUpload () {
   const [file, setFile] = useState('')
 
