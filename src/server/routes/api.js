@@ -172,7 +172,7 @@ router.post('/get-by-name', ApiMiddleware.checkClass, ApiMiddleware.checkKeyword
   // if using deleted results, the search will be delivered in the form `Deleted:KEYWORD`
   // and only admins can see the deleted results
   const deletedArg = getMatch(keyword, /(?<=^Deleted:).*/)
-  const includeDeleted = withDeleted && deletedArg && await user.isAdmin(user.getToken(req))
+  const includeDeleted = withDeleted && deletedArg !== null && await user.isAdmin(getToken(req))
 
   res.status(200).send(
     await ItemQuery.getByName(cls, includeDeleted ? deletedArg : keyword, !includeDeleted, includeDeleted)
