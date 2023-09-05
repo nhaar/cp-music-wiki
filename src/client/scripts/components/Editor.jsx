@@ -8,7 +8,6 @@ import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
 import Focus from '../../images/anti-fullscreen.png'
 import EditorHeader from './EditorHeader'
-import { getName } from '../../../server/misc/common-utils'
 import { FullscreenContext } from '../contexts/FullscreenContext'
 import Unfocus from '../../images/four-corner-arrows.png'
 import { EditorDataContext } from '../contexts/EditorDataContext'
@@ -23,24 +22,24 @@ function getAlternatingClass (path) {
 }
 
 function getSimpleTextModule (Tag, type) {
-  return function (props) {
+  return function ({ value, path }) {
     const getValue = value => value || ''
-    const [value, setValue] = useState(() => getValue(props.value))
+    const [newValue, setNewValue] = useState(() => getValue(value))
     const updateData = useContext(ItemContext)
     const isEditor = useContext(EditorContext)
 
     useEffect(() => {
-      setValue(getValue(props.value))
-    }, [props.value])
+      setNewValue(getValue(value))
+    }, [value])
 
     function updateValue (e) {
       const { value } = e.target
-      setValue(value)
-      updateData(props.path, type !== 'number' ? value : Number(value) || null)
+      setNewValue(value)
+      updateData(path, type !== 'number' ? value : Number(value) || null)
     }
 
     return (
-      <Tag value={value} type={type} onChange={updateValue} readOnly={!isEditor} />
+      <Tag value={newValue} type={type} onChange={updateValue} readOnly={!isEditor} />
     )
   }
 }
@@ -51,25 +50,25 @@ const NumberInputModule = getSimpleTextModule('input', 'number')
 const DateInputModule = getSimpleTextModule('input', 'date')
 
 function getSearchQueryModule (type) {
-  return function (props) {
-    const [value, setValue] = useState(props.value || '')
+  return function ({ value, path }) {
+    const [id, setId] = useState(value || '')
     const updateData = useContext(ItemContext)
     const isEditor = useContext(EditorContext)
 
     function updateValue (id) {
-      setValue(id)
-      updateData(props.path, Number(id))
+      setId(id)
+      updateData(path, Number(id))
     }
 
     return (
-      <QueryInput cls={type} passInfo={updateValue} id={value} readonly={!isEditor} />
+      <QueryInput cls={type} passInfo={updateValue} id={id} readonly={!isEditor} />
     )
   }
 }
 
 function getOptionSelectModule (args) {
-  return function (props) {
-    const [value, setValue] = useState(props.value || '')
+  return function ({ value, path }) {
+    const [selectValue, setSelectValue] = useState(value || '')
     const updateData = useContext(ItemContext)
     const isEditor = useContext(EditorContext)
 
@@ -81,12 +80,12 @@ function getOptionSelectModule (args) {
 
     function handleChange (e) {
       const { value } = e.target
-      setValue(value)
-      updateData(props.path, value || null)
+      setSelectValue(selectValue)
+      updateData(path, value || null)
     }
 
     return (
-      <select value={value} onChange={isEditor && handleChange}>
+      <select value={selectValue} onChange={isEditor && handleChange}>
         <option value='' />
         {options}
       </select>
@@ -94,21 +93,21 @@ function getOptionSelectModule (args) {
   }
 }
 
-function CheckboxModule (props) {
-  const [value, setValue] = useState(typeof props.value === 'boolean' ? props.value : null)
+function CheckboxModule ({ value, path }) {
+  const [checked, setChecked] = useState(typeof value === 'boolean' ? value : null)
   const updateData = useContext(ItemContext)
   const isEditor = useContext(EditorContext)
 
   function handleChange (e) {
     const { checked } = e.target
-    setValue(checked)
-    updateData(props.path, checked)
+    setChecked(checked)
+    updateData(path, checked)
   }
 
   return (
     <input
       type='checkbox'
-      checked={value || false}
+      checked={checked || false}
       onChange={handleChange}
       readOnly={!isEditor}
       style={{
@@ -121,13 +120,13 @@ function CheckboxModule (props) {
   )
 }
 
-function MusicFileModule (props) {
+function MusicFileModule ({ value, path }) {
   const [filenames, setFilenames] = useState('')
 
   useEffect(() => {
-    if (props.value !== null) {
+    if (value !== null) {
       (async () => {
-        const names = (await postAndGetJSON('api/get', { id: Number(props.value), cls: 'file' })).data
+        const names = (await postAndGetJSON('api/get', { id: Number(value), cls: 'file' })).data
         if (names.filename !== filenames.filename) setFilenames(names)
       })()
     }
@@ -171,27 +170,27 @@ function MusicFileModule (props) {
 
   return (
     <div>
-      <SearchQuery value={props.value} path={props.path} />
+      <SearchQuery {...{ value, path }} />
       <MusicFile />
     </div>
   )
 }
 
-function GridRowModule (props) {
+function GridRowModule ({ value, Component, declrs, path }) {
   const [grid, setGrid] = useState(() => {
-    if (props.value) {
+    if (value) {
       let k = 0
-      return props.value.map(row => row.map(cell => {
+      return value.map(row => row.map(cell => {
         k++
         return { id: k, value: cell }
       }))
     } else return []
   })
-  const [rows, setRows] = useState(props.value.length || 0)
+  const [rows, setRows] = useState(value.length || 0)
   const [columns, setColumns] = useState(() => {
     let columns = 0
-    if (props.value) {
-      props.value.forEach(element => {
+    if (value) {
+      value.forEach(element => {
         if (element.length > columns) columns = element.length
       })
     }
@@ -221,7 +220,7 @@ function GridRowModule (props) {
   function setData (callback) {
     const newG = callback(grid)
 
-    updateData(props.path, newG.map(row => row.map(element => element.value)))
+    updateData(path, newG.map(row => row.map(element => element.value)))
     setGrid(newG)
   }
 
@@ -267,8 +266,8 @@ function GridRowModule (props) {
 
   function getDefaultValue () {
     let value = null
-    if (props.declrs) {
-      value = getDefault(props)
+    if (declrs) {
+      value = getDefault(declrs)
     }
     return value
   }
@@ -314,11 +313,11 @@ function GridRowModule (props) {
 
   const components = values.map((element, k) => {
     const [i, j] = getCoords(k)
-    const path = [...props.path, i, j]
+    const thisPath = [...path, i, j]
     return (
       <div key={element.id}>
         <div onMouseUp={stopMoving(k)}>
-          <props.component value={element.value} declrs={props.declrs} path={path} />
+          <Component {...{ value: element.value, declrs, path: thisPath }} />
           {isEditor && <button onMouseDown={startMoving(k)}> Move </button>}
         </div>
       </div>
@@ -351,15 +350,15 @@ function GridRowModule (props) {
   )
 }
 
-function MoveableRowsModule (props) {
+function MoveableRowsModule ({ value, Component, declrs, path }) {
   const [array, setArray] = useState(() => {
-    if (props.value) {
-      return props.value.map((element, i) => ({ id: i, value: element }))
+    if (value) {
+      return value.map((element, i) => ({ id: i, value: element }))
     } else {
       return []
     }
   })
-  const [seq, setSeq] = useState(() => props.value ? props.value.length : 0)
+  const [seq, setSeq] = useState(() => value ? value.length : 0)
   const [fullscreenPath] = useContext(FullscreenContext)
 
   const [isMoving, setIsMoving] = useState(false)
@@ -370,7 +369,7 @@ function MoveableRowsModule (props) {
 
   function setData (callback) {
     const newA = callback(array)
-    updateData(props.path, newA.map(item => item.value))
+    updateData(path, newA.map(item => item.value))
     setArray(newA)
   }
 
@@ -386,8 +385,8 @@ function MoveableRowsModule (props) {
 
   function addRow () {
     let newValue = null
-    if (props.declrs) {
-      newValue = getDefault(props)
+    if (declrs) {
+      newValue = getDefault(declrs)
     }
 
     const nextSeq = seq + 1
@@ -423,10 +422,10 @@ function MoveableRowsModule (props) {
     }
   }
 
-  const showRowElements = !fullscreenPath || (pathIncludes(fullscreenPath, props.path) && fullscreenPath.length <= props.path.length)
+  const showRowElements = !fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)
 
   const components = array.map((element, i) => {
-    const path = [...props.path, i]
+    const thisPath = [...path, i]
 
     return (
       <div
@@ -453,7 +452,7 @@ function MoveableRowsModule (props) {
           {showRowElements
             ? (
               <div
-                className={getAlternatingClass(props.path)} style={{
+                className={getAlternatingClass(thisPath)} style={{
                   border: '1px solid gray',
                   borderBottom: '0',
                   display: 'flex',
@@ -504,7 +503,7 @@ function MoveableRowsModule (props) {
                 undefined
               )}
 
-          <props.component value={element.value} declrs={props.declrs} path={path} />
+          <Component {...{ value: element.value, declrs, path: thisPath }} />
 
         </div>
       </div>
@@ -523,46 +522,43 @@ function MoveableRowsModule (props) {
   )
 }
 
-function getDefault (props) {
+function getDefault (declrs) {
   const defaultValue = {}
-  props.declrs.forEach(declr => {
+  declrs.forEach(declr => {
     let value = null
     if (declr.declrs) {
-      value = getDefault(declr)
+      value = getDefault(declr.declrs)
     }
     defaultValue[declr.property] = value
   })
   return defaultValue
 }
 
-function TableModule (props) {
+function TableModule ({ declrs, value, path }) {
   const [fullscreenPath, setFullscreenPath] = useContext(FullscreenContext)
   const structure = useContext(EditorDataContext)
 
   const components = []
-  props.declrs.forEach((declr, i) => {
-    const path = [...props.path, declr.property]
+  declrs.forEach((declr, i) => {
+    const thisPath = [...path, declr.property]
 
-    let childValue = props.value[declr.property]
+    let childValue = value[declr.property]
     if (!childValue && declr.declrs) {
       childValue = getDefault(declr)
     }
 
     const mainComponent = (
       <declr.Component
-        value={childValue}
-        component={declr.component}
-        declrs={declr.declrs}
-        path={path}
+        {...{ value: childValue, Component: declr.component, declrs: declr.declrs, path: thisPath }}
       />
     )
 
     // add path displayer if at the exact start
-    if (fullscreenPath && pathIncludes(fullscreenPath, path) && fullscreenPath.length === path.length) {
+    if (fullscreenPath && pathIncludes(fullscreenPath, thisPath) && fullscreenPath.length === path.length) {
       const prettyPath = []
       let curStructure = structure
 
-      path.forEach(step => {
+      thisPath.forEach(step => {
         if (typeof step === 'number') {
           prettyPath.push(`Row #${step + 1}`)
         } else {
@@ -651,23 +647,23 @@ function TableModule (props) {
       ))
     }
 
-    if (!fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)) {
+    if (!fullscreenPath || (pathIncludes(fullscreenPath, thisPath) && fullscreenPath.length <= thisPath.length)) {
       components.push((
         <div
-          key={`+${i}`} className={`table-row ${getAlternatingClass(props.path)}`}
+          key={`+${i}`} className={`table-row ${getAlternatingClass(path)}`}
         >
           <div
             className='header--container'
             onClick={clickHeader}
           >
             <div className='header--title'>{declr.name}</div>
-            {!fullscreenPath && <img src={Focus} className='four-arrows' onClick={clickHeader(path)} />}
+            {!fullscreenPath && <img src={Focus} className='four-arrows' onClick={clickHeader(thisPath)} />}
             <img src={QuestionMark} className='question-mark' title={declr.desc} />
           </div>
           {mainComponent}
         </div>
       ))
-    } else if ((fullscreenPath && pathIncludes(fullscreenPath, path))) {
+    } else if ((fullscreenPath && pathIncludes(fullscreenPath, thisPath))) {
       components.push((
         <div key={i}>
           {mainComponent}
@@ -693,11 +689,11 @@ function TableModule (props) {
   )
 }
 
-export default function Editor (props) {
-  const [data, setData] = useState(props.arg.row.data)
+export default function Editor ({ editor, structure, isStatic, row, isDeleted, n }) {
+  const [data, setData] = useState(row.data)
   const [fullscreenPath, setFullscreenPath] = useState(undefined)
   const [hasUnsaved, setHasUnsaved] = useState(false)
-  const [isEditor] = useState(props.editor !== false)
+  const [isEditor] = useState(editor !== false)
 
   const iterate = (obj) => {
     const declrs = []
@@ -732,7 +728,7 @@ export default function Editor (props) {
     return declrs
   }
 
-  const declrs = iterate(props.arg.structure)
+  const declrs = iterate(structure)
 
   function updateData (path, value) {
     const root = { ...data }
@@ -754,28 +750,26 @@ export default function Editor (props) {
     window.onbeforeunload = () => ''
   }
 
-  const name = getName(props.arg.row.querywords)
-
   return (
     <div className='editor--container'>
-      <EditorHeader cur={isEditor ? 1 : 0} isStatic={props.arg.isStatic} id={props.arg.row.id} name={name} cls={props.arg.cls} deleted={props.arg.isDeleted} predefined={props.arg.row.predefined} n={props.arg.n} />
-      <EditorDataContext.Provider value={props.arg.structure}>
+      <EditorHeader cur={isEditor ? 1 : 0} {...{ isStatic, id: row.id, deleted: isDeleted, predefined: row.predefined, n }} />
+      <EditorDataContext.Provider value={structure}>
         <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
           <EditorContext.Provider value={isEditor}>
             <ItemContext.Provider value={updateData}>
               <div className='editor'>
-                <TableModule declrs={declrs} value={data} path={[]} />
+                <TableModule {...{ declrs, value: data, path: [] }} />
               </div>
             </ItemContext.Provider>
           </EditorContext.Provider>
         </FullscreenContext.Provider>
       </EditorDataContext.Provider>
-      {isEditor && <SubmitOptions row={props.arg.row} cls={props.arg.cls} data={data} unsaved={hasUnsaved} />}
+      {isEditor && <SubmitOptions {...{ row, data, unsaved: hasUnsaved }} />}
     </div>
   )
 }
 
-function SubmitOptions (props) {
+function SubmitOptions ({ row, data, unsaved }) {
   const [isMinor, setIsMinor] = useState(false)
 
   function handleMinorChange (e) {
@@ -783,14 +777,14 @@ function SubmitOptions (props) {
   }
 
   async function submitData () {
-    if (props.unsaved !== false) {
+    if (unsaved !== false) {
       if (window.confirm('Submit data?')) {
-        const row = { ...props.row }
-        row.data = props.data
+        const thisRow = { ...row }
+        thisRow.data = data
         const token = getCookies().session
         const payload = {
-          cls: props.cls,
-          row,
+          cls: row.cls,
+          row: thisRow,
           token,
           isMinor
         }

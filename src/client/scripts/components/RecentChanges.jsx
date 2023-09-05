@@ -4,15 +4,15 @@ import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
 
-function Settings (props) {
-  const className = `settings--options ${props.showSettings ? '' : 'hidden'}`
+function Settings ({ showSettings, settings }) {
+  const className = `settings--options ${showSettings ? '' : 'hidden'}`
 
   function clickResults (i) {
-    return () => props.settings.setResults(() => i)
+    return () => settings.setResults(() => i)
   }
 
   function clickPeriod (i) {
-    return () => props.settings.setPeriod(() => i)
+    return () => settings.setPeriod(() => i)
   }
 
   function createButton (value, i, click, state) {
@@ -21,7 +21,7 @@ function Settings (props) {
   }
 
   function handleCheckbox (e) {
-    props.settings.setGroupTogether(e.target.checked)
+    settings.setGroupTogether(e.target.checked)
   }
 
   return (
@@ -30,11 +30,11 @@ function Settings (props) {
         <div className='value-picker'>
           <span className='bold'> Results to Show </span>
           <div>
-            {props.settings.RESULT_OPTIONS.map((value, i) => createButton(value, i, clickResults, props.settings.results))}
+            {settings.RESULT_OPTIONS.map((value, i) => createButton(value, i, clickResults, settings.results))}
           </div>
         </div>
         <div className='settings--group'>
-          <input type='checkbox' checked={props.settings.groupTogether} onChange={handleCheckbox} />
+          <input type='checkbox' checked={settings.groupTogether} onChange={handleCheckbox} />
           <span> Group results by page</span>
         </div>
       </div>
@@ -43,13 +43,13 @@ function Settings (props) {
         <div className='value-picker'>
           <span className='gray bold'> Recent hours </span>
           <div>
-            {props.settings.HOUR_OPTIONS.map((value, i) => createButton(value, i, clickPeriod, props.settings.period))}
+            {settings.HOUR_OPTIONS.map((value, i) => createButton(value, i, clickPeriod, settings.period))}
           </div>
         </div>
         <div className='value-picker'>
           <span className='gray bold'> Recent days </span>
           <div>
-            {props.settings.DAY_OPTIONS.map((value, i) => createButton(value, i + props.settings.HOUR_OPTIONS.length, clickPeriod, props.settings.period))}
+            {settings.DAY_OPTIONS.map((value, i) => createButton(value, i + settings.HOUR_OPTIONS.length, clickPeriod, settings.period))}
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@ function Settings (props) {
   )
 }
 
-function ChangesSetting (props) {
+function ChangesSetting ({ config }) {
   const [showSettings, setShowSettings] = React.useState(false)
   function click () {
     setShowSettings(prev => !prev)
@@ -68,20 +68,20 @@ function ChangesSetting (props) {
   }
 
   function pickPeriodWord () {
-    return props.period > props.CUTOFF ? 'day' : 'hour'
+    return config.period > config.CUTOFF ? 'day' : 'hour'
   }
 
   return (
     <div className='settings--container'>
       <img className='gear-img' src={Gear} />
-      <button className='settings--button' onClick={click}> {props.RESULT_OPTIONS[props.results]} changes, {props.HOUR_OPTIONS.concat(props.DAY_OPTIONS)[props.period]} {pickPeriodWord()}{addPlural(props.period, 0, 4)} </button>
+      <button className='settings--button' onClick={click}> {config.RESULT_OPTIONS[config.results]} changes, {config.HOUR_OPTIONS.concat(config.DAY_OPTIONS)[config.period]} {pickPeriodWord()}{addPlural(config.period, 0, 4)} </button>
       <img className='arrow-img' src={Arrow} />
-      <Settings showSettings={showSettings} settings={props} />
+      <Settings showSettings={showSettings} settings={config} />
     </div>
   )
 }
 
-function DeletionGroup (props) {
+function DeletionGroup () {
   return (
     <div>
       Deletion!
@@ -89,10 +89,10 @@ function DeletionGroup (props) {
   )
 }
 
-function GroupedChange (props) {
+function GroupedChange ({ info }) {
   const [expanded, setExpanded] = useState(false)
   const userCount = {}
-  props.info.users.forEach(user => {
+  info.users.forEach(user => {
     if (userCount[user]) userCount[user]++
     else userCount[user] = 1
   })
@@ -113,14 +113,14 @@ function GroupedChange (props) {
         >
           {'>'}&nbsp;&nbsp;&nbsp;
         </div>
-        {props.info.time}&nbsp;
+        {info.time}&nbsp;
         <a
           style={{
             fontWeight: 'bold'
-          }} href={`/Special:Read?id=${props.info.id}`}
-        >{props.info.name}
-        </a> &#40;{props.info.changes.length} changes | history&#41; . .&nbsp;
-        <span className={getDeltaClass(props.info.size)}>{props.info.size}&#41;</span> . .
+          }} href={`/Special:Read?id=${info.id}`}
+        >{info.name}
+        </a> &#40;{info.changes.length} changes | history&#41; . .&nbsp;
+        <span className={getDeltaClass(info.size)}>{info.size}&#41;</span> . .
         &#91;
         {Object.entries(userCount).map(userCount => {
           const count = userCount[1]
@@ -133,7 +133,7 @@ function GroupedChange (props) {
             paddingLeft: '50px'
           }}
           >
-            {props.info.changes.map(getSingleLine)}
+            {info.changes.map(getSingleLine)}
           </div>
           )
         : undefined}
@@ -141,10 +141,10 @@ function GroupedChange (props) {
   )
 }
 
-function GroupedChanges (props) {
+function GroupedChanges ({ data }) {
   const groupedData = {}
-  for (const day in props.data) {
-    const changes = props.data[day]
+  for (const day in data) {
+    const changes = data[day]
     groupedData[day] = {}
     changes.forEach(change => {
       const key = `${change.id}${change.deletionLog}`
@@ -180,8 +180,8 @@ function GroupedChanges (props) {
     for (const item in items) {
       const info = items[item]
       lis.push(info.deletionLog
-        ? <DeletionGroup {...{ info, item }} key={i} />
-        : <GroupedChange {...{ info, item }} key={i} />
+        ? <DeletionGroup key={i} />
+        : <GroupedChange {...{ info }} key={i} />
       )
       i++
     }
@@ -199,11 +199,11 @@ function GroupedChanges (props) {
   )
 }
 
-function UngroupedChanges (props) {
+function UngroupedChanges ({ data }) {
   const elements = []
   let i = 0
-  for (const day in props.data) {
-    const changes = props.data[day]
+  for (const day in data) {
+    const changes = data[day]
     elements.push(
       <h4 key={i}>{day}</h4>
     )
@@ -321,16 +321,16 @@ function getSingleLine (change, i) {
   }
 }
 
-function Changes (props) {
+function Changes ({ config }) {
   const [data, setData] = useState({})
 
   React.useEffect(() => {
     (async () => {
       const data = await postAndGetJSON('api/recent-changes', {
-        days: props.period > props.CUTOFF
-          ? props.DAY_OPTIONS[props.period - props.CUTOFF - 1]
-          : props.HOUR_OPTIONS[props.period] / 24,
-        number: props.RESULT_OPTIONS[props.results]
+        days: config.period > config.CUTOFF
+          ? config.DAY_OPTIONS[config.period - config.CUTOFF - 1]
+          : config.HOUR_OPTIONS[config.period] / 24,
+        number: config.RESULT_OPTIONS[config.results]
       })
 
       const dividedInDays = {}
@@ -345,9 +345,9 @@ function Changes (props) {
       })
       setData(dividedInDays)
     })()
-  }, [props.results, props.period])
+  }, [config.results, config.period])
 
-  return props.groupTogether
+  return config.groupTogether
     ? (
       <GroupedChanges data={data} />
       )
@@ -387,9 +387,9 @@ export default function RecentChanges () {
         Track the most recent changes to the wiki on this page.
       </p>
       <div className='settings--div'>
-        <ChangesSetting {...props} />
+        <ChangesSetting config={props} />
       </div>
-      <Changes {...props} />
+      <Changes config={props} />
     </div>
   )
 }

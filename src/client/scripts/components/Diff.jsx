@@ -1,7 +1,7 @@
 import React from 'react'
 import '../../stylesheets/diff.css'
 
-export default function Diff (props) {
+export default function Diff ({ diff }) {
   function formatValue (value, info) {
     // convert whitespaces
 
@@ -100,7 +100,7 @@ export default function Diff (props) {
     )
   }
 
-  props.arg.forEach(group => {
+  diff.forEach(group => {
     const type = group[0]
     if (type === 'remove' || type === 'add') {
       diffChildren.push(

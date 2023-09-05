@@ -2,8 +2,8 @@ import React from 'react'
 import '../../stylesheets/md.css'
 import MarkdownParser from '../markdown-parser'
 
-export default function MarkdownInterpreter (props) {
-  const parser = new MarkdownParser(props.markdown)
+export default function MarkdownInterpreter ({ markdown }) {
+  const parser = new MarkdownParser(markdown)
   parser.parse()
 
   const components = parser.blocks.map((block, i) => {

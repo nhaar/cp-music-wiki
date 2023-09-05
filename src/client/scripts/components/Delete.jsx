@@ -4,8 +4,8 @@ import { getCookies, postJSON } from '../client-utils'
 import { getName } from '../../../server/misc/common-utils'
 import EditorHeader from './EditorHeader'
 
-function ReferenceWarning (props) {
-  const components = props.refs.map((ref, i) => {
+function ReferenceWarning ({ refs }) {
+  const components = refs.map((ref, i) => {
     const [cls, name] = ref
     return (
       <li key={i}>
@@ -24,7 +24,7 @@ function ReferenceWarning (props) {
   )
 }
 
-export default function Delete (props) {
+export default function Delete ({ deleteData, row }) {
   const [reason, setReason] = useState(0)
   const [other, setOther] = useState('')
 
@@ -38,20 +38,20 @@ export default function Delete (props) {
 
   async function clickDelete () {
     const token = getCookies().session
-    await postJSON('api/delete', { cls: props.arg.deleteData.cls, id: Number(props.arg.row.id), token, reason, otherReason: other })
+    await postJSON('api/delete', { cls: deleteData.cls, id: Number(row.id), token, reason, otherReason: other })
     window.alert('Item deleted')
     window.location.href = '/Special:Items'
   }
 
   const header = (
-    <EditorHeader cur={4} isStatic={false} id={props.arg.row.id} name={getName(props.arg.row.querywords)} cls={props.arg.deleteData.cls} />
+    <EditorHeader cur={4} isStatic={false} id={row.id} name={getName(row.querywords)} cls={deleteData.cls} />
   )
 
-  if (props.arg.deleteData.refs.length !== 0) {
+  if (deleteData.refs.length !== 0) {
     return (
       <div>
         {header}
-        <ReferenceWarning refs={props.arg.deleteData.refs} />
+        <ReferenceWarning refs={deleteData.refs} />
       </div>
     )
   } else {
@@ -60,7 +60,7 @@ export default function Delete (props) {
         {header}
         <div className='bold'> Warning: The item you are about to delete has a history with n revisions </div>
         <div className='delete--explanation'>
-          You are about to delete "{getName(props.arg.row.querywords)}", which will exclude the item from anything inside the wiki. This action can be undone at any time by an admin.
+          You are about to delete "{getName(row.querywords)}", which will exclude the item from anything inside the wiki. This action can be undone at any time by an admin.
         </div>
         <div className='delete--box'>
           <div className='bold delete--delete'>Delete</div>

@@ -39,7 +39,7 @@ const ChangesData = require('../frontend-bridge/changes-data')
 router.get('/', async (req, res) => {
   // read the text from the static class `main_page`
   const text = (await ItemClassDatabase.getStaticClass('main_page')).data.text
-  sendView(req, res, 'MainPage', 'Main Page', text || '')
+  sendView(req, res, 'MainPage', 'Main Page', { text: text || '' })
 })
 
 /**
@@ -75,7 +75,7 @@ router.get('/:value', async (req, res) => {
         if (t) {
           // token existence -> password reset page
           if (await user.resetLinkIsValid(t)) {
-            sendView(req, res, value, 'Reset password', t)
+            sendView(req, res, value, 'Reset password', { token: t })
           } else {
             res.status(400).send('The link is expired or invalid')
           }
@@ -119,7 +119,7 @@ router.get('/:value', async (req, res) => {
       }
       // page for picking items
       case 'Items': {
-        sendView(req, res, 'PreEditor', 'Item browser', editorData.preeditor)
+        sendView(req, res, 'PreEditor', 'Item browser', { preeditor: editorData.preeditor })
         break
       }
       // pages for updating items (read, edit, delete and undelete)
@@ -185,7 +185,7 @@ router.get('/:value', async (req, res) => {
         switch (value) {
           // page for undeleting items
           case 'Undelete': {
-            sendView(req, res, value, 'Undelete item', id)
+            sendView(req, res, value, 'Undelete item', { row })
             break
           }
           // page for deleting items
@@ -201,7 +201,6 @@ router.get('/:value', async (req, res) => {
             sendView(req, res, ...args, {
               structure: itemClassHandler.classes[row.cls].structure,
               isStatic: itemClassHandler.isStaticClass(row.cls),
-              cls: row.cls,
               row,
               isDeleted,
               n
@@ -263,11 +262,11 @@ router.use('*', (req, res) => {
  * Send a HTTP response with the HTML that will load a react page
  * @param {import('express').Request} req - Express request
  * @param {import('express').Response} - Express response
- * @param {string} scriptName - Name of the javascript bundle, unhashed, to call in the HTML
+ * @param {string} scriptName - Name of the JavaScript JSX component, unhashed, to call in the HTML
  * @param {string} title - Title that will be displayed at the top of the page
- * @param {any} arg - Variable to pass to the javascript bundle as a browser global variable
+ * @param {object} arg - An object with variables that will be passed to the specific component associated with the `scriptName` as a `props` object
  */
-async function sendView (req, res, scriptName, title, arg) {
+async function sendView (req, res, scriptName, title, arg = {}) {
   /** Data so the frontend knows who is navigating */
   const userRow = await user.checkUser(getToken(req))
   const userData = userRow ? { user: userRow.name } : undefined
@@ -338,7 +337,7 @@ async function sendDiffView (req, res, cur, old) {
   }
 
   const diff = ChangesData.getRevDiff(...diffData)
-  sendView(req, res, 'Diff', 'Difference between revisions', diff)
+  sendView(req, res, 'Diff', 'Difference between revisions', { diff })
 }
 
 module.exports = router

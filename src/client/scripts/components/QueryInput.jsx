@@ -5,10 +5,10 @@ import '../../stylesheets/query.css'
 
 import SearchQuery from './SearchQuery'
 
-export default function QueryInput (props) {
+export default function QueryInput ({ id, cls, withDeleted, passInfo }) {
   async function setText () {
-    if (props.id) {
-      const { name } = await postAndGetJSON('api/get-name', { cls: props.cls, id: Number(props.id) })
+    if (id) {
+      const { name } = await postAndGetJSON('api/get-name', { cls, id: Number(id) })
       return name
     } else return ''
   }
@@ -20,14 +20,14 @@ export default function QueryInput (props) {
   }
 
   async function getter (value) {
-    return await postAndGetJSON('api/get-by-name', { cls: props.cls, keyword: value, withDeleted: props.withDeleted })
+    return await postAndGetJSON('api/get-by-name', { cls, keyword: value, withDeleted })
   }
 
-  function passInfo (name, id) {
-    props.passInfo(id, name)
+  function passInfoUp (name, id) {
+    passInfo(id, name)
   }
 
   return (
-    <SearchQuery text={setText} iterateData={updateFunction} getter={getter} passInfo={passInfo} />
+    <SearchQuery text={setText} iterateData={updateFunction} getter={getter} passInfo={passInfoUp} />
   )
 }

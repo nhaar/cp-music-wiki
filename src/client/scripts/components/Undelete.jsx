@@ -3,7 +3,7 @@ import '../../stylesheets/undelete.css'
 import { postJSON } from '../client-utils'
 import EditorHeader from './EditorHeader'
 
-export default function (props) {
+export default function ({ row }) {
   const [reason, setReason] = useState('')
 
   function handleInput (e) {
@@ -11,13 +11,13 @@ export default function (props) {
   }
 
   function handleClick () {
-    postJSON('api/undelete', Object.assign(props.arg, { reason }))
+    postJSON('api/undelete', { id: row.id, reason })
     window.location.href = '/Special:Items'
   }
 
   return (
     <div>
-      <EditorHeader cur={4} isStatic={false} cls={props.arg.cls} id={props.arg.id} deleted />
+      <EditorHeader cur={4} isStatic={false} cls={row.cls} id={row.id} deleted />
       <div className='undelete-box'>
         <div className='bold'>Undelete item</div>
         <div className='undelete--reason-box'>

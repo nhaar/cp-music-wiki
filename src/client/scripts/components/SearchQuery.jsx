@@ -2,26 +2,26 @@ import React, { useEffect, useState } from 'react'
 
 import '../../stylesheets/query.css'
 
-export default function SearchQuery (props) {
-  const [text, setText] = useState(typeof props.text === 'function' ? null : props.text)
+export default function SearchQuery ({ text: textSetter, readonly, getter, iterateData, passInfo, placeholder }) {
+  const [text, setText] = useState(typeof textSetter === 'function' ? null : textSetter)
   const [isHovering, setIsHovering] = useState(false)
   const [options, setOptions] = useState([])
 
   useEffect(() => {
     (async () => {
       if (text === null) {
-        setText(await props.text())
+        setText(await textSetter())
       }
     })()
   })
 
   async function updateQuery (e) {
-    if (!props.readonly) {
-      const data = await props.getter(e.target.value)
+    if (!readonly) {
+      const data = await getter(e.target.value)
       const elements = []
-      props.iterateData(data, (name, ...args) => {
+      iterateData(data, (name, ...args) => {
         function clickOption () {
-          props.passInfo && props.passInfo(name, ...args)
+          passInfo && passInfo(name, ...args)
           setOptions([])
           setIsHovering(false)
           setText(name)
@@ -57,7 +57,7 @@ export default function SearchQuery (props) {
 
   return (
     <div className='query--parent'>
-      <input value={text || ''} onClick={updateQuery} onBlur={blur} onChange={queryType} readOnly={props.readonly} placeholder={props.placeholder || ''} />
+      <input value={text || ''} onClick={updateQuery} onBlur={blur} onChange={queryType} readOnly={readonly} placeholder={placeholder || ''} />
       <div className='query--options' onMouseOver={mouseOver} onMouseOut={mouseOut}>
         {options}
       </div>

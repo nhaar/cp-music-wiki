@@ -2,29 +2,29 @@ import React from 'react'
 import '../../stylesheets/pre-editor.css'
 import QueryInput from './QueryInput'
 
-function EditButton (props) {
+function EditButton ({ info }) {
   function handleClick () {
-    if (isNaN(props.info.id)) {
+    if (isNaN(info.id)) {
       window.alert('No item selected!')
     } else {
-      window.location.href = `/Special:Read?id=${props.info.id}`
+      window.location.href = `/Special:Read?id=${info.id}`
     }
   }
   return <button className='blue-button' onClick={handleClick}> View </button>
 }
 
-function CreateButton (props) {
+function CreateButton ({ info }) {
   function handleClick () {
-    window.location.href = `/Special:Editor?n=${props.info.n}`
+    window.location.href = `/Special:Editor?n=${info.n}`
   }
   return <button className='blue-button' onClick={handleClick}> CREATE NEW </button>
 }
 
-export default function PreEditor (props) {
+export default function PreEditor ({ preeditor }) {
   const [buttonInfo, setButtonInfo] = React.useState({})
   const [clsInfo, setClsInfo] = React.useState({})
   const options = []
-  props.arg.forEach((info, i) => {
+  preeditor.forEach((info, i) => {
     options.push(
       <option key={i} value={i}>{info.name}</option>
     )
@@ -41,7 +41,7 @@ export default function PreEditor (props) {
 
   function updateChildren (e) {
     const index = Number(e.target.value)
-    const info = props.arg[index]
+    const info = preeditor[index]
     const newInfo = { n: index, ...info }
     if (newInfo.id !== undefined) {
       newInfo.isStatic = true

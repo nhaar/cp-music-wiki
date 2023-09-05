@@ -1,9 +1,9 @@
 import React from 'react'
 import '../../stylesheets/category.css'
 
-export default function Category (props) {
-  const onDisplay = Math.max(0, props.arg.pages.length - props.arg.cur + 1)
-  const displayedPages = props.arg.pages.sort().slice(props.arg.cur - 1, onDisplay + 1)
+export default function Category ({ pages, cur, name }) {
+  const onDisplay = Math.max(0, pages.length - cur + 1)
+  const displayedPages = pages.sort().slice(cur - 1, onDisplay + 1)
   const normalLength = 200
 
   const columns = [[], []]
@@ -54,14 +54,14 @@ export default function Category (props) {
     <div className='category-page'>
       <div className='category-intro'>
         The following {onDisplay === 1 ? '' : onDisplay} page{onDisplay !== 1 ? 's' : ''} {onDisplay === 1 ? 'is' : 'are'} in this category
-        {props.arg.pages.length > onDisplay
-          ? `, out of ${props.arg.pages.length} total`
+        {pages.length > onDisplay
+          ? `, out of ${pages.length} total`
           : ''}.
       </div>
       <div className='page-changers'>
-        {props.arg.cur > 1
+        {cur > 1
           ? (
-            <a href={`/Category:${props.arg.name}?cur=${Math.max(1, props.arg.cur - normalLength)}`}>
+            <a href={`/Category:${name}?cur=${Math.max(1, cur - normalLength)}`}>
               {prev}
             </a>
             )
@@ -70,9 +70,9 @@ export default function Category (props) {
               {prev}
             </div>
             )}
-        {props.arg.cur + onDisplay <= props.arg.pages.length
+        {cur + onDisplay <= pages.length
           ? (
-            <a href={`/Category:${props.arg.name}?cur=${Math.min(props.arg.pages.length, props.arg.cur + normalLength)}`}>
+            <a href={`/Category:${name}?cur=${Math.min(pages.length, cur + normalLength)}`}>
               {next}
             </a>
             )

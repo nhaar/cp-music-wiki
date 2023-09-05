@@ -12,10 +12,10 @@ import Login from '../../images/login.png'
 import { getCookies, postAndGetJSON } from '../client-utils'
 import SearchQuery from './SearchQuery'
 
-function HeaderAside (props) {
-  const imgPath = props.props.sidebar ? Arrow : Menu
+function HeaderAside ({ sidebar, swapSidebar }) {
+  const imgPath = sidebar ? Arrow : Menu
   function click () {
-    props.props.swapSidebar()
+    swapSidebar()
   }
 
   return (
@@ -50,7 +50,7 @@ function Searchbar () {
   )
 }
 
-function UserArea (props) {
+function UserArea ({ user }) {
   const [showOptions, setShowOptions] = useState(false)
 
   function toggleOptions () {
@@ -84,10 +84,10 @@ function UserArea (props) {
     })
   }, [])
 
-  const Element = props.user
+  const Element = user
     ? (
       <div>
-        <a href='/'> {props.user.user} </a>
+        <a href='/'> {user.user} </a>
         <div className='user-imgs' onClick={toggleOptions}>
           <img src={UserIcon} className='user-icon' />
           <img src={ArrowDown} className='user-arrow' />
@@ -128,19 +128,19 @@ function UserArea (props) {
   )
 }
 
-function Header (props) {
+function Header ({ swapSidebar, sidebar, user }) {
   return (
     <div className='header'>
-      <HeaderAside props={{ ...props }} />
+      <HeaderAside {...{ swapSidebar, sidebar }} />
       <Searchbar />
-      <UserArea user={props.user} />
+      <UserArea {...{ user }} />
     </div>
   )
 }
 
-function Sidebar (props) {
+function Sidebar ({ sidebar }) {
   return (
-    <div className={`sidebar ${props.sidebar ? '' : 'hidden'}`}>
+    <div className={`sidebar ${sidebar ? '' : 'hidden'}`}>
       <a href='/'> Main Page </a>
       <a href='/Special:RecentChanges'> Recent Changes </a>
       <a href='/Special:Items'> Item browser </a>
@@ -149,16 +149,16 @@ function Sidebar (props) {
   )
 }
 
-function Middle (props) {
+function Middle ({ Content, sidebar, title, arg }) {
   return (
     <div className='content'>
-      <Sidebar sidebar={props.sidebar} />
+      <Sidebar sidebar={sidebar} />
       <div className='content--body'>
-        <div className='page-title'> {props.title} </div>
+        <div className='page-title'> {title} </div>
         <div className='page-content-body'>
-          <props.content arg={props.arg} />
+          <Content {...arg} />
         </div>
-        {!props.arg || !props.arg.data || props.arg.data.categoryNames.length === 0
+        {!arg || !arg.data || arg.data.categoryNames.length === 0
           ? <div />
           : (
             <div className='category--footer'>
@@ -166,7 +166,7 @@ function Middle (props) {
                 Categories:
               </div>
               <div className='category--links'>
-                {props.arg.data.categoryNames.map((name, i) => (
+                {arg.data.categoryNames.map((name, i) => (
                   <a key={i} href={`/Category:${name}`}>
                     {name}
                   </a>
@@ -187,7 +187,7 @@ function Footer () {
   )
 }
 
-export default function Main (props) {
+export default function Main ({ Content, arg, title, user }) {
   const [sidebar, setSidebar] = React.useState(Number(getCookies().sidebar))
 
   if (isNaN(sidebar)) {
@@ -210,8 +210,8 @@ export default function Main (props) {
 
   return (
     <div>
-      <Header swapSidebar={swapSidebar} sidebar={sidebar} user={props.user} />
-      <Middle content={props.content} arg={props.arg} sidebar={sidebar} title={props.title} />
+      <Header {...{ swapSidebar, sidebar, user }} />
+      <Middle {...{ Content, arg, title, sidebar }} />
       <Footer />
     </div>
   )

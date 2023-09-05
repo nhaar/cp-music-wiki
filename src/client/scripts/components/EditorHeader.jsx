@@ -3,7 +3,7 @@ import '../../stylesheets/editor-header.css'
 import StarEmpty from '../../images/star-empty.png'
 import StarFull from '../../images/star-full.png'
 
-export default function EditorHeader (props) {
+export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, n }) {
   const [isEmpty, setIsEmpty] = useState(true)
 
   function fillStar () {
@@ -19,10 +19,10 @@ export default function EditorHeader (props) {
     }
   }
 
-  const paramsSuffix = `?id=${props.id}`
+  const paramsSuffix = `?id=${id}`
   const specialUrl = word => `/Special:${word}${paramsSuffix}`
   const specialRedirect = word => redirect(specialUrl(word))
-  const deleteText = props.deleted ? 'Undelete' : 'Delete'
+  const deleteText = deleted ? 'Undelete' : 'Delete'
 
   const components = [
     <div key={-2} onClick={specialRedirect('Read')}>Read</div>,
@@ -35,7 +35,7 @@ export default function EditorHeader (props) {
       src={isEmpty ? StarEmpty : StarFull}
     />,
     (
-      <div key={2} onClick={redirect(`/Special:${deleteText}?id=${props.id}`)}>
+      <div key={2} onClick={redirect(`/Special:${deleteText}?id=${id}`)}>
         {deleteText}
       </div>
     )
@@ -43,36 +43,36 @@ export default function EditorHeader (props) {
   ].map((component, i) => {
     const className = component.type === 'img'
       ? 'star-img'
-      : i === props.cur ? 'header-setting-cur' : 'header-setting-link'
+      : i === cur ? 'header-setting-cur' : 'header-setting-link'
 
     return cloneElement(component, {
       className
     })
   })
 
-  if (props.isStatic || props.predefined) {
+  if (isStatic || predefined) {
     // if undeletable
     components.splice(3, 2)
-    if (props.isStatic) {
+    if (isStatic) {
       // if static
       components.splice(0, 0, (
         <div key={-10} className='static-text' title="This item class is unique and you can't add or delete items">(static)</div>
       ))
     }
-  } else if (!props.id) {
+  } else if (!id) {
     // creating page
     components.splice(0, components.length)
     components[0] = [
       (
         <div
-          key={0} onClick={() => { window.location.href = `/Special:Editor?n=${props.n}` }}
+          key={0} onClick={() => { window.location.href = `/Special:Editor?n=${n}` }}
           className='header-setting-cur'
         >
           Create
         </div>
       )
     ]
-  } else if (props.deleted) {
+  } else if (deleted) {
     components.splice(1, 1)
   }
 

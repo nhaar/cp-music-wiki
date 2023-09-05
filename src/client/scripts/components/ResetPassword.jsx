@@ -3,7 +3,7 @@ import { postJSON, setNthValue } from '../client-utils'
 import { MIN_PASSWORD_LENGTH } from '../../../server/misc/common-utils'
 import { createWarning } from '../react-utils'
 
-export default function (props) {
+export default function ({ token }) {
   const [values, setValues] = useState(['', ''])
 
   function handleChange (i) {
@@ -13,7 +13,7 @@ export default function (props) {
   }
 
   function handleClick () {
-    postJSON('api/reset-password', { token: props.arg, password: values[0] })
+    postJSON('api/reset-password', { token, password: values[0] })
     window.alert('Password changed')
     window.location.href = '/'
   }
