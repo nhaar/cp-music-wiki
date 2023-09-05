@@ -364,12 +364,12 @@ class ItemClassChanges {
   /**
    * Get the next revision for the same item relative to another revision
    * @param {number} revId - The base revision
-   * @returns {number} Id of the next revision
+   * @returns {number | undefined} Id of the next revision or `undefined` if there is none
    */
   async getNextRev (revId) {
     const cur = await sql.selectId('revisions', revId)
-
-    return Math.min((await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', cur.item_id)).map(row => row.id))
+    const ids = (await sql.selectGreaterAndEqual('revisions', 'id', revId, 'item_id', cur.item_id)).map(row => row.id)
+    return ids.length === 0 ? undefined : Math.min(...ids)
   }
 
   /**
