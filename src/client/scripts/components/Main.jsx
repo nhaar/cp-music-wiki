@@ -40,7 +40,7 @@ function Searchbar () {
   }
 
   function handleSearchClick () {
-    window.location.href = `/${query}`
+    window.location.href = `/${window.encodeURIComponent(query)}`
   }
 
   return (

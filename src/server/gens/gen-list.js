@@ -96,7 +96,7 @@ class PageGenerator {
    * @returns {any | undefined} Parsed data for rendering the page or `undefined` if the page does not exist
    */
   async parse () {
-    this.gen = await PageGenerator.findName(PageGenerator.convertUrlToName(this.page))
+    this.gen = await PageGenerator.findName(this.page)
     if (!this.gen) return
     const data = await this.gen.parser(this.page)
     const categoryNames = []
@@ -117,15 +117,6 @@ class PageGenerator {
   static async getPagesInCategory (category) {
     const id = await PageGenerator.getCategoryId(category)
     return (await PageGenerator.getAllParsed()).filter(page => page.categories.includes(id)).map(page => page.name)
-  }
-
-  /**
-   * Convert a string extracted from an URL that represents a page into a valid page name
-   * @param {string} value - Extracted URL
-   * @returns {string} Valid page name
-   */
-  static convertUrlToName (value) {
-    return value.replace(/_/g, ' ')
   }
 }
 
