@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
-import { getCookies, postAndGetJSON, postJSON } from '../client-utils'
+import { findInObject, getCookies, postAndGetJSON, postJSON } from '../client-utils'
 import { ItemContext } from '../contexts/ItemContext'
 import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
@@ -239,6 +239,7 @@ function GridRowModule ({ value, Component, declrs, path }) {
   const isEditor = useContext(EditorContext)
   const isAdmin = useContext(AdminContext)
   const inAnyone = useContext(AnyoneContext)
+  const [fullscreenPath] = useContext(FullscreenContext)
 
   const values = []
   grid.forEach(col => {
@@ -350,6 +351,8 @@ function GridRowModule ({ value, Component, declrs, path }) {
     return [Math.floor(k / columns), k % columns]
   }
 
+  const showRowElements = getShowRowElements(fullscreenPath, path)
+
   const components = values.map((element, k) => {
     const [i, j] = getCoords(k)
     const thisPath = [...path, i, j]
@@ -364,30 +367,38 @@ function GridRowModule ({ value, Component, declrs, path }) {
       >
         <div onMouseUp={stopMoving(k)}>
           <Component {...{ value: element.value, declrs, path: thisPath }} />
-          <div
-            className='standard-border' style={{
-              padding: '10px',
-              display: 'flex',
-              columnGap: '3px'
-            }}
-          >
-            <span
-              className='standard-border row-label'
+          {showRowElements && (
+            <div
+              className='standard-border' style={{
+                padding: '10px',
+                display: 'flex',
+                columnGap: '3px'
+              }}
             >
-              Row #{i + 1} | Column #{j + 1}
-            </span>
-            {(isEditor && (isAdmin || inAnyone)) && <MoveButton onMouseDown={startMoving(k)} isMoving={isMoving} />}
-          </div>
+              <span
+                className='standard-border row-label'
+              >
+                Row #{i + 1} | Column #{j + 1}
+              </span>
+              {(isEditor && (isAdmin || inAnyone)) && <MoveButton onMouseDown={startMoving(k)} isMoving={isMoving} />}
+            </div>
+          )}
+
         </div>
         <MoveOverlay {...{ currentHover, i: k, isMoving }} />
       </div>
     )
   })
 
-  const style = {
-    gridTemplateColumns: `repeat(${columns}, 1fr)`,
-    gridTemplateRows: `repeat(${rows}, 1fr)`
-  }
+  // prevent grid structure breaking focus mode
+  const style = showRowElements
+    ? {
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gridTemplateRows: `repeat(${rows}, 1fr)`
+      }
+    : {
+        gridTemplateColumns: '1fr'
+      }
 
   return (
     <div
@@ -399,7 +410,7 @@ function GridRowModule ({ value, Component, declrs, path }) {
         {components}
       </div>
 
-      {isEditor && ((isAdmin || inAnyone)
+      {(showRowElements && isEditor) && ((isAdmin || inAnyone)
         ? (
           <div className='grid-buttons'>
             <button onClick={addRow} className='blue-button'>
@@ -470,6 +481,17 @@ function MoveOverlay ({ isMoving, i, currentHover }) {
       className={currentHover === i && isMoving ? 'blue-overlay' : ''}
     />
   )
+}
+
+/**
+ * Get the `showRowElements` boolean based on the first element of `FullScreenContext`, `fullscreenPath`, and the component's
+ * current path, `path`
+ * @param {ObjectPath} fullscreenPath
+ * @param {ObjectPath} path
+ * @returns {boolean} `true` if the row/column elements from an array module should be shown, `false` otherwise
+ */
+function getShowRowElements (fullscreenPath, path) {
+  return !fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)
 }
 
 /**
@@ -545,7 +567,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
   // move/add/del works only if editor mode, and then only if is admin or inside tree that anyone can edit
   const hasFunctionality = isEditor && (useContext(AdminContext) || useContext(AnyoneContext))
 
-  const showRowElements = !fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)
+  const showRowElements = getShowRowElements(fullscreenPath, path)
 
   const components = array.map((element, i) => {
     const thisPath = [...path, i]
@@ -608,7 +630,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
   return (
     <div className='moveable-module'>
       {components}
-      {(isEditor && showRowElements) && hasFunctionality
+      {(isEditor && showRowElements) && (hasFunctionality
         ? (
           <button onClick={addRow} className='blue-button'>
             ADD
@@ -616,7 +638,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
           )
         : (
           <div className='perm-warn'>You don't have permission to add to this list</div>
-          )}
+          ))}
     </div>
   )
 }
@@ -671,16 +693,19 @@ function TableModule ({ declrs, value, path }) {
         )
 
     // add path displayer if at the exact start
-    if (fullscreenPath && pathIncludes(fullscreenPath, thisPath) && fullscreenPath.length === path.length) {
+    if (fullscreenPath && pathIncludes(fullscreenPath, thisPath) && fullscreenPath.length === thisPath.length) {
       const prettyPath = []
       let curStructure = structure
 
-      thisPath.forEach(step => {
+      thisPath.forEach((step, i) => {
         if (typeof step === 'number') {
-          prettyPath.push(`Row #${step + 1}`)
+          let word = 'Row'
+          if (typeof path[i - 1] === 'number') word = 'Column'
+          prettyPath.push(`${word} #${step + 1}`)
         } else {
-          prettyPath.push(curStructure[step].name)
-          curStructure = curStructure[step].content
+          const propertyObj = findInObject(curStructure, 'property', step)
+          prettyPath.push(propertyObj.name)
+          curStructure = propertyObj.content
         }
       })
 
@@ -771,7 +796,6 @@ function TableModule ({ declrs, value, path }) {
         >
           <div
             className='header--container'
-            onClick={clickHeader}
           >
             <div className='header--title'>{declr.name}</div>
             {!fullscreenPath && <img src={Focus} className='four-arrows' onClick={clickHeader(thisPath)} />}
