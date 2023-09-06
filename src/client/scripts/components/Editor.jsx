@@ -383,12 +383,16 @@ function GridRowModule ({ value, Component, declrs, path }) {
   })
 
   const style = {
-    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-    gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`
+    gridTemplateColumns: `repeat(${columns}, 1fr)`,
+    gridTemplateRows: `repeat(${rows}, 1fr)`
   }
 
   return (
-    <div className='grid-control'>
+    <div
+      className='grid-control' style={{
+        overflowX: 'scroll'
+      }}
+    >
       <div className='grid-module' style={style}>
         {components}
       </div>

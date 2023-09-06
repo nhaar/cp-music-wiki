@@ -134,5 +134,22 @@
   width: 90px;
   border-radius: 0;
   margin-right: 2px;
-  margin-top: 20px;
+  margin-top: 20px; 
+}
+
+.grid-control::-webkit-scrollbar {
+  height: 10px;
+}
+
+.grid-control::-webkit-scrollbar-thumb {
+  background: #BBB;
+  border-radius: 5px;
+}
+
+.grid-control::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+.grid-control::-webkit-scrollbar-thumb:active {
+  background: #555;
 }
