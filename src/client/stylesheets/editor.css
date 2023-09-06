@@ -110,3 +110,9 @@
 .alternate-layer {
   background-color: rgba(230, 230, 230);
 }
+
+.perm-warn {
+  color: #ff4242;
+  font-size: 12;
+  font-style: italic;
+}

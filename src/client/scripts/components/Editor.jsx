@@ -11,6 +11,8 @@ import EditorHeader from './EditorHeader'
 import { FullscreenContext } from '../contexts/FullscreenContext'
 import Unfocus from '../../images/four-corner-arrows.png'
 import { EditorDataContext } from '../contexts/EditorDataContext'
+import { AdminContext } from '../contexts/AdminContext'
+import { AnyoneContext } from '../contexts/AnyoneContext'
 
 /**
  * All the `Declrs` that correspond to a table module's children modules
@@ -458,6 +460,9 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
     }
   }
 
+  // move/add/del works only if editor mode, and then only if is admin or inside tree that anyone can edit
+  const hasFunctionality = isEditor && (useContext(AdminContext) || useContext(AnyoneContext))
+
   const showRowElements = !fullscreenPath || (pathIncludes(fullscreenPath, path) && fullscreenPath.length <= path.length)
 
   const components = array.map((element, i) => {
@@ -512,7 +517,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
                   }}
                 > Row #{i + 1}
                 </span>
-                {isEditor && (
+                {hasFunctionality && (
                   <button
                     className={`blue-button ${isMoving ? 'cursor-grabbing' : 'cursor-grab'}`}
                     onMouseDown={clickMove(i)}
@@ -524,7 +529,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
                   </button>
                 )}
 
-                {isEditor && (
+                {hasFunctionality && (
                   <button
                     onClick={deleteRow(i)} className='red-button' style={{
                       borderRadius: '0'
@@ -549,11 +554,15 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
   return (
     <div className='moveable-module'>
       {components}
-      {isEditor && showRowElements && (
-        <button onClick={addRow} className='blue-button'>
-          ADD
-        </button>
-      )}
+      {(isEditor && showRowElements) && hasFunctionality
+        ? (
+          <button onClick={addRow} className='blue-button'>
+            ADD
+          </button>
+          )
+        : (
+          <div className='perm-warn'>You don't have permission to add to this list</div>
+          )}
     </div>
   )
 }
@@ -579,6 +588,8 @@ function getDefault (declrs) {
 function TableModule ({ declrs, value, path }) {
   const [fullscreenPath, setFullscreenPath] = useContext(FullscreenContext)
   const structure = useContext(EditorDataContext)
+  const isAdmin = useContext(AdminContext)
+  const isEditor = useContext(EditorContext)
 
   const components = []
   declrs.forEach((declr, i) => {
@@ -589,11 +600,21 @@ function TableModule ({ declrs, value, path }) {
       childValue = getDefault(declr.declrs)
     }
 
-    const mainComponent = (
-      <declr.Component
-        {...{ value: childValue, Component: declr.component, declrs: declr.declrs, path: thisPath }}
-      />
-    )
+    // define tree where anyone can edit if a parent (context) has anyone prop or if current prop has it
+    const inAnyone = useContext(AnyoneContext) || Boolean(declr.anyone)
+
+    // filter if doesn't have permission
+    const mainComponent = (isEditor && (isAdmin || declr.anyone || declr.declrs || inAnyone)) || !isEditor
+      ? (
+        <AnyoneContext.Provider value={inAnyone}>
+          <declr.Component
+            {...{ value: childValue, Component: declr.component, declrs: declr.declrs, path: thisPath }}
+          />
+        </AnyoneContext.Provider>
+        )
+      : (
+        <div className='perm-warn'>You don't have permission to edit this property.</div>
+        )
 
     // add path displayer if at the exact start
     if (fullscreenPath && pathIncludes(fullscreenPath, thisPath) && fullscreenPath.length === path.length) {
@@ -732,7 +753,7 @@ function TableModule ({ declrs, value, path }) {
 }
 
 /** Component for the reader and editor page */
-export default function Editor ({ editor, structure, isStatic, row, isDeleted, n }) {
+export default function Editor ({ editor, structure, isStatic, row, isDeleted, n, isAdmin }) {
   const [data, setData] = useState(row.data)
   const [fullscreenPath, setFullscreenPath] = useState(undefined)
   const [hasUnsaved, setHasUnsaved] = useState(false)
@@ -796,17 +817,21 @@ export default function Editor ({ editor, structure, isStatic, row, isDeleted, n
   return (
     <div className='editor--container'>
       <EditorHeader cur={isEditor ? 1 : 0} {...{ isStatic, id: row.id, deleted: isDeleted, predefined: row.predefined, n }} />
-      <EditorDataContext.Provider value={structure}>
-        <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
-          <EditorContext.Provider value={isEditor}>
-            <ItemContext.Provider value={updateData}>
-              <div className='editor'>
-                <TableModule {...{ declrs, value: data, path: [] }} />
-              </div>
-            </ItemContext.Provider>
-          </EditorContext.Provider>
-        </FullscreenContext.Provider>
-      </EditorDataContext.Provider>
+      <AnyoneContext.Provider value={false}>
+        <AdminContext.Provider value={isAdmin}>
+          <EditorDataContext.Provider value={structure}>
+            <FullscreenContext.Provider value={[fullscreenPath, setFullscreenPath]}>
+              <EditorContext.Provider value={isEditor}>
+                <ItemContext.Provider value={updateData}>
+                  <div className='editor'>
+                    <TableModule {...{ declrs, value: data, path: [] }} />
+                  </div>
+                </ItemContext.Provider>
+              </EditorContext.Provider>
+            </FullscreenContext.Provider>
+          </EditorDataContext.Provider>
+        </AdminContext.Provider>
+      </AnyoneContext.Provider>
       {isEditor && <SubmitOptions {...{ row, data, unsaved: hasUnsaved }} />}
     </div>
   )

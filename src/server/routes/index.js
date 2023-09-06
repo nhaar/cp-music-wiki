@@ -107,7 +107,7 @@ router.get('/:value', async (req, res) => {
       }
       // route for logging out
       case 'UserLogout': {
-        await user.disconnectUser()
+        await user.disconnectUser(token)
         res.status(302).redirect('/')
         break
       }
@@ -245,7 +245,8 @@ router.get('/:value', async (req, res) => {
               isStatic: itemClassHandler.isStaticClass(row.cls),
               row,
               isDeleted,
-              n
+              n,
+              isAdmin
             })
             break
           }
