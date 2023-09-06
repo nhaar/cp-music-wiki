@@ -1,4 +1,5 @@
 const { keysInclude } = require('../misc/common-utils')
+const ObjectPathHandler = require('../misc/object-path-handler')
 const cptIntrepreter = require('./cpt-interpreter')
 
 /**
@@ -13,29 +14,6 @@ const cptIntrepreter = require('./cpt-interpreter')
  * Very similar to `DefSheet`, except that the `code` property is replaced with a `structure` property with the interpreted
  * `CPT`
  * @typedef {Object.<string, InterpretedClassDef>} ItemObjectSheet
- */
-
-/**
- * An array that represents a path of properties within an object. Each string is either a name of a property, or a closed
- * double brackets indicating that it is an array element
- *
- * For example, the path `['names', '[]']` represents all elements of the array under the `names` property in the following
- * object:
- * `
- * {
- *   names: [1, 2, 3]
- * }
- * `
- *
- * and the path `['data', 'name']` is the element under the `name` property in the following nested object:
- * `
- * {
- *   data: {
- *     name: 'Name'
- *   }
- * }
- * `
- * @typedef {string[]} PropertyPath
  */
 
 /** Class that handles the interpreted classes */
@@ -119,24 +97,7 @@ class ItemClassHandler {
   findPaths (condition) {
     const pathMap = {}
     for (const cls in this.classes) {
-      pathMap[cls] = []
-
-      const iterate = (structure, path) => {
-        structure.forEach(prop => {
-          const newPath = [...path, prop.property]
-          if (prop.array) {
-            for (let i = 0; i < prop.dim; i++) {
-              newPath.push('[]')
-            }
-          }
-          if (condition(prop)) {
-            pathMap[cls].push(newPath)
-          } else if (prop.object) {
-            iterate(prop.content, newPath)
-          }
-        })
-      }
-      iterate(this.classes[cls].structure, [])
+      pathMap[cls] = ObjectPathHandler.findPathFromStructure(this.classes[cls].structure, condition)
     }
     return pathMap
   }
@@ -151,32 +112,10 @@ class ItemClassHandler {
   }
 
   /**
-   * Walk through a path within an object and return all values in the path
-   * @param {PropertyPath} path - Desired path
-   * @param {object} obj - Object to travel
-   * @returns {any[] | undefined} A list of all found values or `undefined` if the path doesn't exist
+   * Check if a string is a valid item class name
+   * @param {string} str
+   * @returns {boolean} `true` if it is a class name, `false` otherwise
    */
-  static travelPath (path, obj) {
-    const found = []
-    const iterate = (value, current) => {
-      const type = path[current]
-      current++
-      if (current === path.length + 1) found.push(value)
-      else if (type === '[]') {
-        value.forEach(element => {
-          iterate(element, current)
-        })
-      } else {
-        if (value === undefined) return
-        const nextValue = value[type]
-        iterate(nextValue, current)
-      }
-    }
-
-    iterate(obj, 0)
-    return found
-  }
-
   isClassName (str) {
     return keysInclude(this.classes, str)
   }

@@ -13,6 +13,7 @@ const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
 const ChangesData = require('../frontend-bridge/changes-data')
 const UserBlocker = require('../database/user-blocker')
+const ItemPermissionFilter = require('../item-class/item-permission-filter')
 
 /** Route for getting the default data object of a class */
 router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
@@ -37,11 +38,23 @@ router.post('/get', ApiMiddleware.checkId, async (req, res) => {
  *
  * Only admins have access to this route
  * */
-router.post('/update', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, ApiMiddleware.getValidatorMiddleware(body => {
+router.post('/update', ApiMiddleware.checkIP, ApiMiddleware.getValidatorMiddleware(body => {
   return itemClassHandler.isClassName(body.row.cls) && isObject(body.row) && isObject(body.row.data)
 }, 'Invalid item provided'), async (req, res) => {
   // `row` is the item row and `isMinor` refers to whether the change is a minor edit
-  const { row, isMinor } = req.body
+  const { row: uncheckedRow, isMinor } = req.body
+
+  const permFilter = new ItemPermissionFilter(uncheckedRow, getToken(req))
+  const row = await permFilter.filterChanges()
+
+  // exit code errors
+  if (row === 1) { // non-admin attemped creating object
+    res.sendStatus(403)
+    return
+  } else if (row === 2) { // invalid object
+    JSONErrorSender.sendBadReq(res, 'Invalid data object')
+    return
+  }
 
   if (await itemClassChanges.didDataChange(row.id, row.data)) {
     const validationErrors = itemClassChanges.validate(row.cls, row.data)

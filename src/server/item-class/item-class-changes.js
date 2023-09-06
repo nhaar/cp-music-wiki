@@ -2,11 +2,12 @@ const jsondiffpatch = require('jsondiffpatch')
 
 const { getName, deepcopy } = require('../misc/common-utils')
 const ItemClassDatabase = require('./item-class-database')
-const { itemClassHandler, ItemClassHandler } = require('./item-class-handler')
+const { itemClassHandler } = require('./item-class-handler')
 const sql = require('../database/sql-handler')
 const user = require('../database/user')
 const { compareObjects, isObject, getLastElement } = require('../misc/server-utils')
 const querywordsHandler = require('./querywords-handler')
+const ObjectPathHandler = require('../misc/object-path-handler')
 
 /** Handles a revision's tags */
 class Tagger {
@@ -142,7 +143,7 @@ class ItemClassChanges {
 
       paths.forEach(path => {
         allElements.forEach(element => {
-          if (ItemClassHandler.travelPath(path, element.data).includes(id)) {
+          if (ObjectPathHandler.travelPath(path, element.data).includes(id)) {
             encountered.push([itemClassHandler.classes[cls].name, getName(element.querywords)])
           }
         })

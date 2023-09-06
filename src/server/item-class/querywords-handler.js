@@ -1,4 +1,5 @@
-const { itemClassHandler, ItemClassHandler } = require('./item-class-handler')
+const ObjectPathHandler = require('../misc/object-path-handler')
+const { itemClassHandler } = require('./item-class-handler')
 
 /**
  * Class that handles the `querywords` column
@@ -32,7 +33,7 @@ class QuerywordsHandler {
     const paths = this.queryIndex[cls]
 
     paths.forEach(path => {
-      found.push(...ItemClassHandler.travelPath(path, itemData))
+      found.push(...ObjectPathHandler.travelPath(path, itemData))
     })
 
     return found.join('&&')

@@ -90,6 +90,10 @@ const { matchGroup, capitalize, matchInside } = require('../misc/server-utils')
  *
  * Adding text enclosed by single quotes can be used to give the property a description of what it is. This description will
  * be shown in the frontend UI to aid people understand what this property represents
+ *
+ * ## `*` parameter
+ *
+ * Adding `*` as a parameter will make it so anyone can edit this property
  * @typedef {string} CPT
  */
 
@@ -267,6 +271,9 @@ class CPTInterpreter {
 
       propObj.name = matchEnclosure('"') || CPTInterpreter.camelToPhrase(prop)
       propObj.desc = matchEnclosure("'") || ''
+
+      // permission
+      propObj.anyone = params.includes('*')
 
       parsed.push(propObj)
     })
