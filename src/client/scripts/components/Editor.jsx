@@ -233,6 +233,7 @@ function GridRowModule ({ value, Component, declrs, path }) {
   })
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
+  const [currentHover, setCurrentHover] = useState(-1)
   const [seq, setSeq] = useState(columns * rows + 1)
   const updateData = useContext(ItemContext)
   const isEditor = useContext(EditorContext)
@@ -248,6 +249,7 @@ function GridRowModule ({ value, Component, declrs, path }) {
     return () => {
       setOriginalPos(k)
       setIsMoving(true)
+      setCurrentHover(k)
     }
   }
 
@@ -261,6 +263,7 @@ function GridRowModule ({ value, Component, declrs, path }) {
   function stopMoving (k) {
     return () => {
       if (isMoving) {
+        setIsMoving(false)
         const [x, y] = getCoords(k)
         const valueInPos = grid[x][y]
         const [i, j] = getCoords(originalPos)
@@ -342,18 +345,39 @@ function GridRowModule ({ value, Component, declrs, path }) {
   }
 
   function getCoords (k) {
-    return [Math.floor(k / columns), k % rows]
+    return [Math.floor(k / columns), k % columns]
   }
 
   const components = values.map((element, k) => {
     const [i, j] = getCoords(k)
     const thisPath = [...path, i, j]
     return (
-      <div key={element.id}>
+      <div
+        key={element.id} style={{
+          margin: '5px',
+          position: 'relative'
+        }}
+        onMouseOver={hoverOver(k, isMoving, setCurrentHover)}
+        onMouseOut={() => setCurrentHover(-1)}
+      >
         <div onMouseUp={stopMoving(k)}>
           <Component {...{ value: element.value, declrs, path: thisPath }} />
-          {isEditor && <button onMouseDown={startMoving(k)}> Move </button>}
+          <div
+            className='standard-border' style={{
+              padding: '10px',
+              display: 'flex',
+              columnGap: '3px'
+            }}
+          >
+            <span
+              className='standard-border row-label'
+            >
+              Row #{i + 1} | Column #{j + 1}
+            </span>
+            {isEditor && <MoveButton onMouseDown={startMoving(k)} isMoving={isMoving} />}
+          </div>
         </div>
+        <MoveOverlay {...{ currentHover, i: k, isMoving }} />
       </div>
     )
   })
@@ -364,23 +388,73 @@ function GridRowModule ({ value, Component, declrs, path }) {
   }
 
   return (
-    <div>
+    <div className='grid-control'>
       <div className='grid-module' style={style}>
         {components}
       </div>
-      <button onClick={removeRow}>
-        Remove Row
+
+      <button onClick={addRow} className='blue-button'>
+        + ROW
       </button>
-      <button onClick={addRow}>
-        Add Row
+      <button onClick={addColumn} className='blue-button'>
+        + COLUMN
       </button>
-      <button onClick={removeColumn}>
-        Remove Column
+      <button onClick={removeRow} className='red-button'>
+        - ROW
       </button>
-      <button onClick={addColumn}>
-        Add Column
+      <button onClick={removeColumn} className='red-button'>
+        - COLUMN
       </button>
     </div>
+  )
+}
+
+/** Component for the button used to engage in a drag and drop moving animation for the array modules */
+function MoveButton ({ isMoving, onMouseDown }) {
+  return (
+    <button
+      className={`blue-button ${isMoving ? 'cursor-grabbing' : 'cursor-grab'}`}
+      onMouseDown={onMouseDown}
+      style={{
+        borderRadius: '0'
+      }}
+    >
+      MOVE
+    </button>
+  )
+}
+
+/**
+ * Get a function that sets a state variable to a value `i` if a boolean `isMoving` is `true`
+ * @param {number} i
+ * @param {boolean} isMoving
+ * @param {SetStateAction} setter - State's `set` method
+ * @returns {function() : void}
+ */
+function hoverOver (i, isMoving, setter) {
+  return () => {
+    if (isMoving) setter(i)
+  }
+}
+
+/**
+ * Component for the overlay for the elements containing modules when they are being hovered in drag and drop mode
+ * in an array module
+ */
+function MoveOverlay ({ isMoving, i, currentHover }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        left: '0',
+        top: '0',
+        zIndex: '100',
+        pointerEvents: 'none'
+      }}
+      className={currentHover === i && isMoving ? 'blue-overlay' : ''}
+    />
   )
 }
 
@@ -454,12 +528,6 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
     }
   }
 
-  function hoverOver (i) {
-    return () => {
-      if (isMoving) setCurrentHover(i)
-    }
-  }
-
   // move/add/del works only if editor mode, and then only if is admin or inside tree that anyone can edit
   const hasFunctionality = isEditor && (useContext(AdminContext) || useContext(AnyoneContext))
 
@@ -475,20 +543,11 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
           position: 'relative',
           padding: '0 -2px'
         }}
-        onMouseUp={finishMove(i)} onMouseOver={hoverOver(i)} onMouseOut={() => { setCurrentHover(-1) }}
+        onMouseUp={finishMove(i)}
+        onMouseOver={hoverOver(i, isMoving, setCurrentHover)}
+        onMouseOut={() => { setCurrentHover(-1) }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            left: '0',
-            top: '0',
-            zIndex: '100',
-            pointerEvents: 'none'
-          }}
-          className={currentHover === i && isMoving ? 'blue-overlay' : ''}
-        />
+        <MoveOverlay {...{ isMoving, i, currentHover }} />
         <div key={element.id}>
           {showRowElements
             ? (
@@ -503,30 +562,11 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
                 }}
               >
                 <span
-                  className='standard-border' style={{
-                    marginLeft: '30px',
-                    height: '32px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    background: 'rgb(230, 230, 230, 0.2)',
-                    color: 'black',
-                    padding: '5px',
-                    borderRadius: 0,
-                    boxSizing: 'border-box',
-                    cursor: 'default'
-                  }}
+                  className='standard-border row-label'
                 > Row #{i + 1}
                 </span>
                 {hasFunctionality && (
-                  <button
-                    className={`blue-button ${isMoving ? 'cursor-grabbing' : 'cursor-grab'}`}
-                    onMouseDown={clickMove(i)}
-                    style={{
-                      borderRadius: '0'
-                    }}
-                  >
-                    MOVE
-                  </button>
+                  <MoveButton isMoving={isMoving} onMouseDown={clickMove(i)} />
                 )}
 
                 {hasFunctionality && (
