@@ -237,6 +237,8 @@ function GridRowModule ({ value, Component, declrs, path }) {
   const [seq, setSeq] = useState(columns * rows + 1)
   const updateData = useContext(ItemContext)
   const isEditor = useContext(EditorContext)
+  const isAdmin = useContext(AdminContext)
+  const inAnyone = useContext(AnyoneContext)
 
   const values = []
   grid.forEach(col => {
@@ -374,7 +376,7 @@ function GridRowModule ({ value, Component, declrs, path }) {
             >
               Row #{i + 1} | Column #{j + 1}
             </span>
-            {isEditor && <MoveButton onMouseDown={startMoving(k)} isMoving={isMoving} />}
+            {(isEditor && (isAdmin || inAnyone)) && <MoveButton onMouseDown={startMoving(k)} isMoving={isMoving} />}
           </div>
         </div>
         <MoveOverlay {...{ currentHover, i: k, isMoving }} />
@@ -397,18 +399,26 @@ function GridRowModule ({ value, Component, declrs, path }) {
         {components}
       </div>
 
-      <button onClick={addRow} className='blue-button'>
-        + ROW
-      </button>
-      <button onClick={addColumn} className='blue-button'>
-        + COLUMN
-      </button>
-      <button onClick={removeRow} className='red-button'>
-        - ROW
-      </button>
-      <button onClick={removeColumn} className='red-button'>
-        - COLUMN
-      </button>
+      {isEditor && ((isAdmin || inAnyone)
+        ? (
+          <div className='grid-buttons'>
+            <button onClick={addRow} className='blue-button'>
+              + ROW
+            </button>
+            <button onClick={addColumn} className='blue-button'>
+              + COLUMN
+            </button>
+            <button onClick={removeRow} className='red-button'>
+              - ROW
+            </button>
+            <button onClick={removeColumn} className='red-button'>
+              - COLUMN
+            </button>
+          </div>
+          )
+        : (
+          <div className='perm-warn'>You don't have permission to edit this grid</div>
+          ))}
     </div>
   )
 }

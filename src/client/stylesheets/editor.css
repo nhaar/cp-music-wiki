@@ -130,7 +130,7 @@
   cursor: default;
 }
 
-.grid-control > button {
+.grid-buttons > button {
   width: 90px;
   border-radius: 0;
   margin-right: 2px;
