@@ -20,13 +20,14 @@ const router = express.Router()
 const apiRouter = require('./api')
 const user = require('../database/user')
 const PageGenerator = require('../gens/gen-list')
-const { getToken, isStringNumber } = require('../misc/server-utils')
+const { getToken } = require('../misc/server-utils')
 const { itemClassHandler } = require('../item-class/item-class-handler')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const editorData = require('../frontend-bridge/editor-data')
 const ChangesData = require('../frontend-bridge/changes-data')
 const UserBlocker = require('../database/user-blocker')
+const { isStringNumber } = require('../misc/common-utils')
 
 /**
  * Route for the homepage

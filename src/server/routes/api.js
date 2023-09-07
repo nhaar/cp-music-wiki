@@ -7,7 +7,7 @@ const PageGenerator = require('../gens/gen-list')
 const ApiMiddleware = require('../misc/api-middleware')
 const JSONErrorSender = require('../misc/json-error-sender')
 const { getToken, isObject } = require('../misc/server-utils')
-const { getMatch } = require('../misc/common-utils')
+const { getMatch, isNumberLike } = require('../misc/common-utils')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
@@ -43,9 +43,11 @@ router.post('/update', ApiMiddleware.checkIP, ApiMiddleware.getValidatorMiddlewa
   return itemClassHandler.isClassName(body.row.cls) && isObject(body.row) && isObject(body.row.data)
 }, 'Invalid item provided'), async (req, res) => {
   // `row` is the item row and `isMinor` refers to whether the change is a minor edit
-  const { row: uncheckedRow, isMinor } = req.body
+  const { row: uncheckedRow, isMinor, watchDays } = req.body
 
-  const permFilter = new ItemPermissionFilter(uncheckedRow, getToken(req))
+  const token = getToken(req)
+
+  const permFilter = new ItemPermissionFilter(uncheckedRow, token)
   const row = await permFilter.filterChanges()
 
   // exit code errors
@@ -60,7 +62,11 @@ router.post('/update', ApiMiddleware.checkIP, ApiMiddleware.getValidatorMiddlewa
   if (await itemClassChanges.didDataChange(row.id, row.data)) {
     const validationErrors = itemClassChanges.validate(row.cls, row.data)
     if (validationErrors.length === 0) {
-      await itemClassChanges.pushChange(getToken(req), row, isMinor)
+      const id = await itemClassChanges.pushChange(token, row, isMinor)
+      if (watchDays !== undefined && isNumberLike(watchDays)) {
+        const watchlistHandler = new WatchlistHandler(await user.getUserId(token))
+        await watchlistHandler.addToWatchlist(id, Number(watchDays))
+      }
       res.sendStatus(200)
     } else JSONErrorSender.sendBadReqJSON(res, { errors: validationErrors })
   } else {

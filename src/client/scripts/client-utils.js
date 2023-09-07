@@ -100,3 +100,22 @@ export function setNthValue (n, value, setValues) {
     return newV
   })
 }
+
+/**
+ * Get a click handler that sets a state value to the `value` property of an element tied to an event
+ * @param {SetStateAction} setter - State's `set` method
+ * @returns {function(Event) : void}
+ */
+export function getValueChangeHandler (setter) {
+  return e => { setter(e.target.value) }
+}
+
+/**
+
+ * Get a click handler that sets a state value to the `checked` property of an element tied to an event
+ * @param {SetStateAction} setter - State's `set` method
+ * @returns {function(Event) : void}
+ */
+export function getCheckedChangeHandler (setter) {
+  return e => { setter(e.target.checked) }
+}

@@ -132,15 +132,6 @@ class ServerUtils {
   }
 
   /**
-   * Check if a value is a string representation of an integer
-   * @param {any} value - Value to check
-   * @returns {boolean} `true` if the value is a string representation of an integer, `false` otherwise
-   */
-  static isStringNumber (value) {
-    return typeof value === 'string' && value.match(/^\d+$/)
-  }
-
-  /**
    * Iterate through all elements of an array and execute an asynchronous callback, awaiting between each callback
    * @param {any[]} arr - Array to iterate
    * @param {function(any, number)} callback - Asynchronous function executed in each iteration that takes as the first argument the current element of the array and as the second argument the index of the element

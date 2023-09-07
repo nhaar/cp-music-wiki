@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
-import { findInObject, getCookies, postAndGetJSON, postJSON } from '../client-utils'
+import { findInObject, getCheckedChangeHandler, getCookies, getValueChangeHandler, postAndGetJSON, postJSON } from '../client-utils'
 import { ItemContext } from '../contexts/ItemContext'
 import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
@@ -926,10 +926,8 @@ export default function Editor ({ editor, structure, isStatic, row, isDeleted, n
 
 function SubmitOptions ({ row, data, unsaved }) {
   const [isMinor, setIsMinor] = useState(false)
-
-  function handleMinorChange (e) {
-    setIsMinor(e.target.checked)
-  }
+  const [watch, setWatch] = useState(true)
+  const [selectVal, setSelectVal] = useState(0)
 
   async function submitData () {
     if (unsaved !== false) {
@@ -941,7 +939,8 @@ function SubmitOptions ({ row, data, unsaved }) {
           cls: row.cls,
           row: thisRow,
           token,
-          isMinor
+          isMinor,
+          watchDays: watch ? selectVal : undefined
         }
         const response = await postJSON('api/update', payload)
         if (response.status === 200) {
@@ -969,16 +968,16 @@ function SubmitOptions ({ row, data, unsaved }) {
       </div>
 
       <div className='submit--options'>
-        <input type='checkbox' checked={isMinor} onChange={handleMinorChange} />
+        <input type='checkbox' checked={isMinor} onChange={getCheckedChangeHandler(setIsMinor)} />
         <span>This is a minor edit</span>
-        <input type='checkbox' />
+        <input type='checkbox' checked={watch} onChange={getCheckedChangeHandler(setWatch)} />
         <span>Watch this page</span>
-        <select>
-          <option>Permanent</option>
-          <option>1 week</option>
-          <option>1 month</option>
-          <option>3 months</option>
-          <option>6 months</option>
+        <select value={selectVal} onChange={getValueChangeHandler(setSelectVal)}>
+          <option value={0}>Permanent</option>
+          <option value={7}>1 week</option>
+          <option value={30}>1 month</option>
+          <option value={91}>3 months</option>
+          <option value={183}>6 months</option>
         </select>
       </div>
       <div className='submit--buttons'>

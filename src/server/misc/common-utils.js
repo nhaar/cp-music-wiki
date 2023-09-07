@@ -95,6 +95,24 @@ class CommonUtils {
   static convertDaysToMs (days) {
     return days * 86400000
   }
+
+  /**
+   * Check if a value is a string representation of an integer
+   * @param {any} value - Value to check
+   * @returns {boolean} `true` if the value is a string representation of an integer, `false` otherwise
+   */
+  static isStringNumber (value) {
+    return typeof value === 'string' && value.match(/^\d+$/)
+  }
+
+  /**
+   * Check if `value` is a valid number or if it is a string representing a number
+   * @param {any} value
+   * @returns {boolean} `true` if it is number like or `false` otherwise
+   */
+  static isNumberLike (value) {
+    return (typeof value === 'number' && !isNaN(value)) || CommonUtils.isStringNumber(value)
+  }
 }
 
 module.exports = CommonUtils

@@ -109,10 +109,12 @@ class ItemClassChanges {
    * @param {ItemRow} row - Updated row object for the item
    * @param {boolean} isMinor - `true` if it is a minor edit, `false` otherwise
    * @param {string[]} tags - Tags to add to the revision
+   * @returns {number} Id of changed item
    */
   async pushChange (token, row, isMinor, tags = []) {
-    await this.addChange(row, token, isMinor, tags)
+    const id = await this.addChange(row, token, isMinor, tags)
     await this.updateItem(row)
+    return id
   }
 
   /**
@@ -262,6 +264,7 @@ class ItemClassChanges {
    * @param {string} token - Session token for the user submitting the revision
    * @param {boolean} isMinor - Whether this revision is a minor edit or not
    * @param {string[]} tags - Array of tags to add to the revision
+   * @returns {number} Id of the changed item
    */
   async addChange (row, token, isMinor, tags = []) {
     let oldRow = await ItemClassDatabase.getUndeletedItem(row.id)
@@ -277,6 +280,7 @@ class ItemClassChanges {
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
     await this.insertRev(id, userId, delta, isMinor, created, tags)
+    return id
   }
 
   /**
@@ -293,7 +297,7 @@ class ItemClassChanges {
     await sql.insert(
       'revisions',
       'item_id, wiki_user, timestamp, patch, minor_edit, created, tags',
-      [itemId, user, Date.now(), patch, Number(isMinor), Number(created), Tagger.getTagString(...tags)]
+      [itemId, user, Date.now(), patch, Number(isMinor), Number(created), Tagger.getListString(...tags)]
     )
   }
 
@@ -359,7 +363,7 @@ class ItemClassChanges {
     const lastRev = getLastElement(revisions)
     const lastUser = lastRev.wiki_user
     const lastUserRevisions = []
-    const isRollback = await (new Tagger(lastRev.id)).hasTag('rollback')
+    const isRollback = await (new Tagger(lastRev.id)).hasItem('rollback')
     // if last revision is a rollback, undoing everything as normal would do nothing
     if (isRollback) {
       lastUserRevisions.push(lastRev)
@@ -387,7 +391,7 @@ class ItemClassChanges {
     for (let i = 0; i < lastUserRevisions.length; i++) {
       const revision = lastUserRevisions[i]
       const tagger = new Tagger(revision.id)
-      await tagger.addTag('reverted')
+      await tagger.addItem('reverted')
     }
   }
 }
