@@ -8,80 +8,16 @@ const user = require('../database/user')
 const { compareObjects, isObject, getLastElement } = require('../misc/server-utils')
 const querywordsHandler = require('./querywords-handler')
 const ObjectPathHandler = require('../misc/object-path-handler')
+const CellList = require('../database/cell-list')
 
 /** Handles a revision's tags */
-class Tagger {
-  /** Build instance linked to revision */
+class Tagger extends CellList {
+  /**
+   * Build instance linked to revision of id `rev`
+   * @param {number} rev
+   */
   constructor (rev) {
-    this.id = rev
-  }
-
-  /**
-   * Get the tag string from a list of tags
-   * @param  {...text} tags - Tags
-   * @returns {string} Tags string
-   */
-  static getTagString (...tags) {
-    return tags.join('%')
-  }
-
-  /**
-   * Get the list of tages from the tag string
-   * @param {string} tagString - Tag string from a revision
-   * @returns {string[]} List of tags
-   */
-  static getTagList (tagString) {
-    return tagString.split('%')
-  }
-
-  /**
-   * Check if the instance's revision has a tag
-   * @param {string} tag - Tag to find
-   * @returns {boolean} `true` if it includes the tag, `false` otherwise
-   */
-  async hasTag (tag) {
-    const tags = await this.getTags()
-    return tags.includes(tag)
-  }
-
-  /**
-   * Update the instance's revision tags with an update function
-   * @param {function(string) : string} updatefn - Function that takes as an argument the old list of tages and returns
-   * the new list of text
-   */
-  async updateTags (updatefn) {
-    const tags = updatefn(await this.getTags())
-    await sql.update('revisions', 'tags', 'id = $1', [Tagger.getTagString(...tags)], [this.id])
-  }
-
-  /**
-   * Get the list of tags from the instance's revision
-   * @returns {string[]} List of tags
-   */
-  async getTags () {
-    return Tagger.getTagList(await sql.selectColumn('revisions', 'id', this.id, 'tags'))
-  }
-
-  /**
-   * Add a tag to this instance's revision
-   * @param {string} tag - New tag
-   */
-  async addTag (tag) {
-    await this.updateTags(old => {
-      old.push(tag)
-      return old
-    })
-  }
-
-  /**
-   * Remove a tag from this instance's revision
-   * @param {string} tag - Tag to remove
-   */
-  async removeTag (tag) {
-    if (typeof tag === 'string') tag = Number(tag)
-    await this.updateTags(old => {
-      return old.filter(t => t !== tag)
-    })
+    super('revisions', 'tags', 'id', rev)
   }
 }
 

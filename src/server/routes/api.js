@@ -14,6 +14,7 @@ const { itemClassHandler } = require('../item-class/item-class-handler')
 const ChangesData = require('../frontend-bridge/changes-data')
 const UserBlocker = require('../database/user-blocker')
 const ItemPermissionFilter = require('../item-class/item-permission-filter')
+const WatchlistTracker = require('../database/watchlist-tracker')
 
 /** Route for getting the default data object of a class */
 router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
@@ -264,6 +265,15 @@ router.post('/item-history', ApiMiddleware.checkChanges, async (req, res) => {
   const { days, number } = req.body
 
   res.status(200).send(await ChangesData.getLastRevisions(days, number, row => row.item_id === Number(id)))
+})
+
+/** Route for an user to (un)watch an item */
+router.post('/watch', ApiMiddleware.checkId, async (req, res) => {
+  const { watch, id } = req.body
+  const tracker = new WatchlistTracker(await user.getUserId(getToken(req)))
+  if (watch) tracker.addItem(id + '')
+  else tracker.removeItem(id + '')
+  res.sendStatus(200)
 })
 
 module.exports = router

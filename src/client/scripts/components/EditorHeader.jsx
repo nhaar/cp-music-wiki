@@ -1,7 +1,8 @@
-import React, { cloneElement, useState } from 'react'
+import React, { cloneElement, useEffect, useState } from 'react'
 import '../../stylesheets/editor-header.css'
 import StarEmpty from '../../images/star-empty.png'
 import StarFull from '../../images/star-full.png'
+import { postJSON } from '../client-utils'
 
 /**
  * Component for the small header that shows up in the top of the following pages:
@@ -9,9 +10,13 @@ import StarFull from '../../images/star-full.png'
  * * Edit page
  * * Delete page
  * * Undelete page
+ * * Item history
+ * * (watchlist page button)
  * */
-export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, n }) {
-  const [isEmpty, setIsEmpty] = useState(true)
+export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, n, watching }) {
+  const [isEmpty, setIsEmpty] = useState(!watching)
+  const [inverting, setInverting] = useState(false)
+  const [isWatching, setIsWatching] = useState(watching)
 
   function fillStar () {
     setIsEmpty(false)
@@ -19,6 +24,17 @@ export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, 
   function emptyStar () {
     setIsEmpty(true)
   }
+
+  // use `inverting` as a buffer to wait response
+  useEffect(() => {
+    (async () => {
+      if (inverting) {
+        await postJSON('api/watch', { watch: !isWatching, id })
+        setIsWatching(!isWatching)
+        setInverting(false)
+      }
+    })()
+  }, [inverting])
 
   function redirect (page) {
     return () => {
@@ -37,8 +53,9 @@ export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, 
     <div key={1} onClick={specialRedirect('ItemHistory')}>View history</div>,
     <img
       key={-1}
-      onMouseOver={fillStar}
-      onMouseLeave={emptyStar}
+      onMouseOver={isWatching ? emptyStar : fillStar}
+      onMouseLeave={isWatching ? fillStar : emptyStar}
+      onClick={() => setInverting(true)}
       src={isEmpty ? StarEmpty : StarFull}
     />,
     (

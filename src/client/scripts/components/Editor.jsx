@@ -831,7 +831,7 @@ function TableModule ({ declrs, value, path }) {
 }
 
 /** Component for the reader and editor page */
-export default function Editor ({ editor, structure, isStatic, row, isDeleted, n, isAdmin }) {
+export default function Editor ({ editor, structure, isStatic, row, isDeleted, n, isAdmin, watching }) {
   const [data, setData] = useState(row.data)
   const [fullscreenPath, setFullscreenPath] = useState(undefined)
   const [hasUnsaved, setHasUnsaved] = useState(false)
@@ -894,7 +894,16 @@ export default function Editor ({ editor, structure, isStatic, row, isDeleted, n
 
   return (
     <div className='editor--container'>
-      <EditorHeader cur={isEditor ? 1 : 0} {...{ isStatic, id: row.id, deleted: isDeleted, predefined: row.predefined, n }} />
+      <EditorHeader
+        cur={isEditor ? 1 : 0} {...{
+          isStatic,
+          id: row.id,
+          deleted: isDeleted,
+          predefined: row.predefined,
+          n,
+          watching
+        }}
+      />
       <AnyoneContext.Provider value={false}>
         <AdminContext.Provider value={isAdmin}>
           <EditorDataContext.Provider value={structure}>

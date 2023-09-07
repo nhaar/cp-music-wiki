@@ -7,6 +7,7 @@ const { MIN_PASSWORD_LENGTH } = require('../misc/common-utils')
 const mailer = require('../misc/email')
 const { URL, SALT, ITERATIONS, KEYLEN, DIGEST } = require('../../../config')
 const { getToken } = require('../misc/server-utils')
+const WatchlistTracker = require('./watchlist-tracker')
 
 /** Class that manages everything related to the wiki user accounts */
 class UserHandler {
@@ -22,7 +23,8 @@ class UserHandler {
         session_token TEXT,
         created_timestamp NUMERIC,
         perms TEXT,
-        blocked INT DEFAULT 0
+        blocked INT DEFAULT 0,
+        watchlist TEXT DEFAULT ''
       )
     `)
 
@@ -266,6 +268,17 @@ ${URL}Special:ResetPassword?t=${linkToken}`)
    */
   async getUserFromName (name) {
     return await sql.selectRowWithColumn('wiki_users', 'name', name)
+  }
+
+  /**
+   * Check if an user is watching an item
+   * @param {string} token - User's session token
+   * @param {number} id - Item id
+   * @returns {boolean} `true` if user is watching, `false` otherwise
+   */
+  async isWatching (token, id) {
+    const tracker = new WatchlistTracker(await this.getUserId(token))
+    return await tracker.hasItem(id)
   }
 }
 

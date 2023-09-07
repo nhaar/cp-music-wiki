@@ -156,11 +156,21 @@ router.get('/:value', async (req, res) => {
       // page for seeing item history
       case 'ItemHistory': {
         const { id } = req.query
+
+        if (!isStringNumber(id)) {
+          res.sendStatus(400)
+          return
+        }
+
+        let watching
+        if (id) watching = await user.isWatching(token, id)
+
         sendVal('Item history', {
           item: Number(id),
           isStatic: await ItemClassDatabase.isStaticItem(id),
           deleted: await ItemClassDatabase.isDeleted(id),
-          predefined: await itemClassChanges.isPredefined(id)
+          predefined: await itemClassChanges.isPredefined(id),
+          watching
         })
         break
       }
@@ -178,6 +188,9 @@ router.get('/:value', async (req, res) => {
           res.sendStatus(400)
           return
         }
+
+        let watching
+        if (id) watching = await user.isWatching(token, id)
 
         // if creating an item, figure out the class
         // otherwise it is unnecessary as the class will be embeded in the item row
@@ -227,12 +240,12 @@ router.get('/:value', async (req, res) => {
         switch (value) {
           // page for undeleting items
           case 'Undelete': {
-            sendVal('Undelete item', { row })
+            sendVal('Undelete item', { row, watching })
             break
           }
           // page for deleting items
           case 'Delete': {
-            sendVal('Delete item', { deleteData: (await editorData.getDeleteData(Number(id))), row })
+            sendVal('Delete item', { deleteData: (await editorData.getDeleteData(Number(id))), row, watching })
             break
           }
           // read and edit item pages
@@ -246,7 +259,8 @@ router.get('/:value', async (req, res) => {
               row,
               isDeleted,
               n,
-              isAdmin
+              isAdmin,
+              watching
             })
             break
           }
