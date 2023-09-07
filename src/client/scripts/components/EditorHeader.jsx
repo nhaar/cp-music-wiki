@@ -29,7 +29,7 @@ export default function EditorHeader ({ cur, isStatic, id, deleted, predefined, 
   useEffect(() => {
     (async () => {
       if (inverting) {
-        await postJSON('api/watch', { watch: !isWatching, id })
+        await postJSON('api/watch', { watch: !isWatching, id, days: 0 })
         setIsWatching(!isWatching)
         setInverting(false)
       }

@@ -86,6 +86,15 @@ class CommonUtils {
   static getExtremeCharEnclosurePattern (char) {
     return `(?<=^${char}).*(?=${char}$)`
   }
+
+  /**
+   * Convert a number `days` in days to miliseconds
+   * @param {number} days
+   * @returns {number}
+   */
+  static convertDaysToMs (days) {
+    return days * 86400000
+  }
 }
 
 module.exports = CommonUtils

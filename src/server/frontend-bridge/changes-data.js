@@ -4,6 +4,7 @@ const sql = require('../database/sql-handler')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
+const { convertDaysToMs } = require('../misc/common-utils')
 
 /** Class that generates data from the frontend that refers to items changing */
 class ChangesData {
@@ -84,7 +85,7 @@ class ChangesData {
    */
   static async getLastRevisions (days, number, filterfn = () => true) {
     // days is converted to ms
-    const timestamp = Date.now() - (days) * 86400000
+    const timestamp = Date.now() - convertDaysToMs(days)
     const revs = await sql.selectGreaterAndEqual('revisions', 'timestamp', timestamp)
     const dels = await sql.selectGreaterAndEqual('deletion_log', 'timestamp', timestamp)
     const rows = revs.concat(dels).filter(filterfn)

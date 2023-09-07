@@ -63,7 +63,7 @@ class SQLHandler {
    * @param {boolean} order - `true` if the selected rows should be ordered by ascending id, `false` otherwise
    * @returns {object[]} All selected rows
    */
-  async selectAndEquals (table, conditions, values, selecting, order = true) {
+  async selectAndEquals (table, conditions, values, selecting, order = false) {
     return await this.select(table, this.getAndEquals(conditions), values, selecting, order ? 'ORDER BY id ASC' : '')
   }
 
@@ -230,7 +230,17 @@ class SQLHandler {
    * @param {any} value - Value to match in column
    */
   async delete (table, column, value) {
-    await this.pool.query(`DELETE FROM ${table} WHERE ${column} = $1`, [value])
+    await this.deleteAndEquals(table, column, [value])
+  }
+
+  /**
+   * Delete all rows in a table named `table` where all columns in `columns` are equal to the respective values in `values`
+   * @param {string} table
+   * @param {string} columns - Column names separated by comma
+   * @param {any[]} values - Values in the same order the columns appear
+   */
+  async deleteAndEquals (table, columns, values) {
+    await this.pool.query(`DELETE FROM ${table} WHERE ${this.getAndEquals(columns, 0)}`, values)
   }
 
   /**
