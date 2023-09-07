@@ -105,14 +105,14 @@ class ItemClassChanges {
 
   /**
    * Push a request for updating an item to the database
-   * @param {string} token - Session token for user submitting the update
+   * @param {number} user - Id of user submitting the update
    * @param {ItemRow} row - Updated row object for the item
    * @param {boolean} isMinor - `true` if it is a minor edit, `false` otherwise
    * @param {string[]} tags - Tags to add to the revision
    * @returns {number} Id of changed item
    */
-  async pushChange (token, row, isMinor, tags = []) {
-    const id = await this.addChange(row, token, isMinor, tags)
+  async pushChange (user, row, isMinor, tags = []) {
+    const id = await this.addChange(row, user, isMinor, tags)
     await this.updateItem(row)
     return id
   }
@@ -261,12 +261,12 @@ class ItemClassChanges {
   /**
    * Add a revision for a change or creation to the revisions table
    * @param {Row} row - Row for the data being changed
-   * @param {string} token - Session token for the user submitting the revision
+   * @param {number} iser - Id of user submitting the revision
    * @param {boolean} isMinor - Whether this revision is a minor edit or not
    * @param {string[]} tags - Array of tags to add to the revision
    * @returns {number} Id of the changed item
    */
-  async addChange (row, token, isMinor, tags = []) {
+  async addChange (row, user, isMinor, tags = []) {
     let oldRow = await ItemClassDatabase.getUndeletedItem(row.id)
     let id = row.id
     let created = false
@@ -276,10 +276,9 @@ class ItemClassChanges {
       created = true
       oldRow = { data: itemClassHandler.defaults[row.cls] }
     }
-    const userId = await user.getUserId(token)
 
     const delta = jsondiffpatch.diff(oldRow.data, row.data)
-    await this.insertRev(id, userId, delta, isMinor, created, tags)
+    await this.insertRev(id, user, delta, isMinor, created, tags)
     return id
   }
 

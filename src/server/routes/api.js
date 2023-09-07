@@ -7,7 +7,7 @@ const PageGenerator = require('../gens/gen-list')
 const ApiMiddleware = require('../misc/api-middleware')
 const JSONErrorSender = require('../misc/json-error-sender')
 const { getToken, isObject } = require('../misc/server-utils')
-const { getMatch, isNumberLike } = require('../misc/common-utils')
+const { getMatch } = require('../misc/common-utils')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
@@ -62,11 +62,10 @@ router.post('/update', ApiMiddleware.checkIP, ApiMiddleware.getValidatorMiddlewa
   if (await itemClassChanges.didDataChange(row.id, row.data)) {
     const validationErrors = itemClassChanges.validate(row.cls, row.data)
     if (validationErrors.length === 0) {
-      const id = await itemClassChanges.pushChange(token, row, isMinor)
-      if (watchDays !== undefined && isNumberLike(watchDays)) {
-        const watchlistHandler = new WatchlistHandler(await user.getUserId(token))
-        await watchlistHandler.addToWatchlist(id, Number(watchDays))
-      }
+      const userId = await user.getUserId(token)
+      const id = await itemClassChanges.pushChange(userId, row, isMinor)
+      const watchlistHandler = new WatchlistHandler(userId)
+      await watchlistHandler.processAddRequest(id, watchDays)
       res.sendStatus(200)
     } else JSONErrorSender.sendBadReqJSON(res, { errors: validationErrors })
   } else {
@@ -126,7 +125,7 @@ router.post('/rollback', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, (req, 
  */
 router.post('/delete', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, async (req, res) => {
   // `id` is the item to delete, `token`, `reason` is the id of the reason and `otherReason` is a string for the other reason
-  const { id, reason, otherReason } = req.body
+  const { id, reason, otherReason, watchDays } = req.body
 
   // check if other items reference this item, if they do, send error
   const refs = await itemClassChanges.checkReferences(id)
@@ -135,7 +134,10 @@ router.post('/delete', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, async (r
     if (await ItemClassDatabase.isStaticItem(id) || await itemClassChanges.isPredefined(id)) {
       res.sendStatus(400)
     } else {
-      itemClassChanges.deleteItem(id, getToken(req), reason, otherReason)
+      const token = getToken(req)
+      itemClassChanges.deleteItem(id, token, reason, otherReason)
+      const watchlistHandler = new WatchlistHandler(await user.getUserId(token))
+      await watchlistHandler.processAddRequest(id, watchDays)
       res.sendStatus(200)
     }
   } else {

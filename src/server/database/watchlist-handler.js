@@ -1,4 +1,4 @@
-const { convertDaysToMs } = require('../misc/common-utils')
+const { convertDaysToMs, isNumberLike } = require('../misc/common-utils')
 const sql = require('./sql-handler')
 
 /** Handle the watchlist of the wiki users */
@@ -67,6 +67,18 @@ class WatchlistHandler {
       await this.removeFromWatchlist(item)
     }
     return (timestamp === '0' || !isExpired)
+  }
+
+  /**
+   * Get the variable `watchDays` from the API routes `api/delete` and `api/update` and process it to know if
+   * an item should be watched
+   * @param {number} item - Item id
+   * @param {string | number} watchDays
+   */
+  async processAddRequest (item, watchDays) {
+    if (watchDays !== undefined && isNumberLike(watchDays)) {
+      await this.addToWatchlist(item, Number(watchDays))
+    }
   }
 }
 

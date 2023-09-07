@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import '../../stylesheets/delete.css'
-import { getCookies, postJSON } from '../client-utils'
+import { getCheckedChangeHandler, getCookies, postJSON } from '../client-utils'
 import { getName } from '../../../server/misc/common-utils'
 import EditorHeader from './EditorHeader'
 
@@ -29,6 +29,7 @@ function ReferenceWarning ({ refs }) {
 export default function Delete ({ deleteData, row }) {
   const [reason, setReason] = useState(0)
   const [other, setOther] = useState('')
+  const [watch, setWatch] = useState(true)
 
   function handleSelect (e) {
     setReason(e.target.value)
@@ -44,7 +45,8 @@ export default function Delete ({ deleteData, row }) {
       cls: deleteData.cls,
       id: Number(row.id),
       token,
-      reason: Number(reason) === 0 ? other : reason
+      reason: Number(reason) === 0 ? other : reason,
+      watchDays: watch ? 0 : undefined
     })
     window.alert('Item deleted')
     window.location.href = '/Special:Items'
@@ -89,7 +91,7 @@ export default function Delete ({ deleteData, row }) {
             : undefined}
 
           <div className='delete--watch'>
-            <input type='checkbox' />
+            <input type='checkbox' checked={watch} onChange={getCheckedChangeHandler(setWatch)} />
             <span>Watch this page</span>
           </div>
           <button className='red-button delete--button' onClick={clickDelete}>
