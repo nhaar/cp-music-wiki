@@ -80,6 +80,21 @@ class WatchlistHandler {
       await this.addToWatchlist(item, Number(watchDays))
     }
   }
+
+  /**
+   * Get an array with all the items in this instance's user's watchlist
+   * @returns {number[]}
+   */
+  async getWatchedItems () {
+    const items = (await sql.selectWithColumn(WatchlistHandler.table, WatchlistHandler.userCol, this.user))
+      .map(row => row.item_id)
+    const nonExpiredItems = []
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (await this.isWatching(item)) nonExpiredItems.push(item)
+    }
+    return nonExpiredItems
+  }
 }
 
 module.exports = WatchlistHandler

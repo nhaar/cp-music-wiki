@@ -175,6 +175,11 @@ router.get('/:value', async (req, res) => {
         })
         break
       }
+      // page for an user's watchlist
+      case 'Watchlist': {
+        sendVal('Watchlist')
+        break
+      }
       // pages for updating items (read, edit, delete and undelete)
       case 'Read': case 'Editor': case 'Delete': case 'Undelete': {
         // `id` is item id, used to read/edit/delete

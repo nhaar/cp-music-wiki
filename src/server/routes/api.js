@@ -284,4 +284,12 @@ router.post('/watch', ApiMiddleware.checkId, async (req, res) => {
   res.sendStatus(200)
 })
 
+/** Route for accessing the watchlist */
+router.post('/get-watchlist', async (req, res) => {
+  const { days, number } = req.body
+  const watchlistHandler = new WatchlistHandler(await user.getUserId(getToken(req)))
+  const items = await watchlistHandler.getWatchedItems()
+  res.status(200).send(await ChangesData.getLastRevisions(days, number, row => items.includes(row.item_id)))
+})
+
 module.exports = router

@@ -24,6 +24,7 @@ module.exports = [
   'RequestReset',
   'Block',
   'ItemHistory',
+  'Watchlist',
   'gens/OstGen',
   'gens/SongGen',
   'gens/DisambigGen'

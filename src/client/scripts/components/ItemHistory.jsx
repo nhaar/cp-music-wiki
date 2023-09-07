@@ -7,7 +7,10 @@ export default function ItemHistory ({ item, isStatic, deleted, predefined, watc
   return (
     <div>
       <EditorHeader {...{ cur: 2, isStatic, id: item, deleted, predefined, watching }} />
-      <ChangesList route={`api/item-history?id=${item}`} />
+      <ChangesList
+        route={`api/item-history?id=${item}`}
+        text="Track this item's history."
+      />
     </div>
   )
 }

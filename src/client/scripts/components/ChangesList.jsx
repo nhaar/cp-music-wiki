@@ -375,7 +375,7 @@ function Changes ({ config, route }) {
 }
 
 /** Component for the recent changes page */
-export default function ChangesList ({ route }) {
+export default function ChangesList ({ route, text }) {
   const cookies = getCookies()
   const [results, setResults] = useState(Number(cookies.recentChangeResults) || 0)
   const [period, setPeriod] = useState(Number(cookies.recentChangePeriod) || 0)
@@ -403,7 +403,7 @@ export default function ChangesList ({ route }) {
   return (
     <div>
       <p>
-        Track the most recent changes to the wiki on this page.
+        {text}
       </p>
       <div className='settings--div'>
         <ChangesSetting config={props} />
