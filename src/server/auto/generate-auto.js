@@ -8,7 +8,7 @@ if (!fs.existsSync(autoPath)) fs.mkdirSync(autoPath)
 
 // generates the JavaScript file for all components
 list.forEach((component, i) => {
-  fs.writeFileSync(path.join(__dirname, autoPath, `${hashed[i]}.js`), `
+  fs.writeFileSync(path.join(autoPath, `${hashed[i]}.js`), `
     import React from 'react'
     import Main from '../components/Main.jsx'
     import Content from '../components/${component}.jsx'
