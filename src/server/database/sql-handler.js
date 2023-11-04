@@ -120,11 +120,15 @@ class SQLHandler {
    * @param {string} column - Name of the column to check the condition
    * @param {any} value - Value that the checking column needs to have
    * @param {string} selecting - Name of the column to extract the value
-   * @returns {any | undefined} Found row or `undefined` if nothing was found
+   * @returns {any | undefined} Found row's column value or `undefined` if nothing was found
    */
   async selectColumn (table, column, value, selecting) {
     const row = await this.selectRowWithColumn(table, column, value, selecting)
     return row && row[selecting]
+  }
+
+  async selectColumnValues (table, column, value, selecting) {
+    return (await (this.selectWithColumn(table, column, value))).map(row => row[selecting])
   }
 
   /**

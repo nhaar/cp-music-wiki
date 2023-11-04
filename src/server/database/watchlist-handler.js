@@ -62,11 +62,18 @@ class WatchlistHandler {
     if (!row) return false
 
     const timestamp = row[WatchlistHandler.expirationCol]
-    const isExpired = Date.now() < timestamp
-    if (isExpired) {
+    if (WatchlistHandler.isExpired(timestamp)) {
       await this.removeFromWatchlist(item)
     }
-    return (timestamp === '0' || !isExpired)
+    return WatchlistHandler.isStillWatching(timestamp)
+  }
+
+  static isExpired (timestamp) {
+    return Date.now() < timestamp
+  }
+
+  static isStillWatching (timestamp) {
+    return timestamp === '0' || !WatchlistHandler.isExpired(timestamp)
   }
 
   /**
@@ -86,14 +93,35 @@ class WatchlistHandler {
    * @returns {number[]}
    */
   async getWatchedItems () {
-    const items = (await sql.selectWithColumn(WatchlistHandler.table, WatchlistHandler.userCol, this.user))
-      .map(row => row.item_id)
+    const items = await sql.selectColumnValues(
+      WatchlistHandler.table,
+      WatchlistHandler.userCol,
+      this.user,
+      WatchlistHandler.itemCol
+    )
     const nonExpiredItems = []
     for (let i = 0; i < items.length; i++) {
       const item = items[i]
       if (await this.isWatching(item)) nonExpiredItems.push(item)
     }
     return nonExpiredItems
+  }
+
+  static async getWatchers (item) {
+    const rows = await sql.selectWithColumn(
+      WatchlistHandler.table,
+      WatchlistHandler.itemCol,
+      item
+    )
+
+    const watchers = []
+    rows.forEach(row => {
+      if (row[WatchlistHandler.itemCol] === item && WatchlistHandler.isStillWatching(row[WatchlistHandler.expirationCol])) {
+        watchers.push(row[WatchlistHandler.userCol])
+      }
+    })
+
+    return watchers
   }
 }
 

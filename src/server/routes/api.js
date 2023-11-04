@@ -15,6 +15,7 @@ const ChangesData = require('../frontend-bridge/changes-data')
 const UserBlocker = require('../database/user-blocker')
 const ItemPermissionFilter = require('../item-class/item-permission-filter')
 const WatchlistHandler = require('../database/watchlist-handler')
+const UserAlerts = require('../database/user-alerts')
 
 /** Route for getting the default data object of a class */
 router.post('/default', ApiMiddleware.checkClass, async (req, res) => {
@@ -290,6 +291,17 @@ router.post('/get-watchlist', async (req, res) => {
   const watchlistHandler = new WatchlistHandler(await user.getUserId(getToken(req)))
   const items = await watchlistHandler.getWatchedItems()
   res.status(200).send(await ChangesData.getLastRevisions(days, number, row => items.includes(row.item_id)))
+})
+
+/** Route for getting the user's alerts */
+router.post('/get-notif-info', async (req, res) => {
+  const token = getToken(req)
+  const info = await UserAlerts.getNotififInfo(token)
+  if (info === undefined) {
+    res.sendStatus(403)
+    return
+  }
+  res.status(200).send(info)
 })
 
 module.exports = router

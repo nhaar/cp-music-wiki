@@ -9,6 +9,7 @@ import UserIcon from '../../images/user-icon.png'
 import ArrowDown from '../../images/arrow-down.png'
 import Logout from '../../images/logout.png'
 import Login from '../../images/login.png'
+import Bell from '../../images/bell.png'
 import { getCookies, postAndGetJSON } from '../client-utils'
 import SearchQuery from './SearchQuery'
 
@@ -52,6 +53,121 @@ function Searchbar () {
   )
 }
 
+function NotifNumber ({ number }) {
+  let fontSize = '12px'
+  let content = number
+  if (number > 99) {
+    fontSize = '9px'
+    content = '99+'
+  }
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      color: 'white',
+      backgroundColor: 'red',
+      borderRadius: '50%',
+      width: '20px',
+      height: '20px',
+      fontSize,
+      cursor: 'default',
+      userSelect: 'none',
+      textAlign: 'center',
+      verticalAlign: 'center',
+      display: 'flex',
+      justifyContent: 'center',
+      alignContent: 'center',
+      flexDirection: 'column',
+      pointerEvents: 'none'
+    }}
+    >
+      {content}
+    </div>
+  )
+}
+
+function NotifMenu ({ alerts }) {
+  return (
+    <div
+      className='standard-border center-elements' style={{
+        position: 'absolute',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'right',
+        right: '0'
+      }}
+    >
+      {alerts.length === 0
+        ? 'No notifications found'
+        : alerts.map((alert, i) => (
+          <div
+            key={i} style={{
+              padding: '5px',
+              width: '100%',
+              minWidth: '500px',
+              maxWidth: '700px',
+              minHeight: '16px',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              textAlign: 'right',
+              marginRight: '5px'
+            }}
+          >
+            {alert.text}
+          </div>
+        ))}
+    </div>
+  )
+}
+
+function NotificationIcon ({ user }) {
+  const [info, setInfo] = useState({})
+  const [showMenu, setShowMenu] = useState(false)
+  useEffect(() => {
+    (async () => {
+      setInfo(await postAndGetJSON('api/get-notif-info', { token: user.token }))
+    })()
+  }, [])
+
+  console.log(info)
+
+  function handleClick () {
+    // setInfo(i => {
+    //   const newI = { ...i }
+    //   newI.unread = 0
+    //   return newI
+    // })
+
+    // send read all thing
+    // show menu
+    setShowMenu(!showMenu)
+  }
+
+  return (
+    <div
+      style={{
+        position: 'relative'
+      }} onClick={handleClick}
+    >
+      <img
+        src={Bell}
+        className='icon-img'
+        style={{
+          width: '20px',
+          height: '20px',
+          cursor: 'pointer',
+          padding: '10px'
+        }}
+      />
+      {(info.unread !== undefined && info.unread > 0) && <NotifNumber number={info.unread} />}
+      {showMenu && <NotifMenu alerts={info.alerts} />}
+    </div>
+
+  )
+}
+
 /** Component for the right portion of the header, which contains user related elements */
 function UserArea ({ user }) {
   const [showOptions, setShowOptions] = useState(false)
@@ -91,6 +207,7 @@ function UserArea ({ user }) {
     ? (
       <div>
         <a href='/'> {user.user} </a>
+        <NotificationIcon user={user} />
         <div className='user-imgs' onClick={toggleOptions}>
           <img src={UserIcon} className='user-icon' />
           <img src={ArrowDown} className='user-arrow' />

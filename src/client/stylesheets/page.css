@@ -408,3 +408,9 @@ input:focus {
 .white-bg {
   background-color: white;
 }
+
+.center-elements {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

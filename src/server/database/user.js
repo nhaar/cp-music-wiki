@@ -63,6 +63,23 @@ class UserHandler {
         expiration_timestamp NUMERIC
       )
     `)
+
+    sql.create(`
+      alerts (
+        id SERIAL PRIMARY KEY,
+        timestamp NUMERIC,
+        text TEXT
+      )
+    `)
+
+    sql.create(`
+      user_alert (
+        id SERIAL PRIMARY KEY,
+        user_id INT,
+        alert_id INT,
+        read INT
+      )
+    `)
   }
 
   /**
@@ -288,6 +305,10 @@ ${URL}Special:ResetPassword?t=${linkToken}`)
   async isWatching (token, id) {
     const watchlistHandler = new WatchlistHandler(await this.getUserId(token))
     return await watchlistHandler.isWatching(id)
+  }
+
+  async getUsername (id) {
+    return await sql.selectColumn('wiki_users', 'id', id, 'name')
   }
 }
 

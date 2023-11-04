@@ -9,6 +9,7 @@ const { compareObjects, isObject, getLastElement } = require('../misc/server-uti
 const querywordsHandler = require('./querywords-handler')
 const ObjectPathHandler = require('../misc/object-path-handler')
 const CellList = require('../database/cell-list')
+const UserAlerts = require('../database/user-alerts')
 
 /** Handles a revision's tags */
 class Tagger extends CellList {
@@ -114,6 +115,7 @@ class ItemClassChanges {
   async pushChange (user, row, isMinor, tags = []) {
     const id = await this.addChange(row, user, isMinor, tags)
     await this.updateItem(row)
+    UserAlerts.sendItemChangedNotification(id, user)
     return id
   }
 

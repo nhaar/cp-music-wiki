@@ -1,6 +1,7 @@
 const { keysInclude } = require('../misc/common-utils')
 const ObjectPathHandler = require('../misc/object-path-handler')
 const cptIntrepreter = require('./cpt-interpreter')
+const ItemClassDatabase = require('./item-class-database')
 
 /**
  * Object with the processed information for an item class
@@ -118,6 +119,10 @@ class ItemClassHandler {
    */
   isClassName (str) {
     return keysInclude(this.classes, str)
+  }
+
+  getPrettyName (cls) {
+    return this.classes[cls].name
   }
 }
 

@@ -175,6 +175,10 @@ class ItemClassDatabase {
       return ''
     }
   }
+
+  static async getClassName (id) {
+    return itemClassHandler.getPrettyName(await ItemClassDatabase.getClass(id))
+  }
 }
 
 module.exports = ItemClassDatabase
