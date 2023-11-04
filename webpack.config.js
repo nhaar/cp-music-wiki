@@ -36,14 +36,13 @@ class WebpackSetup {
   getEntry (isProduction) {
     const entry = {}
     const hotReloader = 'webpack-hot-middleware/client?reload=true'
-    const bundle = path.join(__dirname, `src/client/scripts/auto/${name}.js`)
-    const entryArray = [bundle]
-    if (!isProduction) entryArray.unshift(hotReloader)
-    if (isProduction)
     this.names.forEach(name => {
-  entry[name] = entryArray
-})
-return entry
+      const bundle = path.join(__dirname, `src/client/scripts/auto/${name}.js`)
+      const entryArray = [bundle]
+      if (!isProduction) entryArray.unshift(hotReloader)
+      entry[name] = entryArray
+    })
+    return entry
 }
 
 /**
