@@ -1,11 +1,12 @@
 const crypto = require('crypto')
+const bcrypt = require('bcrypt')
 
 const validator = require('validator')
 
 const sql = require('./sql-handler')
 const { MIN_PASSWORD_LENGTH } = require('../misc/common-utils')
 const mailer = require('../misc/email')
-const { URL, SALT, ITERATIONS, KEYLEN, DIGEST } = require('../../../config')
+const { URL, SALT_ROUNDS, SALT, ITERATIONS, KEYLEN, DIGEST } = require('../../../config')
 const { getToken } = require('../misc/server-utils')
 const WatchlistHandler = require('./watchlist-handler')
 
@@ -112,12 +113,33 @@ class UserHandler {
   }
 
   /**
-   * Encrypt a value using the `config` encryption values
+   * Encrypt an IP
    * @param {string} value - Text to encrypt
    * @returns {string} Encrypted hash
    */
-  getHash (value) {
+  getIPHash (value) {
     return crypto.pbkdf2Sync(value, SALT, ITERATIONS, KEYLEN, DIGEST).toString('hex')
+  }
+
+  /**
+   * Encrypt a password
+   * @param {string} value - Text to encrypt
+   * @returns {string} Encrypted hash
+   */
+  async getPasswordHash (value) {
+    const salt = await new Promise((resolve, reject) => {
+      bcrypt.genSalt(SALT_ROUNDS, (err, salt) => {
+        if (err) reject(err)
+        else resolve(salt)
+      })
+    })
+    return await new Promise((resolve, reject) => {
+      bcrypt.hash(value, salt, (err, hash) => {
+        console.log(hash)
+        if (err) reject(err)
+        else resolve(hash)
+      })
+    })
   }
 
   /**
@@ -138,7 +160,7 @@ class UserHandler {
     const internalData = await sql.selectRowWithColumn('wiki_users', 'name', user)
     if (!internalData) return
 
-    if (internalData.user_password === this.getHash(password)) return internalData.id
+    if (bcrypt.compareSync(password, internalData.user_password)) return internalData.id
     else return null
   }
 
@@ -156,7 +178,7 @@ class UserHandler {
     sql.updateById('wiki_users', 'session_token', [sessionToken], userId)
     const previousIps = (await sql.selectWithColumn('user_ip', 'user_id', userId)).map(row => row.ip)
 
-    if (!previousIps.includes(this.getHash(ip))) await this.insertIp(userId, ip)
+    if (!previousIps.includes(await this.getIPHash(ip))) await this.insertIp(userId, ip)
     return sessionToken
   }
 
@@ -168,7 +190,7 @@ class UserHandler {
    * @param {string} ip - IP address requesting the account creation
    */
   async createAccount (name, password, email, ip) {
-    const hash = this.getHash(password)
+    const hash = await this.getPasswordHash(password)
     await sql.insert('wiki_users', 'name, user_password, email, created_timestamp, perms', [name, hash, email, Date.now(), 'user'])
     const id = await sql.getBiggestSerial('wiki_users')
     await this.insertIp(id, ip)
@@ -180,7 +202,7 @@ class UserHandler {
    * @param {text} ip - IP address
    */
   async insertIp (user, ip) {
-    await sql.insert('user_ip', 'user_id, ip', [user, this.getHash(ip)])
+    await sql.insert('user_ip', 'user_id, ip', [user, await this.getIPHash(ip)])
   }
 
   /**
@@ -271,7 +293,7 @@ ${URL}Special:ResetPassword?t=${linkToken}`)
   async resetPassword (token, newPass) {
     const row = await this.getResetLink(token)
     if (row) {
-      await sql.updateById('wiki_users', 'user_password', [this.getHash(newPass)], row.user_id)
+      await sql.updateById('wiki_users', 'user_password', [await this.getPasswordHash(newPass)], row.user_id)
     }
   }
 

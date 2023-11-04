@@ -76,7 +76,7 @@ class ApiMiddleware {
    * @param {NextFunction} next - Express next function
    */
   static async checkIP (req, res, next) {
-    const hash = user.getHash(req.ip)
+    const hash = await user.getIPHash(req.ip)
     const users = (await sql.selectWithColumn('user_ip', 'ip', hash)).map(row => row.user_id)
     let isValid = true
     for (let i = 0; i < users.length; i++) {
