@@ -264,7 +264,8 @@ router.post('/block', ApiMiddleware.checkAdmin, ApiMiddleware.checkIP, async (re
     return
   }
   const blocker = new UserBlocker({ username: userName })
-  blocker.swapBlock(reason)
+  const token = getToken(req)
+  blocker.swapBlock(reason, token)
   res.sendStatus(200)
 })
 

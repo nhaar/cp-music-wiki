@@ -51,6 +51,7 @@ class UserHandler {
         id SERIAL PRIMARY KEY,
         user_id INT,
         timestamp NUMERIC,
+        blocker_id INT,
         reason TEXT
       )
     `)

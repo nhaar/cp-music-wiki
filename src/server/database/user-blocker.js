@@ -35,12 +35,13 @@ class UserBlocker {
   /**
    * Block the instance's user if they are unblocked, unblock if they are blocked
    * @param {string} reason - Reason for blocking/unblocking
+   * @param {string} blockerSession - Session token of the user blocking/unblocking
    */
-  async swapBlock (reason) {
+  async swapBlock (reason, blockerSession) {
     if (!this.id) await this.getId()
     const numberVal = Number(!await this.isBlocked())
     await sql.updateById('wiki_users', 'blocked', numberVal, this.id)
-    await sql.insert('block_log', 'user_id, timestamp, reason, is_block', [this.id, Date.now(), reason, numberVal])
+    await sql.insert('block_log', 'user_id, timestamp, reason, is_block, blocker_id', [this.id, Date.now(), reason, numberVal, user.getUserId(blockerSession)])
     // log out if blocking user
     if (numberVal) {
       await this.getSession()
