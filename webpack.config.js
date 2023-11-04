@@ -30,25 +30,32 @@ class WebpackSetup {
 
   /**
    * Get the entry property for all of the entry point javascript files
+   * @param {boolean} isProduction - If the webpack configuration is for production
    * @returns {object} The entry property object
    */
-  getEntry () {
+  getEntry (isProduction) {
     const entry = {}
+    const hotReloader = 'webpack-hot-middleware/client?reload=true'
+    const bundle = path.join(__dirname, `src/client/scripts/auto/${name}.js`)
+    const entryArray = [bundle]
+    if (!isProduction) entryArray.unshift(hotReloader)
+    if (isProduction)
     this.names.forEach(name => {
-      entry[name] = ['webpack-hot-middleware/client?reload=true', path.join(__dirname, `src/client/scripts/auto/${name}.js`)]
-    })
-    return entry
-  }
+  entry[name] = entryArray
+})
+return entry
+}
 
-  /**
-   * Get the `module.exports` for the webpack configuration
-   * @returns {object} The object for the exports
-   */
-  getExports () {
+/**
+ * Get the `module.exports` for the webpack configuration
+ * @returns {object} The object for the exports
+*/
+getExports () {
+    const isProduction = process.env.NODE_ENV === 'production'
+    
     // apart from a few, most of this is just the standard webpack configuration
-    return {
-      mode: 'development',
-      entry: this.getEntry(),
+    const standardExport = {
+      entry: this.getEntry(isProduction),
       module: {
         rules: [
           {
@@ -83,13 +90,22 @@ class WebpackSetup {
         path: path.join(__dirname, 'src/client/dist'),
         filename: '[name].bundle.js',
         publicPath: '/'
-      },
-      devtool: 'inline-source-map',
-      plugins: [
-        new webpack.HotModuleReplacementPlugin(),
-        this.lintPlugin
-      ]
+      }
     }
+
+    // for hot reload
+    if (!isProduction) {
+      Object.assign(standardExport, {
+        mode: 'development',
+        devtool: 'inline-source-map',
+        plugins: [
+          new webpack.HotModuleReplacementPlugin(),
+          this.lintPlugin
+        ]
+      })
+    }
+
+    return standardExport
   }
 }
 
