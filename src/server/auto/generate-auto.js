@@ -3,9 +3,12 @@ const path = require('path')
 const list = require('./auto-list')
 const hashed = require('./hashed-list')
 
+const autoPath = path.join(__dirname, '../../client/scripts/auto')
+if (!fs.existsSync(autoPath)) fs.mkdirSync(autoPath)
+
 // generates the JavaScript file for all components
 list.forEach((component, i) => {
-  fs.writeFileSync(path.join(__dirname, `../../client/scripts/auto/${hashed[i]}.js`), `
+  fs.writeFileSync(path.join(__dirname, autoPath, `${hashed[i]}.js`), `
     import React from 'react'
     import Main from '../components/Main.jsx'
     import Content from '../components/${component}.jsx'
