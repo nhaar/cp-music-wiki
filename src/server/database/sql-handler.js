@@ -145,6 +145,18 @@ class SQLHandler {
   }
 
   /**
+   * Select a row from a table where a column matches a string value, case insensitive
+   * @param {string} table - Name of the table
+   * @param {string} column - Name of the column to check
+   * @param {string} value - Value to match the column, case insensitive
+   * @param {string} selecting - The columns to include, separated by commas, or leave out for al columns
+   * @returns {object | undefined} Found row if it exists or `undefined` otherwise
+   */
+  selectCaseInsensitive = async (table, column, value, selecting = '*') => {
+    return await this.select(table, `LOWER(${column}) = LOWER($1)`, [value], selecting)
+  }
+
+  /**
    * Select the row matching an id in a table
    * @param {string} table - Name of the table
    * @param {number} id - Id of the row

@@ -24,7 +24,9 @@ class UserBlocker {
 
   /** Save the instance's user's id in the instance */
   async getId () {
-    this.id = (await this.getRow()).id
+    const row = await this.getRow()
+    // if user not found, row will be undefined
+    if (row) this.id = row.id
   }
 
   /** Save the instance's user's session in the instance */
@@ -55,6 +57,9 @@ class UserBlocker {
    */
   async isBlocked () {
     if (!this.id) await this.getId()
+    // no id: user not found, will be handled after this
+    if (!this.id) return false
+
     return Boolean((await sql.selectId('wiki_users', this.id)).blocked)
   }
 }

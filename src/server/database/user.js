@@ -157,7 +157,7 @@ class UserHandler {
    * @returns {number | null} Returns the user's id if the credentials are correct, `null` otherwise
    */
   async confirmCredentials (user, password) {
-    const internalData = await sql.selectRowWithColumn('wiki_users', 'name', user)
+    const internalData = await this.getUserFromName(user)
     if (!internalData) return
 
     if (bcrypt.compareSync(password, internalData.user_password)) return internalData.id
@@ -313,10 +313,15 @@ ${URL}Special:ResetPassword?t=${linkToken}`)
   /**
    * Get an user's row based on their name
    * @param {string} name - Username
-   * @returns {object} User's row object
+   * @returns {object} User's row object, or an empty object if the user doesn't exist
    */
   async getUserFromName (name) {
-    return await sql.selectRowWithColumn('wiki_users', 'name', name)
+    const rows = await sql.selectCaseInsensitive('wiki_users', 'name', name)
+    if (!rows) {
+      return {}
+    } else {
+      return rows[0]
+    }
   }
 
   /**
