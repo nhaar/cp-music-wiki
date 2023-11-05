@@ -43,15 +43,15 @@ class WebpackSetup {
       entry[name] = entryArray
     })
     return entry
-}
+  }
 
-/**
+  /**
  * Get the `module.exports` for the webpack configuration
  * @returns {object} The object for the exports
 */
-getExports () {
+  getExports () {
     const isProduction = process.env.NODE_ENV === 'production'
-    
+
     // apart from a few, most of this is just the standard webpack configuration
     const standardExport = {
       entry: this.getEntry(isProduction),

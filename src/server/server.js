@@ -42,6 +42,9 @@ require('./item-class/item-class-database').initDatabase().then(() => {
   app.use('/', require('./routes/index'))
 })
 
+// schedule backups
+require('./database/backuper').scheduleBackups()
+
 // run on custom or environment port
 const SERVER_PORT = process.env.PORT || require('../../config').PORT
 app.listen(SERVER_PORT, () => {
