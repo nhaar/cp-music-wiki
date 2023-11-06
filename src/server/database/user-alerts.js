@@ -1,5 +1,4 @@
 const ItemClassDatabase = require('../item-class/item-class-database')
-const { itemClassHandler } = require('../item-class/item-class-handler')
 const sql = require('./sql-handler')
 const user = require('./user')
 const WatchlistHandler = require('./watchlist-handler')
