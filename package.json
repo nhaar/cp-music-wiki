@@ -1,6 +1,6 @@
 {
   "name": "cp-music-wiki",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "src/server/server.js",
   "scripts": {
