@@ -126,7 +126,7 @@ class ItemClassChanges {
   async updateItem (row) {
     const { data, id, cls } = row
 
-    if (id === undefined) ItemClassDatabase.insertItem(cls, data)
+    if (id === undefined) await ItemClassDatabase.insertItem(cls, data)
     else {
       await sql.updateOneCondition(
         'items', 'data, querywords', [JSON.stringify(data), querywordsHandler.getQueryWords(cls, data)], 'id', id
