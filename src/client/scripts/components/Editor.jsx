@@ -56,8 +56,15 @@ function getSimpleTextModule (Tag, type) {
       updateData(path, type !== 'number' ? value : Number(value) || null)
     }
 
+    // avoiding being too small in nested tables
+    const width = type === 'date' ? '150px' : '100%'
+
     return (
-      <Tag value={newValue} type={type} onChange={updateValue} readOnly={!isEditor} />
+      <Tag
+        value={newValue} type={type} onChange={updateValue} readOnly={!isEditor} style={{
+          minWidth: width
+        }}
+      />
     )
   }
 }
