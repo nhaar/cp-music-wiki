@@ -852,7 +852,7 @@ export default function Editor ({ editor, structure, isStatic, row, isDeleted, n
           TEXTLONG: TextAreaModule,
           INT: NumberInputModule,
           ID: getSearchQueryModule(prop.args && prop.args[0]),
-          SELECT: getOptionSelectModule(prop.args && prop.args[0]),
+          SELECT: getOptionSelectModule(prop.args && prop.args),
           DATE: DateInputModule,
           BOOLEAN: CheckboxModule,
           FILE: MusicFileModule
