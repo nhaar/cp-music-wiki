@@ -7,7 +7,8 @@
     "start": "nodemon src/server/server.js --ignore src/client && standard --fix",
     "hot": "set NODE_ENV=hot&& npm run start",
     "production": "NODE_ENV=production node src/server/server.js",
-    "build": "node src/server/auto/generate-auto.js && webpack --mode production"
+    "build": "node src/server/auto/generate-auto.js && webpack --mode production",
+    "backup": "node src/server/database/create-backup.js"
   },
   "author": "",
   "license": "ISC",
