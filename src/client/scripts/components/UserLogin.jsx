@@ -8,12 +8,14 @@ export default function UserLogin () {
     user: '',
     password: ''
   })
+  const [remember, setRemember] = React.useState(false)
 
   async function click () {
     const data = await postAndGetJSON('api/login', values)
     const token = data.token
     if (token) {
-      document.cookie = `session=${token}`
+      const expires = remember ? '; expires=Fri, 31 Dec 9999 23:59:59 GMT' : ''
+      document.cookie = `session=${token}${expires}`
       document.cookie = `username=${values.user}`
       window.alert('Login successful')
       window.location.href = '/'
@@ -47,6 +49,29 @@ export default function UserLogin () {
       <button className='blue-button' onClick={click}>
         Log in
       </button>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'row',
+        height: '32px'
+      }}
+      >
+        <input
+          type='checkbox' value={remember} onChange={e => setRemember(e.target.checked)} style={{
+            height: '100%',
+            cursor: 'pointer'
+          }}
+        />
+        <div style={{
+          alignItems: 'center',
+          display: 'flex',
+          height: '100%',
+          paddingTop: '4px',
+          justifyContent: 'center'
+        }}
+        >
+          Remember me
+        </div>
+      </div>
     </div>
   )
 }
