@@ -228,6 +228,19 @@ class ItemClassChanges {
                   if (!validDate) errorMsg('a valid date string (YYYY-MM-DD)')
                   break
                 }
+                case 'SELECT': {
+                  let valid = false
+                  for (let i = 0; i < prop.args.length; i++) {
+                    const option = prop.args[i]
+                    // from the specific syntax of CPT select options
+                    if (option.match(`\\[${value}`)) {
+                      valid = true
+                      break
+                    }
+                  }
+                  if (!valid) errorMsg('one of the available SELECT options')
+                  break
+                }
                 default: {
                   throw new Error('Unexpected default value')
                 }
