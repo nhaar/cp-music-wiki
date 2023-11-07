@@ -43,7 +43,7 @@ function modifier ({ current, previousModified, structure }) {
     const arrayElement = ObjectPathHandler.readObjectPath(modified, oldVersionPath)
     const wrapper = { value: arrayElement[index] }
     if (index < previousLength) {
-      wrapper.id = previousArrayElement[index]
+      wrapper.id = previousArrayElement[index].id
     } else {
       wrapper.id = getUniqueHash()
     }
