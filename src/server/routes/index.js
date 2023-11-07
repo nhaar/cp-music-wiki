@@ -385,8 +385,10 @@ async function sendView (req, res, scriptName, title, arg = {}) {
  */
 async function sendDiffView (req, res, cur, old) {
   const diffData = [old, cur]
+  const diffRow = [...diffData]
   for (let i = 0; i < diffData.length; i++) {
     diffData[i] = await itemClassChanges.getRevisionData(Number(diffData[i]))
+    diffRow[i] = await sqlHandler.selectId('revisions', diffRow[i])
   }
   // send error if either revisions don't exist
   if (diffData.includes(null)) {
@@ -395,7 +397,7 @@ async function sendDiffView (req, res, cur, old) {
   }
 
   // send error if trying to diff two different items
-  if (diffData[0].item_id !== diffData[1].item_id) {
+  if (diffRow[0].item_id !== diffRow[1].item_id) {
     res.sendStatus(400)
     return
   }
