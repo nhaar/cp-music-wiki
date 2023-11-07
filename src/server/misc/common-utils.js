@@ -123,6 +123,14 @@ class CommonUtils {
   static getRandomInt (a = 0, b) {
     return Math.floor(Math.random() * (b - a)) + a
   }
+
+  /**
+   * Generate a random and unique hash
+   * @returns {string} A string containing an unique value
+   */
+  static getUniqueHash () {
+    return [Date.now(), CommonUtils.getRandomInt(0, 4096)].map(n => n.toString(16)).join('')
+  }
 }
 
 module.exports = CommonUtils

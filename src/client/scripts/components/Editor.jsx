@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
-import { findInObject, getCheckedChangeHandler, getCookies, getUniqueHash, getValueChangeHandler, postAndGetJSON, postJSON } from '../client-utils'
+import { findInObject, getCheckedChangeHandler, getCookies, getValueChangeHandler, postAndGetJSON, postJSON } from '../client-utils'
 import { ItemContext } from '../contexts/ItemContext'
 import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
@@ -13,7 +13,7 @@ import Unfocus from '../../images/four-corner-arrows.png'
 import { EditorDataContext } from '../contexts/EditorDataContext'
 import { AdminContext } from '../contexts/AdminContext'
 import { AnyoneContext } from '../contexts/AnyoneContext'
-import { deepcopy } from '../../../server/misc/common-utils'
+import { deepcopy, getUniqueHash } from '../../../server/misc/common-utils'
 
 /**
  * All the `Declrs` that correspond to a table module's children modules

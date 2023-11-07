@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/server/server.js",
   "scripts": {
-    "start": "nodemon src/server/server.js --ignore src/client && standard --fix",
+    "start": "nodemon src/server/server.js --ignore src/client && standard src --fix",
     "hot": "set NODE_ENV=hot&& npm run start",
     "production": "NODE_ENV=production node src/server/server.js",
     "build": "node src/server/auto/generate-auto.js && webpack --mode production",
