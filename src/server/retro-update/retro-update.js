@@ -37,7 +37,7 @@ class RetroUpdate {
    * @param {number} id - Item id
    * @returns {import('../database/sql-handler').Row[]} Array with row for all patches
    */
-  static async getsPatches (id) {
+  static async getPatches (id) {
     return await sqlHandler.selectWithColumn('revisions', 'item_id', id, '*', true)
   }
 
