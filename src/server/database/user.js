@@ -135,7 +135,6 @@ class UserHandler {
     })
     return await new Promise((resolve, reject) => {
       bcrypt.hash(value, salt, (err, hash) => {
-        console.log(hash)
         if (err) reject(err)
         else resolve(hash)
       })
