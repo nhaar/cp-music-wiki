@@ -10,23 +10,15 @@ const { itemClassHandler } = require('../item-class/item-class-handler')
 const Backuper = require('../database/backuper')
 
 /**
- * A function that takes as the first argunent the data for an unmodified version for a data object, as the second argument
- * the data for the PREVIOUS modified version of the same item, relative to the unmodified version, and as the third argument
- *  the structure of the item class, and returns the modified version
+ * A function that gets the modified data for a version. It takes as the argument an object, containing the
+ * following properties:
  *
- * In a simplistic way, if you consider an item as having multiple versions, before any modification:
- *
- * ```js
- * [originalVersion_0, originalVersion_1, ..., originalVersion_i, ... originalVersion_current]
- * ```
- *
- * If the first argument is `originalVersion_i`, then the array of modified versions so far is
- * ```js
- * [modifiedVersion_0, modifiedVersion_1, ..., modifiedVersion_i-1]
- * ```
- *
- * And thus the second argument is `modifiedVersion_i-1`
- * @typedef {function(object, object, ObjectStructure) : object} ModifierFunction
+ * * `current`: The target data object
+ * * `previousModified`: Modified data object for the previous version
+ * * `previousUnmodified`: Unmodified data object for the previous version
+ * * `cls`: Name of the class of the item
+ * * `structure`: Structure object for the class
+ * @typedef {function(object) : object} ModifierFunction
  */
 
 /**
@@ -80,7 +72,14 @@ class RetroUpdate {
     let previous = newVersions[0]
     for (let i = 1; i < originalVersions.length; i++) {
       const current = originalVersions[i]
-      const modified = modifierFunction(deepcopy(current), deepcopy(previous), structure)
+      const args = {
+        cls,
+        structure,
+        current: deepcopy(current),
+        previousModified: deepcopy(previous),
+        previousUnmodified: deepcopy(originalVersions[i - 1])
+      }
+      const modified = modifierFunction(args)
       newVersions.push(modified)
       previous = modified
     }
