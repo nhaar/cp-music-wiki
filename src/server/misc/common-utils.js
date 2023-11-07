@@ -129,7 +129,7 @@ class CommonUtils {
    * @returns {string} A string containing an unique value
    */
   static getUniqueHash () {
-    return [Date.now(), CommonUtils.getRandomInt(0, 4096)].map(n => n.toString(16)).join('')
+    return [CommonUtils.getRandomInt(0, 1048576/* 16^5 */), Date.now()].map(n => n.toString(16)).join('')
   }
 }
 
