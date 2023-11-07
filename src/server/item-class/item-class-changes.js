@@ -80,7 +80,7 @@ class ItemClassChanges {
 
       paths.forEach(path => {
         allElements.forEach(element => {
-          if (ObjectPathHandler.travelPath(path, element.data).includes(id)) {
+          if (ObjectPathHandler.travelItemPath(path, element.data).includes(id)) {
             encountered.push([itemClassHandler.classes[cls].name, getName(element.querywords)])
           }
         })
@@ -154,6 +154,7 @@ class ItemClassChanges {
 
     // iterate through each property and each validation statement in the definition to validate it
     const iterateObject = (structure, validators, itemData, path) => {
+      console.log(itemData)
       validators.forEach(validator => {
         try {
           validator.checkRule(itemData, errors)
@@ -167,12 +168,14 @@ class ItemClassChanges {
           if (prop.array && !ignoreArray) {
             // iterate through all the nested arrays to find all destination paths
             const dimensionIterator = (array, level) => {
+              console.log('dim ite')
+              console.log(array)
               if (Array.isArray(array)) {
                 for (let i = 0; i < array.length; i++) {
                   const newPath = deepcopy(path)
                   newPath.push(`[${i}]`)
                   if (level === 1) {
-                    checkType(array[i], prop, newPath, true)
+                    checkType(array[i].value, prop, newPath, true)
                   } else {
                     dimensionIterator(array[i], level - 1)
                   }
@@ -187,11 +190,13 @@ class ItemClassChanges {
               errors.push(`${path.join('')} must be ${indefiniteDescription}`)
             }
             if (prop.object) {
+              console.log(value)
               if (isObject(value)) {
                 iterateObject(prop.content, prop.validators, value, path)
               } else errorMsg('a valid object')
             } else {
               if (prop.query) {
+                console.log(value)
                 if (typeof value !== 'string' || !value) {
                   errors.push(`Must give a name (error at ${path.join('')})`)
                 }

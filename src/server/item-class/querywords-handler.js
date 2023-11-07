@@ -33,7 +33,7 @@ class QuerywordsHandler {
     const paths = this.queryIndex[cls]
 
     paths.forEach(path => {
-      found.push(...ObjectPathHandler.travelPath(path, itemData))
+      found.push(...ObjectPathHandler.travelItemPath(path, itemData))
     })
 
     return found.join('&&')

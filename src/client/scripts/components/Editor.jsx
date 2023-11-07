@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import '../../stylesheets/editor.css'
 import QueryInput from './QueryInput'
-import { findInObject, getCheckedChangeHandler, getCookies, getValueChangeHandler, postAndGetJSON, postJSON } from '../client-utils'
+import { findInObject, getCheckedChangeHandler, getCookies, getUniqueHash, getValueChangeHandler, postAndGetJSON, postJSON } from '../client-utils'
 import { ItemContext } from '../contexts/ItemContext'
 import { EditorContext } from '../contexts/EditorContext'
 import QuestionMark from '../../images/question-mark.png'
@@ -13,6 +13,7 @@ import Unfocus from '../../images/four-corner-arrows.png'
 import { EditorDataContext } from '../contexts/EditorDataContext'
 import { AdminContext } from '../contexts/AdminContext'
 import { AnyoneContext } from '../contexts/AnyoneContext'
+import { deepcopy } from '../../../server/misc/common-utils'
 
 /**
  * All the `Declrs` that correspond to a table module's children modules
@@ -220,12 +221,10 @@ function MusicFileModule ({ value, path }) {
 function GridRowModule ({ value, Component, declrs, path }) {
   const [grid, setGrid] = useState(() => {
     if (value) {
-      let k = 0
-      return value.map(row => row.map(cell => {
-        k++
-        return { id: k, value: cell }
-      }))
-    } else return []
+      return deepcopy(value)
+    } else {
+      return []
+    }
   })
   const [rows, setRows] = useState(value.length || 0)
   const [columns, setColumns] = useState(() => {
@@ -241,7 +240,6 @@ function GridRowModule ({ value, Component, declrs, path }) {
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
   const [currentHover, setCurrentHover] = useState(-1)
-  const [seq, setSeq] = useState(columns * rows + 1)
   const updateData = useContext(ItemContext)
   const isEditor = useContext(EditorContext)
   const isAdmin = useContext(AdminContext)
@@ -266,7 +264,7 @@ function GridRowModule ({ value, Component, declrs, path }) {
   function setData (callback) {
     const newG = callback(grid)
 
-    updateData(path, newG.map(row => row.map(element => element.value)))
+    updateData(path, newG)
     setGrid(newG)
   }
 
@@ -326,13 +324,12 @@ function GridRowModule ({ value, Component, declrs, path }) {
     }
     const row = []
     for (let i = 0; i < curCol; i++) {
-      row.push({ id: seq + i, value: getDefaultValue() })
+      row.push({ id: getUniqueHash(), value: getDefaultValue() })
     }
     setData(g => {
       const newG = [...g]
       newG.push(row)
       setRows(r => r + 1)
-      setSeq(s => s + curCol)
       return newG
     })
   }
@@ -344,11 +341,10 @@ function GridRowModule ({ value, Component, declrs, path }) {
       setData(g => {
         const newG = [...g]
         for (let i = 0; i < rows; i++) {
-          newG[i].push({ id: seq + i, value: getDefaultValue() })
+          newG[i].push({ id: getUniqueHash(), value: getDefaultValue() })
         }
 
         setColumns(c => c + 1)
-        setSeq(s => s + rows)
         return newG
       })
     }
@@ -362,7 +358,8 @@ function GridRowModule ({ value, Component, declrs, path }) {
 
   const components = values.map((element, k) => {
     const [i, j] = getCoords(k)
-    const thisPath = [...path, i, j]
+    // because arrays end with an object containing the value
+    const thisPath = [...path, i, j, 'value']
     return (
       <div
         key={element.id} style={{
@@ -508,12 +505,11 @@ function getShowRowElements (fullscreenPath, path) {
 function MoveableRowsModule ({ value, Component, declrs, path }) {
   const [array, setArray] = useState(() => {
     if (value) {
-      return value.map((element, i) => ({ id: i, value: element }))
+      return deepcopy(value)
     } else {
       return []
     }
   })
-  const [seq, setSeq] = useState(() => value ? value.length : 0)
   const [fullscreenPath] = useContext(FullscreenContext)
 
   const [isMoving, setIsMoving] = useState(false)
@@ -524,7 +520,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
 
   function setData (callback) {
     const newA = callback(array)
-    updateData(path, newA.map(item => item.value))
+    updateData(path, [...newA])
     setArray(newA)
   }
 
@@ -544,9 +540,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
       newValue = getDefault(declrs)
     }
 
-    const nextSeq = seq + 1
-    setSeq(nextSeq)
-    setData(a => [...a, { id: seq, value: newValue }])
+    setData(a => [...a, { id: getUniqueHash(), value: newValue }])
   }
 
   function clickMove (i) {
@@ -577,7 +571,7 @@ function MoveableRowsModule ({ value, Component, declrs, path }) {
   const showRowElements = getShowRowElements(fullscreenPath, path)
 
   const components = array.map((element, i) => {
-    const thisPath = [...path, i]
+    const thisPath = [...path, i, 'value']
 
     return (
       <div

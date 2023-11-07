@@ -95,16 +95,6 @@ class ServerUtils {
   }
 
   /**
-   * Get a random integer in an interval
-   * @param {number} a - Lower bound of the interval, including
-   * @param {number} b - Upper bound of the interval, excluding
-   * @returns {number} Random generated integer
-   */
-  static getRandomInt (a = 0, b) {
-    return Math.floor(Math.random() * (b - a)) + a
-  }
-
-  /**
    * Get a random element from an array
    * @param {any[]} arr - Array to choose from
    * @returns {any} Picked element

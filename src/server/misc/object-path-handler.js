@@ -1,16 +1,26 @@
 /**
- * An array that represents a path of properties within an object. Each string is either a name of a property, or a closed
- * double brackets indicating that it is an array element
+ * An array that represents a path of properties within an ITEM's data object. Each string is either a name of a property, or
+ * a closed double brackets indicating that it is an array element
  *
  * For example, the path `['names', '[]']` represents all elements of the array under the `names` property in the following
- * object:
- * `
- * {
- *   names: [1, 2, 3]
- * }
- * `
+ * data object:
  *
- * and the path `['data', 'name']` is the element under the `name` property in the following nested object:
+ * ```js
+ * {
+ *   names: [
+ *     {
+ *       id: 'somehash1',
+ *       value: 1
+ *     },
+ *     {
+ *       id: 'somehash2',
+ *       value: 2
+ *     }
+ *   ]
+ * }
+ * ```
+ *
+ * and the path `['data', 'name']` is the element under the `name` property in the following nested data object:
  * `
  * {
  *   data: {
@@ -18,11 +28,11 @@
  *   }
  * }
  * `
- * @typedef {string[]} PropertyPath
+ * @typedef {string[]} ItemPath
  */
 
 /**
- * An array of properties/indexes that leads to a value inside an object.
+ * An array of properties/indexes that leads to a value inside a (regular JavaScript) object.
  *
  * For example:
  *
@@ -30,7 +40,7 @@
  *
  * In the object
  *
- * `
+ * ```js
  * {
  *   names: [
  *     {
@@ -38,22 +48,22 @@
  *     }
  *   ]
  * }
- * `
+ * ```
  *
  * leads ot the value `Hello World`. The index of arrays can be either string or numbers.
  *
  * @typedef {(string | number)[]} ObjectPath
  */
 
-/** Class that handles everything related to object paths */
+/** Class that handles everything related to object and item paths */
 class ObjectPathHandler {
   /**
-   * Walk through a path within an object and return all values in the path
-   * @param {PropertyPath} path - Desired path
-   * @param {object} obj - Object to travel
+   * Walk through a path within an item's data object and return all values in the path
+   * @param {ItemPath} path - Desired path
+   * @param {object} obj - Data object to travel
    * @returns {any[] | undefined} A list of all found values or `undefined` if the path doesn't exist
    */
-  static travelPath (path, obj) {
+  static travelItemPath (path, obj) {
     const found = []
     const iterate = (value, current) => {
       const type = path[current]
@@ -61,7 +71,7 @@ class ObjectPathHandler {
       if (current === path.length + 1) found.push(value)
       else if (type === '[]') {
         value.forEach(element => {
-          iterate(element, current)
+          iterate(element.value, current)
         })
       } else {
         if (value === undefined) return
@@ -75,16 +85,18 @@ class ObjectPathHandler {
   }
 
   /**
-   * Get all `ObjectPath`s that apply to a given object based on a `PropertyPath`.
+   * Get all `ObjectPath`s that apply to a given object based on an `ItemPath`.
    *
-   * In essence what this method does is to multiple the number of paths for all the available array indexes, for example,
+   * In essence what this method does is to multiple the number of paths for all the available array indexes and the values, for example,
    * if the path looks like `['prop', '[]']`, and `prop` stores an array of two elements, the output will be the array
-   * `[['prop', 0], ['prop', 1]]`
-   * @param {PropertyPath} propertyPath - Property path
+   * `[['prop', 0, 'value'], ['prop', 1, 'value']]`
+   *
+   * (Expand indices, and add value after each index)
+   * @param {ItemPath} itemPath - Item path
    * @param {object} object - Object to base off
    * @returns {ObjectPath[]} All found object paths
    */
-  static getObjectPathsFromPropertyPath (propertyPath, object) {
+  static getObjectPathsFromItemPath (itemPath, object) {
     const objectPaths = []
 
     /**
@@ -94,12 +106,12 @@ class ObjectPathHandler {
      * @param {number} current - Index for the depth of the property path
      */
     function iterate (object, objPath = [], current = 0) {
-      if (current < propertyPath.length) {
-        const step = propertyPath[current]
+      if (current < itemPath.length) {
+        const step = itemPath[current]
         current++
         if (step === '[]') {
           object.forEach((e, i) => {
-            iterate(e, [...objPath, i], current)
+            iterate(e.value, [...objPath, 'value', i], current)
           })
         } else {
           iterate(object[step], [...objPath, step], current)
@@ -166,9 +178,9 @@ class ObjectPathHandler {
    * condition
    * @param {ObjectStructure} structure - The item class' `data` object structure
    * @param {function(PropertyInfo) : boolean} condition - Check the `ItemClassHandler.findPaths` docs
-   * @returns {PropertyPath[]} A list of all the found property paths
+   * @returns {ItemPath[]} A list of all the found property paths
    */
-  static findPathFromStructure (structure, condition) {
+  static findItemPathFromStructure (structure, condition) {
     const paths = []
     const iterate = (structure, path = []) => {
       structure.forEach(prop => {

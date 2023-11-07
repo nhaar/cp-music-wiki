@@ -97,7 +97,7 @@ class ItemClassHandler {
   findPaths (condition) {
     const pathMap = {}
     for (const cls in this.classes) {
-      pathMap[cls] = ObjectPathHandler.findPathFromStructure(this.classes[cls].structure, condition)
+      pathMap[cls] = ObjectPathHandler.findItemPathFromStructure(this.classes[cls].structure, condition)
     }
     return pathMap
   }

@@ -113,6 +113,16 @@ class CommonUtils {
   static isNumberLike (value) {
     return (typeof value === 'number' && !isNaN(value)) || CommonUtils.isStringNumber(value)
   }
+
+  /**
+   * Get a random integer in an interval
+   * @param {number} a - Lower bound of the interval, including
+   * @param {number} b - Upper bound of the interval, excluding
+   * @returns {number} Random generated integer
+   */
+  static getRandomInt (a = 0, b) {
+    return Math.floor(Math.random() * (b - a)) + a
+  }
 }
 
 module.exports = CommonUtils

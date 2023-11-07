@@ -1,4 +1,4 @@
-import { formatCookies } from '../../server/misc/common-utils'
+import { formatCookies, getRandomInt } from '../../server/misc/common-utils'
 
 /**
  * Asynchronously make a `POST` request with the body being `JSON`
@@ -118,4 +118,12 @@ export function getValueChangeHandler (setter) {
  */
 export function getCheckedChangeHandler (setter) {
   return e => { setter(e.target.checked) }
+}
+
+/**
+ * Generate a random and unique hash
+ * @returns {string} A string containing an unique value
+ */
+export function getUniqueHash () {
+  return [Date.now(), getRandomInt(0, 4096)].map(n => n.toString(16)).join('')
 }
