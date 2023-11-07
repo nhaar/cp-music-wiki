@@ -168,11 +168,22 @@ class ItemClassChanges {
             // iterate through all the nested arrays to find all destination paths
             const dimensionIterator = (array, level) => {
               if (Array.isArray(array)) {
+                const ids = []
                 for (let i = 0; i < array.length; i++) {
                   const newPath = deepcopy(path)
                   newPath.push(`[${i}]`)
                   if (level === 1) {
-                    checkType(array[i].value, prop, newPath, true)
+                    if (typeof (array[i]) !== 'object') {
+                      errors.push(`Element of array ${path.join('')} should have wrapper object`)
+                    } else if (array[i].value === undefined) {
+                      errors.push(`Wrapper for element of array in ${path.join('')} must contain a value`)
+                    } else if (typeof (array[i].id) !== 'string') {
+                      errors.push(`Wrapper for element of array in ${path.join('')} must contain a string id`)
+                    } else if (ids.includes(array[i].id)) {
+                      errors.push(`Array with duplicated ids in ${path.join('')}`)
+                    } else {
+                      checkType(array[i].value, prop, newPath, true)
+                    }
                   } else {
                     dimensionIterator(array[i], level - 1)
                   }
