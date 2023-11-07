@@ -1,8 +1,7 @@
-const jsondiffpatch = require('jsondiffpatch')
-
 const { getName, deepcopy } = require('../misc/common-utils')
 const ItemClassDatabase = require('./item-class-database')
 const { itemClassHandler } = require('./item-class-handler')
+const jsondiffpatch = require('./item-class-patcher')
 const sql = require('../database/sql-handler')
 const user = require('../database/user')
 const { compareObjects, isObject, getLastElement } = require('../misc/server-utils')
