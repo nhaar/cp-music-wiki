@@ -2,7 +2,10 @@ const sqlHandler = require('../src/server/database/sql-handler')
 const { isNumberLike, deepcopy, getUniqueHash } = require('../src/server/misc/common-utils')
 const ObjectPathHandler = require('../src/server/misc/object-path-handler')
 const RetroUpdate = require('../src/server/retro-update/retro-update')
-const lmao = 0
+
+// NOTE!
+// because when I wrote this script, the database had no matrices, this script does not handle matrices backwards compatibility
+// there should be no reason for me to implement it since no other database exists and there should be no future people using old versions
 
 async function getter () {
   return await sqlHandler.selectAll('items')
@@ -12,7 +15,7 @@ function removeValueFromPath (path) {
   const newPath = deepcopy(path)
 
   newPath.forEach((step, i) => {
-    if (step === 'value' && (isNumberLike(newPath[i + 1]) || i === newPath.length - 1)) {
+    if (step === 'value' && isNumberLike(newPath[i - 1])) {
       newPath.splice(i, 1)
     }
   })
@@ -29,10 +32,9 @@ function modifier ({ current, previousModified, structure }) {
 
   paths.forEach(path => {
     const arrayElementPath = deepcopy(path)
+    // remove: index and 'value'
     arrayElementPath.pop()
-    if (arrayElementPath[arrayElementPath.length - 1] === 'value') {
-      arrayElementPath.pop()
-    }
+    arrayElementPath.pop()
 
     const previousArrayElement = ObjectPathHandler.readObjectPath(previousModified, arrayElementPath)
     const previousLength = previousArrayElement.length
