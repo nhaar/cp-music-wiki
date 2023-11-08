@@ -164,34 +164,40 @@ class ItemClassChanges {
         // check if the type of a property is the same as it was defined
         const checkType = (value, prop, path, ignoreArray = false) => {
           if (prop.array && !ignoreArray) {
-            // iterate through all the nested arrays to find all destination paths
-            const dimensionIterator = (array, level) => {
-              if (Array.isArray(array)) {
-                const ids = []
-                for (let i = 0; i < array.length; i++) {
-                  const newPath = deepcopy(path)
-                  newPath.push(`[${i}]`)
-                  if (level === 1) {
-                    if (typeof (array[i]) !== 'object') {
-                      errors.push(`Element of array ${path.join('')} should have wrapper object`)
-                    } else if (array[i].value === undefined) {
-                      errors.push(`Wrapper for element of array in ${path.join('')} must contain a value`)
-                    } else if (typeof (array[i].id) !== 'string') {
-                      errors.push(`Wrapper for element of array in ${path.join('')} must contain a string id`)
-                    } else if (ids.includes(array[i].id)) {
-                      errors.push(`Array with duplicated ids in ${path.join('')}`)
-                    } else {
-                      checkType(array[i].value, prop, newPath, true)
-                    }
-                  } else {
-                    dimensionIterator(array[i], level - 1)
-                  }
-                }
-              } else {
+            if (prop.matrix) {
+              if (!Array.isArray(value.value)) {
+                errors.push(`${path.join('')}: Matrix contains no valid value`)
+                return
+              } else if ([value.rows, value.columns].filter(n => typeof (n) === 'number').length === 0) {
+                errors.push(`${path.join('')}: Matrix doesn't have valid row or column value`)
+                return
+              }
+            } else {
+              if (!Array.isArray(value)) {
                 errors.push(`${path.join('')} is not an array`)
+                return
               }
             }
-            dimensionIterator(value, prop.dim)
+            const newPath = deepcopy(path)
+            const array = prop.matrix ? value.value : value
+            if (prop.matrix) {
+              newPath.push('value')
+            }
+            const ids = []
+            for (let i = 0; i < array.length; i++) {
+              newPath.push(`[${i}]`)
+              if (typeof (array[i]) !== 'object') {
+                errors.push(`Element of array ${path.join('')} should have wrapper object`)
+              } else if (array[i].value === undefined) {
+                errors.push(`Wrapper for element of array in ${path.join('')} must contain a value`)
+              } else if (typeof (array[i].id) !== 'string') {
+                errors.push(`Wrapper for element of array in ${path.join('')} must contain a string id`)
+              } else if (ids.includes(array[i].id)) {
+                errors.push(`Array with duplicated ids in ${path.join('')}`)
+              } else {
+                checkType(array[i].value, prop, newPath, true)
+              }
+            }
           } else {
             const errorMsg = indefiniteDescription => {
               errors.push(`${path.join('')} must be ${indefiniteDescription}`)

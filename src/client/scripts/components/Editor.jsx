@@ -14,6 +14,7 @@ import { EditorDataContext } from '../contexts/EditorDataContext'
 import { AdminContext } from '../contexts/AdminContext'
 import { AnyoneContext } from '../contexts/AnyoneContext'
 import { deepcopy, getUniqueHash } from '../../../server/misc/common-utils'
+import ItemMatrix from '../../../server/item-class/item-matrix'
 
 /**
  * All the `Declrs` that correspond to a table module's children modules
@@ -219,24 +220,25 @@ function MusicFileModule ({ value, path }) {
 
 /** Component for a module that represents a two-dimensional array, that lets it be displayed as a grid */
 function GridRowModule ({ value, Component, declrs, path }) {
-  const [grid, setGrid] = useState(() => {
+  const [matrix, setMatrix] = useState(() => {
     if (value) {
-      return deepcopy(value)
+      const matrix = deepcopy(value)
+      return new ItemMatrix(matrix.value, matrix.rows, matrix.columns)
     } else {
       return []
     }
   })
-  const [rows, setRows] = useState(value.length || 0)
-  const [columns, setColumns] = useState(() => {
-    let columns = 0
-    if (value) {
-      value.forEach(element => {
-        if (element.length > columns) columns = element.length
-      })
-    }
+  // const [rows, setRows] = useState(value.length || 0)
+  // const [columns, setColumns] = useState(() => {
+  //   let columns = 0
+  //   if (value) {
+  //     value.forEach(element => {
+  //       if (element.length > columns) columns = element.length
+  //     })
+  //   }
 
-    return columns
-  })
+  //   return columns
+  // })
   const [isMoving, setIsMoving] = useState(false)
   const [originalPos, setOriginalPos] = useState(-1)
   const [currentHover, setCurrentHover] = useState(-1)
@@ -245,13 +247,6 @@ function GridRowModule ({ value, Component, declrs, path }) {
   const isAdmin = useContext(AdminContext)
   const inAnyone = useContext(AnyoneContext)
   const [fullscreenPath] = useContext(FullscreenContext)
-
-  const values = []
-  grid.forEach(col => {
-    for (let j = 0; j < columns; j++) {
-      values.push(col[j] || null)
-    }
-  })
 
   function startMoving (k) {
     return () => {
@@ -262,51 +257,44 @@ function GridRowModule ({ value, Component, declrs, path }) {
   }
 
   function setData (callback) {
-    const newG = callback(grid)
+    const newM = callback(new ItemMatrix(deepcopy(matrix.value), matrix.rows, matrix.columns))
+    updateData(path, newM)
+    setMatrix(newM)
+  }
 
-    updateData(path, newG)
-    setGrid(newG)
+  function setDataWithNested (callback) {
+    console.log(matrix)
+    const newM = new ItemMatrix(callback(ItemMatrix.fromFlatToNested(matrix.value, matrix.rows, matrix.columns)))
+    updateData(path, newM)
+    setMatrix(newM)
   }
 
   function stopMoving (k) {
     return () => {
       if (isMoving) {
         setIsMoving(false)
-        const [x, y] = getCoords(k)
-        const valueInPos = grid[x][y]
-        const [i, j] = getCoords(originalPos)
-        setData(g => {
-          const newG = [...g]
-          newG[x][y] = newG[i][j]
-          newG[i][j] = valueInPos
-          return newG
+        const valueInPos = matrix.value[k]
+        setData(m => {
+          m.value[k] = m.value[originalPos]
+          m.value[originalPos] = valueInPos
+          return m
         })
       }
     }
   }
 
   function removeRow () {
-    if (rows > 0) {
-      setData(g => {
-        const newG = [...g]
-        newG.splice(newG.length - 1, 1)
-        setRows(r => r - 1)
-        return newG
-      })
-    }
+    setData(m => {
+      m.removeRow()
+      return m
+    })
   }
 
   function removeColumn () {
-    if (columns > 1) {
-      setData(g => {
-        const newG = [...g]
-        newG.forEach(row => {
-          row.splice(row.length - 1, 1)
-        })
-        setColumns(c => c - 1)
-        return newG
-      })
-    }
+    setData(m => {
+      m.removeColumn()
+      return m
+    })
   }
 
   function getDefaultValue () {
@@ -318,48 +306,41 @@ function GridRowModule ({ value, Component, declrs, path }) {
   }
 
   function addRow () {
-    const curCol = columns || 1
-    if (columns === 0) {
-      setColumns(1)
-    }
     const row = []
-    for (let i = 0; i < curCol; i++) {
+    if (matrix.columns === 0) {
+      matrix.columns = 1
+    }
+    for (let i = 0; i < matrix.columns; i++) {
       row.push({ id: getUniqueHash(), value: getDefaultValue() })
     }
-    setData(g => {
-      const newG = [...g]
-      newG.push(row)
-      setRows(r => r + 1)
-      return newG
+    setData(m => {
+      m.addRow(row)
+      return m
     })
   }
 
   function addColumn () {
-    if (rows === 0) {
-      addRow()
-    } else {
-      setData(g => {
-        const newG = [...g]
-        for (let i = 0; i < rows; i++) {
-          newG[i].push({ id: getUniqueHash(), value: getDefaultValue() })
-        }
-
-        setColumns(c => c + 1)
-        return newG
-      })
-    }
+    setData(m => {
+      const total = m.rows === 0 ? 1 : m.rows
+      const col = []
+      for (let i = 0; i < total; i++) {
+        col.push({ id: getUniqueHash(), value: getDefaultValue() })
+      }
+      m.addColumn(col)
+      return m
+    })
   }
 
   function getCoords (k) {
-    return [Math.floor(k / columns), k % columns]
+    return [Math.floor(k / matrix.columns), k % matrix.columns]
   }
 
   const showRowElements = getShowRowElements(fullscreenPath, path)
 
-  const components = values.map((element, k) => {
+  const components = matrix.value.map((element, k) => {
     const [i, j] = getCoords(k)
     // because arrays end with an object containing the value
-    const thisPath = [...path, i, j, 'value']
+    const thisPath = [...path, 'value', k, 'value']
     return (
       <div
         key={element.id} style={{
@@ -397,8 +378,8 @@ function GridRowModule ({ value, Component, declrs, path }) {
   // prevent grid structure breaking focus mode
   const style = showRowElements
     ? {
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, 1fr)`
+        gridTemplateColumns: `repeat(${matrix.columns}, 1fr)`,
+        gridTemplateRows: `repeat(${matrix.rows}, 1fr)`
       }
     : {
         gridTemplateColumns: '1fr'
@@ -862,7 +843,7 @@ export default function Editor ({ editor, structure, isStatic, row, isDeleted, n
 
       if (prop.array) {
         declr.component = declr.Component
-        declr.Component = prop.dim === 1 ? MoveableRowsModule : GridRowModule
+        declr.Component = prop.matrix ? GridRowModule : MoveableRowsModule
       }
 
       declrs.push(declr)

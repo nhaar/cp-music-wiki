@@ -54,8 +54,17 @@ class ItemClassHandler {
   static getDefault (structure) {
     const defaultObject = {}
     structure.forEach(prop => {
-      if (prop.array) defaultObject[prop.property] = []
-      else {
+      if (prop.array) {
+        if (prop.matrix) {
+          defaultObject[prop.property] = {
+            value: [],
+            rows: 0,
+            columns: 0
+          }
+        } else {
+          defaultObject[prop.property] = []
+        }
+      } else {
         if (prop.object) {
           defaultObject[prop.property] = ItemClassHandler.getDefault(prop.content)
         } else {

@@ -1,8 +1,8 @@
 /**
  * An array that represents a path of properties within an ITEM's data object. Each string is either a name of a property, or
- * a closed double brackets indicating that it is an array element
+ * a closed double brackets with 1 indicating that it is an array element or with 2 indicating that it is a matrix
  *
- * For example, the path `['names', '[]']` represents all elements of the array under the `names` property in the following
+ * For example, the path `['names', '[1]']` represents all elements of the array under the `names` property in the following
  * data object:
  *
  * ```js
@@ -21,13 +21,24 @@
  * ```
  *
  * and the path `['data', 'name']` is the element under the `name` property in the following nested data object:
- * `
+ * ```js
  * {
  *   data: {
  *     name: 'Name'
  *   }
  * }
- * `
+ * ```
+ *
+ * For matrices, we have for example the path `['matrix', [2]]`:
+ * ```js
+ * {
+ *   matrix: {
+ *     value: [],
+ *     rows: 0,
+ *     columns: 0
+ *   }
+ * }
+ *
  * @typedef {string[]} ItemPath
  */
 
@@ -69,8 +80,9 @@ class ObjectPathHandler {
       const type = path[current]
       current++
       if (current === path.length + 1) found.push(value)
-      else if (type === '[]') {
-        value.forEach(element => {
+      else if (type.match(/\[(1|2)\]/)) {
+        const array = type === '[2]' ? value.value : value
+        array.forEach(element => {
           iterate(element.value, current)
         })
       } else {
@@ -109,9 +121,13 @@ class ObjectPathHandler {
       if (current < itemPath.length) {
         const step = itemPath[current]
         current++
-        if (step === '[]') {
+        if (step.match(/\[(1|2)\]/)) {
+          const newPath = [...objPath]
+          if (step === '[2]') {
+            newPath.push('value')
+          }
           object.forEach((e, i) => {
-            iterate(e.value, [...objPath, 'value', i], current)
+            iterate(e.value, [...newPath, i, 'value'], current)
           })
         } else {
           iterate(object[step], [...objPath, step], current)
@@ -186,9 +202,8 @@ class ObjectPathHandler {
       structure.forEach(prop => {
         const newPath = [...path, prop.property]
         if (prop.array) {
-          for (let i = 0; i < prop.dim; i++) {
-            newPath.push('[]')
-          }
+          const dim = prop.matrix ? 2 : 1
+          newPath.push(`[${dim}]`)
         }
         if (condition(prop)) {
           paths.push(newPath)
