@@ -4,7 +4,7 @@ const sql = require('../database/sql-handler')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
-const { convertDaysToMs } = require('../misc/common-utils')
+const { convertDaysToMs, formatDate } = require('../misc/common-utils')
 const jsondiffpatch = require('../item-class/item-class-patcher')
 const ObjectPathHandler = require('../misc/object-path-handler')
 
@@ -287,6 +287,12 @@ class SimpleDiff extends DiffItem {
     } else if (content === 'ID') {
       this.old = old
       this.cur = cur
+    } else if (content === 'DATE') {
+      [this.old, this.cur] = [old, cur].map((date) => {
+        if (!date) { return '' }
+        return formatDate(new Date(date))
+      })
+      this.delta = Diff.diffChars(this.old, this.cur)
     }
   }
 }

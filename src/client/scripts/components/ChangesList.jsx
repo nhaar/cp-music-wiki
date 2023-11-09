@@ -3,6 +3,7 @@ import { getCookies, getMonthName, postAndGetJSON, postJSON } from '../client-ut
 import '../../stylesheets/recent-changes.css'
 import Gear from '../../images/gear.png'
 import Arrow from '../../images/arrow-down.png'
+import { formatDate } from '../../../server/misc/common-utils'
 
 /** Component with the settings menu for the changes */
 function Settings ({ showSettings, settings }) {
@@ -354,7 +355,7 @@ function Changes ({ config, route }) {
       const dividedInDays = {}
       data.forEach(change => {
         const date = new Date(Number(change.timestamp))
-        const day = `${date.getDate()} ${getMonthName(date.getMonth())} ${date.getFullYear()}`
+        const day = formatDate(date)
         if (dividedInDays[day]) {
           dividedInDays[day].push(change)
         } else {

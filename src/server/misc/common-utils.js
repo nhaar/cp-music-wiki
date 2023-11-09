@@ -131,6 +131,26 @@ class CommonUtils {
   static getUniqueHash () {
     return [CommonUtils.getRandomInt(0, 1048576/* 16^5 */), Date.now()].map(n => n.toString(16)).join('')
   }
+
+  /**
+   * Get the name of a month
+   * @param {number} month - Month number, starting at 0 for January
+   * @returns {string} Month name
+   */
+  static getMonthName (month) {
+    return [
+      'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
+    ][month]
+  }
+
+  /**
+   * Format a date to a string in the format `DD MonthName YYYY`
+   * @param {Date} date
+   * @returns {string}
+   */
+  static formatDate (date) {
+    return `${date.getDate()} ${CommonUtils.getMonthName(date.getMonth())} ${date.getFullYear()}`
+  }
 }
 
 module.exports = CommonUtils

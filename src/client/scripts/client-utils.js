@@ -77,17 +77,6 @@ export function getCookies () {
 }
 
 /**
- * Get the name of a month
- * @param {number} month - Month number, starting at 0 for January
- * @returns {string} Month name
- */
-export function getMonthName (month) {
-  return [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
-  ][month]
-}
-
-/**
  * Set the `n-th` index within a React stateful array to a value
  * @param {number} n - Target index
  * @param {any} value - Value to set

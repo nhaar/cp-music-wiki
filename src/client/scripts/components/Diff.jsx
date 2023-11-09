@@ -16,7 +16,7 @@ function getPathText (path) {
 function SimpleDiff ({ diff }) {
   let component
   switch (diff.content) {
-    case 'TEXTSHORT': {
+    case 'TEXTSHORT': case 'DATE': {
       component = <TextshortDiff diff={diff} />
       break
     }
