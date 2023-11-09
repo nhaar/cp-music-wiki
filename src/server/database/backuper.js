@@ -79,7 +79,7 @@ class Backuper {
   /**
    * Backup the database
    */
-  static backup () {
+  static async backup () {
     let passwordSetter
 
     // other OSs not supported
@@ -93,15 +93,17 @@ class Backuper {
 
     const dumpCommand = `${passwordSetter} pg_dump -U ${config.PG_USER} -h 127.0.0.1 -w -F p -f "${fileName}" -d ${config.PG_DATABASE}`
 
-    exec(dumpCommand, (err, stdout, stderr) => {
-      if (err) {
-        throw err
-      }
-      if (stderr) {
-        console.log(stderr)
-        return
-      }
-      console.log(stdout)
+    await new Promise((resolve, reject) => {
+      exec(dumpCommand, (err, stdout, stderr) => {
+        if (err) {
+          throw err
+        }
+        if (stderr) {
+          reject(stderr)
+        }
+        console.log(stdout)
+        resolve()
+      })
     })
   }
 }

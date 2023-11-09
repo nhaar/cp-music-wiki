@@ -54,8 +54,17 @@ class ItemClassHandler {
   static getDefault (structure) {
     const defaultObject = {}
     structure.forEach(prop => {
-      if (prop.array) defaultObject[prop.property] = []
-      else {
+      if (prop.array) {
+        if (prop.matrix) {
+          defaultObject[prop.property] = {
+            value: [],
+            rows: 0,
+            columns: 0
+          }
+        } else {
+          defaultObject[prop.property] = []
+        }
+      } else {
         if (prop.object) {
           defaultObject[prop.property] = ItemClassHandler.getDefault(prop.content)
         } else {
@@ -97,7 +106,7 @@ class ItemClassHandler {
   findPaths (condition) {
     const pathMap = {}
     for (const cls in this.classes) {
-      pathMap[cls] = ObjectPathHandler.findPathFromStructure(this.classes[cls].structure, condition)
+      pathMap[cls] = ObjectPathHandler.findItemPathFromStructure(this.classes[cls].structure, condition)
     }
     return pathMap
   }

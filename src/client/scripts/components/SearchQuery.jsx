@@ -14,7 +14,7 @@ export default function SearchQuery ({ text: textSetter, readonly, getter, itera
         setText(await textSetter())
       }
     })()
-  })
+  }, [])
 
   async function updateQuery (e) {
     if (!readonly) {

@@ -28,6 +28,7 @@ const editorData = require('../frontend-bridge/editor-data')
 const ChangesData = require('../frontend-bridge/changes-data')
 const UserBlocker = require('../database/user-blocker')
 const { isStringNumber } = require('../misc/common-utils')
+const sqlHandler = require('../database/sql-handler')
 
 /**
  * Route for the homepage
@@ -385,8 +386,10 @@ async function sendView (req, res, scriptName, title, arg = {}) {
  */
 async function sendDiffView (req, res, cur, old) {
   const diffData = [old, cur]
+  const diffRow = [...diffData]
   for (let i = 0; i < diffData.length; i++) {
     diffData[i] = await itemClassChanges.getRevisionData(Number(diffData[i]))
+    diffRow[i] = await sqlHandler.selectId('revisions', diffRow[i])
   }
   // send error if either revisions don't exist
   if (diffData.includes(null)) {
@@ -395,13 +398,14 @@ async function sendDiffView (req, res, cur, old) {
   }
 
   // send error if trying to diff two different items
-  if (diffData[0].item_id !== diffData[1].item_id) {
+  if (diffRow[0].item_id !== diffRow[1].item_id) {
     res.sendStatus(400)
     return
   }
 
-  const diff = ChangesData.getRevDiff(...diffData)
-  sendView(req, res, 'Diff', 'Difference between revisions', { diff })
+  const cls = await ItemClassDatabase.getClass(diffRow[0].item_id)
+  const diffs = ChangesData.getRevDiff(...diffData, cls)
+  sendView(req, res, 'Diff', 'Difference between revisions', { diffs })
 }
 
 module.exports = router

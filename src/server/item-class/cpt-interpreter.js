@@ -188,14 +188,23 @@ class CPTInterpreter {
       callbackfn(property, type, params)
     })
   }
-
   /**
    * Check if a `CPT` `type` declaration represents a declaration of an array
    * @param {string} type - `type` as declared
    * @returns {boolean} `true` if it represents an array, `false` otherwise
    */
+
   static isArrayType (type) {
-    return type.includes('[]')
+    return type.match(/\[\]/)
+  }
+
+  /**
+   * Check if a `CPT` `type` declaration represents a declaration of a matrix
+   * @param {string} type - `type` as declared
+   * @returns {boolean} `true` if it represents a matrix, `false` otherwise
+   */
+  static isMatrix (type) {
+    return type.match(/\[\]/g).length === 2
   }
 
   /**
@@ -243,11 +252,13 @@ class CPTInterpreter {
     CPTInterpreter.iterateDeclarations(cpt, (prop, type, params) => {
       const propObj = { property: prop }
 
-      if (CPTInterpreter.isArrayType(type)) {
-        propObj.array = true
-        propObj.dim = CPTInterpreter.getDimension(type)
+      propObj.array = CPTInterpreter.isArrayType(type)
+      if (propObj.array) {
+        propObj.matrix = CPTInterpreter.isMatrix(type)
         type = getMatch(type, /.*?(?=\[\]+)/)
-      } else propObj.array = false
+      } else {
+        propObj.matrix = false
+      }
 
       const args = (getMatch(type, /(?<=\().*(?=\))/) || '').split(',')
       propObj.args = args

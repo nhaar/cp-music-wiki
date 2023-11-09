@@ -16,7 +16,7 @@ class WebpackSetup {
     this.lintPlugin = {
       apply: compiler => {
         compiler.hooks.afterEmit.tap('AfterEmitPlugin', () => {
-          exec('npx standard --fix', (err, stdout) => {
+          exec('npx standard src --fix', (err, stdout) => {
             if (err) {
               console.log('====================== LINT ERRORS ======================')
               process.stdout.write(stdout)

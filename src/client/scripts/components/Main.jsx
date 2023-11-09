@@ -131,8 +131,6 @@ function NotificationIcon ({ user }) {
     })()
   }, [])
 
-  console.log(info)
-
   function handleClick () {
     // setInfo(i => {
     //   const newI = { ...i }
