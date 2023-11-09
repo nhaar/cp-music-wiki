@@ -28,6 +28,10 @@ function SimpleDiff ({ diff }) {
       component = <IDDiff diff={diff} />
       break
     }
+    case 'BOOLEAN': {
+      component = <BooleanDiff diff={diff} />
+      break
+    }
   }
 
   return (
@@ -148,6 +152,14 @@ function IDDiff ({ diff }) {
     })()
   }, [])
 
+  return (
+    <LineDiffComponent diff={delta} />
+  )
+}
+
+/** Component for showing difference for a boolean value (checkboxes) */
+function BooleanDiff ({ diff }) {
+  const delta = [{ removed: true, value: diff.old }, { added: true, value: diff.cur }]
   return (
     <LineDiffComponent diff={delta} />
   )

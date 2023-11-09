@@ -293,6 +293,9 @@ class SimpleDiff extends DiffItem {
         return formatDate(new Date(date))
       })
       this.delta = Diff.diffChars(this.old, this.cur)
+    } else if (content === 'BOOLEAN') {
+      this.old = old ? 'Yes' : 'No'
+      this.cur = cur ? 'Yes' : 'No'
     }
   }
 }
