@@ -17,7 +17,6 @@
   border-left-width: 3px;
   border-radius: 5px;
   border-style: solid;
-  flex-grow: 1;
 }
 
 .diff--text-parent > div {
@@ -60,4 +59,17 @@
 
 .add-diff {
   border-color: var(--add-color);
+}
+
+.diff--item {
+  border: 1px solid black;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.diff--item-header {
+  justify-content: left;
+  width: 100%;
+  margin-top: -5px;
+  margin-left: -5px;
 }

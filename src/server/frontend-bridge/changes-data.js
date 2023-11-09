@@ -1,3 +1,5 @@
+const Diff = require('diff')
+
 const sql = require('../database/sql-handler')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
@@ -169,8 +171,9 @@ class ChangesData {
         const rightEntry = diff[i + '']
 
         if (rightEntry !== undefined) {
-          if (content.object) {
-            checkObject(content, rightEntry, [...path, i, 'value'], newPrettyPath)
+          // an object's content will be stored as an array
+          if (Array.isArray(content)) {
+            checkObject(content, rightEntry.value, [...path, i, 'value'], newPrettyPath)
           } else {
             diffs.push(new SimpleDiff(newPrettyPath, content, rightEntry[0], rightEntry[1]))
           }
@@ -197,15 +200,18 @@ class ChangesData {
         arrayDiffs.push(new ArrayAddDiff(i, matrix, curArray[i].value, content))
       }
 
-      diffs.push(new ArrayDiff([...prettyPath], arrayDiffs))
+      if (arrayDiffs.length > 0) {
+        diffs.push(new ArrayDiff([...prettyPath], arrayDiffs))
+      }
     }
 
     function checkObject (content, diff, path = [], prettyPath = []) {
-      structure.forEach(prop => {
+      content.forEach(prop => {
         const delta = diff[prop.property]
         if (delta) {
           const newPath = [...path, prop.property]
           const newPrettyPath = [...prettyPath, prop.name]
+
           if (prop.array) {
             checkArray(prop.content, delta, newPath, newPrettyPath, prop.matrix)
           } else if (prop.object) {
@@ -250,6 +256,9 @@ class SimpleDiff extends DiffItem {
     this.old = old
     this.cur = cur
     this.content = content
+    if (content === 'TEXTSHORT') {
+      this.delta = Diff.diffChars(old, cur)
+    }
   }
 }
 

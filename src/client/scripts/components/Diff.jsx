@@ -11,6 +11,93 @@ function getPathText (path) {
   return path.join(' -> ')
 }
 
+/** Component for a simple diff */
+function SimpleDiff ({ diff }) {
+  let component
+  switch (diff.content) {
+    case 'TEXTSHORT': {
+      component = <TextshortDiff diff={diff} />
+      break
+    }
+  }
+
+  return (
+    <div className='column-flex diff--item'>
+      <div className='diff--item-header'>
+        Changes to {getPathText(diff.path)}:
+      </div>
+      {component}
+    </div>
+  )
+}
+
+/**
+ * Component for text with chars diffed
+ *
+ * diff is the result of diffChars
+ * add should be true if the line is being placed on the right side
+ */
+function CharDiffText ({ diff, add }) {
+  const className = add
+    ? 'add-span'
+    : 'remove-span'
+    (diff)
+  return (
+    <div className='flex'>
+      {diff.map(change => {
+        if ((!add && !change.added) || (add && !change.removed)) {
+          const colorClass = ((add && change.added) || (!add && change.removed)) ? className : ''
+          return <span className={`${colorClass}`}>{change.value.replace(' ', '\u00A0')}</span>
+        }
+      })}
+    </div>
+  )
+}
+
+/**
+ * Component for text with a line diffed
+ *
+ * diff is the result of diffLines
+ * add should be true if the line is being placed on the right side
+ */
+function LineDiffComponent ({ diff, add }) {
+  const sign = add ? '+' : '-'
+  return (
+    <div
+      style={{
+        display: 'flex',
+        width: '100%'
+      }}
+    >
+      <div className='sign'>{sign}</div>
+      <div
+        className='diff--text-parent' style={{
+          display: 'flex',
+          flexDirection: 'row',
+          borderColor: add ? 'green' : 'red'
+        }}
+      >
+        <CharDiffText diff={diff} add={add} />
+      </div>
+    </div>
+  )
+}
+
+/** Component for a TEXTSHORT diff */
+function TextshortDiff ({ diff }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 50%)',
+      width: '100%'
+    }}
+    >
+      <LineDiffComponent diff={diff.delta} />
+      <LineDiffComponent diff={diff.delta} add />
+    </div>
+  )
+}
+
 /**
  * Component that displays the inner changes to an array
  */
@@ -21,20 +108,11 @@ function ArrayDiff ({ diff }) {
 
   return (
     <div
-      className='column-flex' style={{
-        border: '1px solid black',
-        padding: '10px',
-        rowGap: '10px',
-        borderRadius: '5px'
+      className='column-flex diff--item' style={{
+        rowGap: '10px'
       }}
     >
-      <div style={{
-        justifyContent: 'left',
-        width: '100%',
-        marginTop: '-5px',
-        marginLeft: '-5px'
-      }}
-      >
+      <div className='diff--item-header'>
         Changes to an array (list or grid) in: {getPathText(diff.path)}
       </div>
       {diffComponents}
@@ -187,9 +265,16 @@ export default function Diff ({ diffs }) {
 
   diffs.forEach(diff => {
     switch (diff.type) {
+      case 'simple': {
+        diffChildren.push(<SimpleDiff diff={diff} />)
+        break
+      }
       case 'array': {
         diffChildren.push(<ArrayDiff diff={diff} />)
         break
+      }
+      default: {
+        throw new Error('Invalid diff type')
       }
     }
   })
