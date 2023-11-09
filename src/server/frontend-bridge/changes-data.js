@@ -1,10 +1,10 @@
-const Diff = require('diff')
-
 const sql = require('../database/sql-handler')
 const itemClassChanges = require('../item-class/item-class-changes')
 const ItemClassDatabase = require('../item-class/item-class-database')
 const { itemClassHandler } = require('../item-class/item-class-handler')
 const { convertDaysToMs } = require('../misc/common-utils')
+const jsondiffpatch = require('../item-class/item-class-patcher')
+const ObjectPathHandler = require('../misc/object-path-handler')
 
 /** Class that generates data from the frontend that refers to items changing */
 class ChangesData {
@@ -145,32 +145,165 @@ class ChangesData {
    * Get the difference between two revisions
    * @param {ItemData} old - Data for the older revision
    * @param {ItemData} cur - Data for the newer revision
-   * @returns {any[][]} An array where each element is an array containing the diff information
+   * @returns {object[]} An array where each element is an object containing the diff information
    */
-  static getRevDiff (old, cur) {
-    const strs = [old, cur].map(data => JSON.stringify(data, null, 2))
-    const diff = Diff.diffLines(...strs)
+  static getRevDiff (old, cur, cls) {
+    const structure = itemClassHandler.classes[cls].structure
+    const diffs = []
+    const diff = jsondiffpatch.diff(old, cur)
 
-    const groups = []
+    function checkArray (content, diff, path, prettyPath, matrix) {
+      if (matrix) {
+        path.push('value')
+      }
+      const oldArray = ObjectPathHandler.readObjectPath(old, path)
+      const curArray = ObjectPathHandler.readObjectPath(cur, path)
+      const oldLength = oldArray.length
+      const curLength = curArray.length
+      // taking care of everything except the added entries!
+      for (let i = 0; i < oldLength; i++) {
+        const newPrettyPath = [...prettyPath, i]
+        // in here, right entry corresponds to things that changed, using the index of the NEW array
+        const rightEntry = diff[i + '']
 
-    for (let i = 0; i < diff.length; i++) {
-      const statement = diff[i]
-      const next = diff[i + 1]
-      let charDiff
-      if (next) charDiff = Diff.diffChars(statement.value, next.value)
-      if (statement.removed) {
-        if (next.added) {
-          i++
-          groups.push(['removeadd', statement, next, charDiff])
-        } else {
-          groups.push(['remove', statement])
+        if (rightEntry !== undefined) {
+          if (content.object) {
+            checkObject(content, rightEntry, [...path, i, 'value'], newPrettyPath)
+          } else {
+            diffs.push(new SimpleDiff(newPrettyPath, content, rightEntry[0], rightEntry[1]))
+          }
         }
-      } else if (statement.added) {
-        groups.push(['add', statement])
+
+        // left entry corresponds to things that were removed/moved, using the index of the OLD array
+        const leftEntry = diff['_' + i]
+
+        if (leftEntry !== undefined) {
+          const magicNumber = leftEntry[2]
+          // moving
+          if (magicNumber === 3) {
+            diffs.push(new ArrayMoveDiff([...prettyPath], matrix, i, leftEntry[1]))
+          // removing
+          } else if (magicNumber === 0) {
+            diffs.push(new ArrayDeleteDiff([...prettyPath], i, matrix))
+          }
+        }
+      }
+
+      for (let i = oldLength; i < curLength; i++) {
+        diffs.push(new ArrayAddDiff([...prettyPath], i, matrix, curArray[i].value, content))
       }
     }
 
-    return groups
+    function checkObject (content, diff, path = [], prettyPath = []) {
+      structure.forEach(prop => {
+        const delta = diff[prop.property]
+        if (delta) {
+          const newPath = [...path, prop.property]
+          const newPrettyPath = [...prettyPath, prop.name]
+          if (prop.array) {
+            checkArray(prop.content, delta, newPath, newPrettyPath, prop.matrix)
+          } else if (prop.object) {
+            checkObject(content, delta, newPath, newPrettyPath)
+          } else {
+            // for normal properties, it is expected only to change
+            diffs.push(new SimpleDiff(newPrettyPath, prop.content, delta[0], delta[1]))
+          }
+        }
+      })
+    }
+
+    checkObject(structure, diff)
+
+    return diffs
+  }
+}
+
+/**
+ * Prototype for an object that contains the data for an item's revision
+ */
+class DiffItem {
+  constructor (path) {
+    this.path = path || []
+  }
+}
+
+/**
+ * Object containing information for a property change
+ */
+class SimpleDiff extends DiffItem {
+  /**
+   *
+   * @param {any[]} path - Pretty path for the property
+   * @param {string} content - Property's content, which is a id string like "TEXTSHORT"
+   * @param {any} old - Old value
+   * @param {any} cur - New value
+   */
+  constructor (path, content, old, cur) {
+    super(path)
+    this.old = old
+    this.cur = cur
+    this.content = content
+    this.type = 'simple'
+  }
+}
+
+/**
+ * Object containing information for an element that was moved in an array
+ */
+class ArrayMoveDiff extends DiffItem {
+  /**
+   *
+   * @param {any[]} path - Pretty path for the array
+   * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
+   * @param {number} oldIndex - Index in the old array
+   * @param {number} curIndex - Index in the new array
+   */
+  constructor (path, isMatrix, oldIndex, curIndex) {
+    super(path)
+    this.isMatrix = isMatrix
+    this.oldIndex = oldIndex
+    this.curIndex = curIndex
+    this.type = 'arraymove'
+  }
+}
+
+/**
+ * Object containing information for an element that was deleted from an array
+ */
+class ArrayDeleteDiff extends DiffItem {
+  /**
+   *
+   * @param {any[]} path - Pretty path for the array
+   * @param {number} index - Index in the original array
+   * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
+   */
+  constructor (path, index, isMatrix) {
+    super(path)
+    this.index = index
+    this.isMatrix = isMatrix
+    this.type = 'arraydelete'
+  }
+}
+
+/**
+ * Object containing information for an element that was added to an array
+ */
+class ArrayAddDiff extends DiffItem {
+  /**
+   *
+   * @param {any[]} path - Pretty path for the array
+   * @param {number} index  - Index in the new array
+   * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
+   * @param {any} value - Value of the element in the array in the data object
+   * @param {object[]|string} content - Content for the element, which can be a string or an array of objects
+   */
+  constructor (path, index, isMatrix, value, content) {
+    super(path)
+    this.index = index
+    this.isMatrix = isMatrix
+    this.type = 'arrayadd'
+    this.value = value
+    this.content = content
   }
 }
 

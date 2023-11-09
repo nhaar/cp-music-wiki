@@ -131,7 +131,7 @@ class ItemMatrix {
    * @returns {object} - Object containing the keys `value` for the array, and `rows` and `columns` for the size
    */
   static fromNestedToFlat (nested) {
-    return { value: nested.flat(Infinity), rows: nested.length, columns: nested[0] && nested[0].length || 0 }
+    return { value: nested.flat(Infinity), rows: nested.length, columns: (nested[0] && nested[0].length) || 0 }
   }
 }
 

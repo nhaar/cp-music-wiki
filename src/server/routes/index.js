@@ -28,6 +28,7 @@ const editorData = require('../frontend-bridge/editor-data')
 const ChangesData = require('../frontend-bridge/changes-data')
 const UserBlocker = require('../database/user-blocker')
 const { isStringNumber } = require('../misc/common-utils')
+const sqlHandler = require('../database/sql-handler')
 
 /**
  * Route for the homepage
@@ -402,8 +403,9 @@ async function sendDiffView (req, res, cur, old) {
     return
   }
 
-  const diff = ChangesData.getRevDiff(...diffData)
-  sendView(req, res, 'Diff', 'Difference between revisions', { diff })
+  const cls = await ItemClassDatabase.getClass(diffRow[0].item_id)
+  const diffs = ChangesData.getRevDiff(...diffData, cls)
+  sendView(req, res, 'Diff', 'Difference between revisions', { diffs })
 }
 
 module.exports = router
