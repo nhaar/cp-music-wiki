@@ -2,14 +2,38 @@ import React from 'react'
 import '../../stylesheets/diff.css'
 import { TableModule, addComponentsToDeclarations } from './EditorComponents'
 
-function PathText ({ path }) {
+function getPathText (path) {
+  return path.join(' -> ')
+}
+
+function ArrayDiff ({ diff }) {
+  const diffComponents = diff.diffs.map((diff, i) => {
+    switch (diff.type) {
+      case 'add': {
+        return <ArrayAddDiff diff={diff} key={i} />
+      }
+    }
+  })
+
   return (
-    <div>
-      {path.map((step, i) => (
-        <span key={i}>
-          {step} - {'>'}
-        </span>
-      ))}
+    <div
+      className='column-flex' style={{
+        border: '1px solid black',
+        padding: '10px',
+        rowGap: '10px',
+        borderRadius: '5px'
+      }}
+    >
+      <div style={{
+        justifyContent: 'left',
+        width: '100%',
+        marginTop: '-5px',
+        marginLeft: '-5px'
+      }}
+      >
+        Changes to an array (list or grid) in: {getPathText(diff.path)}
+      </div>
+      {diffComponents}
     </div>
   )
 }
@@ -17,8 +41,17 @@ function PathText ({ path }) {
 function ArrayAddDiff ({ diff }) {
   const declrs = addComponentsToDeclarations(diff.content)
   return (
-    <div className='column-flex'>
-      <PathText path={diff.path} />
+    <div
+      className='diff--text-parent' style={{
+        borderColor: 'green'
+      }}
+    >
+      <div style={{
+        marginBottom: '5px'
+      }}
+      >
+        New element added as row #{diff.index + 1}
+      </div>
       <TableModule declrs={declrs} value={diff.value} path={[]} />
     </div>
   )
@@ -128,8 +161,8 @@ export default function Diff ({ diffs }) {
 
   diffs.forEach(diff => {
     switch (diff.type) {
-      case 'arrayadd': {
-        diffChildren.push(<ArrayAddDiff diff={diff} />)
+      case 'array': {
+        diffChildren.push(<ArrayDiff diff={diff} />)
         break
       }
     }

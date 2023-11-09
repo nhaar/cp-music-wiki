@@ -156,6 +156,7 @@ class ChangesData {
       if (matrix) {
         path.push('value')
       }
+      const arrayDiffs = []
       const oldArray = ObjectPathHandler.readObjectPath(old, path)
       const curArray = ObjectPathHandler.readObjectPath(cur, path)
       const oldLength = oldArray.length
@@ -181,17 +182,19 @@ class ChangesData {
           const magicNumber = leftEntry[2]
           // moving
           if (magicNumber === 3) {
-            diffs.push(new ArrayMoveDiff([...prettyPath], matrix, i, leftEntry[1]))
+            arrayDiffs.push(new ArrayMoveDiff(matrix, i, leftEntry[1]))
           // removing
           } else if (magicNumber === 0) {
-            diffs.push(new ArrayDeleteDiff([...prettyPath], i, matrix))
+            arrayDiffs.push(new ArrayDeleteDiff(i, matrix))
           }
         }
       }
 
       for (let i = oldLength; i < curLength; i++) {
-        diffs.push(new ArrayAddDiff([...prettyPath], i, matrix, curArray[i].value, content))
+        arrayDiffs.push(new ArrayAddDiff(i, matrix, curArray[i].value, content))
       }
+
+      diffs.push(new ArrayDiff([...prettyPath], arrayDiffs))
     }
 
     function checkObject (content, diff, path = [], prettyPath = []) {
@@ -222,8 +225,9 @@ class ChangesData {
  * Prototype for an object that contains the data for an item's revision
  */
 class DiffItem {
-  constructor (path) {
+  constructor (path, type) {
     this.path = path || []
+    this.type = type
   }
 }
 
@@ -239,71 +243,91 @@ class SimpleDiff extends DiffItem {
    * @param {any} cur - New value
    */
   constructor (path, content, old, cur) {
-    super(path)
+    super(path, 'simple')
     this.old = old
     this.cur = cur
     this.content = content
-    this.type = 'simple'
+  }
+}
+
+/**
+ * Prototype for an object that contains the data for a change within an array
+ */
+class ArrayDiffItem {
+  /**
+   *
+   * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
+   * @param {string} type - Type of change, can be `move`, `delete` or `add`
+   */
+  constructor (isMatrix, type) {
+    this.isMatrix = isMatrix
+    this.type = type
   }
 }
 
 /**
  * Object containing information for an element that was moved in an array
  */
-class ArrayMoveDiff extends DiffItem {
+class ArrayMoveDiff extends ArrayDiffItem {
   /**
    *
-   * @param {any[]} path - Pretty path for the array
    * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
    * @param {number} oldIndex - Index in the old array
    * @param {number} curIndex - Index in the new array
    */
-  constructor (path, isMatrix, oldIndex, curIndex) {
-    super(path)
-    this.isMatrix = isMatrix
+  constructor (isMatrix, oldIndex, curIndex) {
+    super(isMatrix, 'move')
     this.oldIndex = oldIndex
     this.curIndex = curIndex
-    this.type = 'arraymove'
   }
 }
 
 /**
  * Object containing information for an element that was deleted from an array
  */
-class ArrayDeleteDiff extends DiffItem {
+class ArrayDeleteDiff extends ArrayDiffItem {
   /**
    *
-   * @param {any[]} path - Pretty path for the array
    * @param {number} index - Index in the original array
    * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
    */
-  constructor (path, index, isMatrix) {
-    super(path)
+  constructor (index, isMatrix) {
+    super(isMatrix, 'delete')
     this.index = index
-    this.isMatrix = isMatrix
-    this.type = 'arraydelete'
   }
 }
 
 /**
  * Object containing information for an element that was added to an array
  */
-class ArrayAddDiff extends DiffItem {
+class ArrayAddDiff extends ArrayDiffItem {
   /**
    *
-   * @param {any[]} path - Pretty path for the array
    * @param {number} index  - Index in the new array
    * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
    * @param {any} value - Value of the element in the array in the data object
    * @param {object[]|string} content - Content for the element, which can be a string or an array of objects
    */
-  constructor (path, index, isMatrix, value, content) {
-    super(path)
+  constructor (index, isMatrix, value, content) {
+    super(isMatrix, 'add')
     this.index = index
-    this.isMatrix = isMatrix
-    this.type = 'arrayadd'
     this.value = value
     this.content = content
+  }
+}
+
+/**
+ * Object containing information for an array change
+ */
+class ArrayDiff extends DiffItem {
+  /**
+   *
+   * @param {(string|number)[]} path - Pretty path for the array
+   * @param {ArrayDiffItem[]} diffs - Array of objects containing the data for the inner array changes
+   */
+  constructor (path, diffs) {
+    super(path, 'array')
+    this.diffs = diffs
   }
 }
 
