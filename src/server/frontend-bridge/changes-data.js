@@ -155,6 +155,7 @@ class ChangesData {
     function checkArray (content, diff, path, prettyPath, matrix) {
       if (matrix) {
         path.push('value')
+        diff = diff.value
       }
       const arrayDiffs = []
       const oldArray = ObjectPathHandler.readObjectPath(old, path)
@@ -182,10 +183,12 @@ class ChangesData {
           const magicNumber = leftEntry[2]
           // moving
           if (magicNumber === 3) {
-            arrayDiffs.push(new ArrayMoveDiff(matrix, i, leftEntry[1]))
+            const newIndex = leftEntry[1]
+            arrayDiffs.push(new ArrayMoveDiff(matrix, i, newIndex, oldArray[i].value, content))
+            arrayDiffs.push(new ArrayMoveDiff(matrix, newIndex, i, oldArray[newIndex].value, content))
           // removing
           } else if (magicNumber === 0) {
-            arrayDiffs.push(new ArrayDeleteDiff(i, matrix))
+            arrayDiffs.push(new ArrayDeleteDiff(i, matrix, oldArray[i].value, content))
           }
         }
       }
@@ -258,10 +261,14 @@ class ArrayDiffItem {
    *
    * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
    * @param {string} type - Type of change, can be `move`, `delete` or `add`
+   * @param {any} value - Value of the element in the array in the data object
+   * @param {object[]|string} content - Content for the element, which can be a string or an array of objects
    */
-  constructor (isMatrix, type) {
+  constructor (isMatrix, type, value, content) {
     this.isMatrix = isMatrix
     this.type = type
+    this.value = value
+    this.content = content
   }
 }
 
@@ -274,9 +281,11 @@ class ArrayMoveDiff extends ArrayDiffItem {
    * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
    * @param {number} oldIndex - Index in the old array
    * @param {number} curIndex - Index in the new array
+   * @param {any} value - Value of the element in the array in the data object
+   * @param {object[]|string} content - Content for the element, which can be a string or an array of objects
    */
-  constructor (isMatrix, oldIndex, curIndex) {
-    super(isMatrix, 'move')
+  constructor (isMatrix, oldIndex, curIndex, value, content) {
+    super(isMatrix, 'move', value, content)
     this.oldIndex = oldIndex
     this.curIndex = curIndex
   }
@@ -290,9 +299,11 @@ class ArrayDeleteDiff extends ArrayDiffItem {
    *
    * @param {number} index - Index in the original array
    * @param {bool} isMatrix - If `true`, the array is a matrix, otherwise it is a list
+   * @param {any} value - Value of the element in the array in the data object
+   * @param {object[]|string} content - Content for the element, which can be a string or an array of objects
    */
-  constructor (index, isMatrix) {
-    super(isMatrix, 'delete')
+  constructor (index, isMatrix, value, content) {
+    super(isMatrix, 'delete', value, content)
     this.index = index
   }
 }
@@ -309,10 +320,8 @@ class ArrayAddDiff extends ArrayDiffItem {
    * @param {object[]|string} content - Content for the element, which can be a string or an array of objects
    */
   constructor (index, isMatrix, value, content) {
-    super(isMatrix, 'add')
+    super(isMatrix, 'add', value, content)
     this.index = index
-    this.value = value
-    this.content = content
   }
 }
 

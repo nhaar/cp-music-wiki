@@ -2,17 +2,21 @@ import React from 'react'
 import '../../stylesheets/diff.css'
 import { TableModule, addComponentsToDeclarations } from './EditorComponents'
 
+/**
+ * Get a readable path from the pretty path from diffs
+ * @param {(string|number)[]} path - Pretty path
+ * @returns {string}
+ */
 function getPathText (path) {
   return path.join(' -> ')
 }
 
+/**
+ * Component that displays the inner changes to an array
+ */
 function ArrayDiff ({ diff }) {
   const diffComponents = diff.diffs.map((diff, i) => {
-    switch (diff.type) {
-      case 'add': {
-        return <ArrayAddDiff diff={diff} key={i} />
-      }
-    }
+    return <ArrayDiffItem diff={diff} type={diff.type} key={i} />
   })
 
   return (
@@ -38,26 +42,48 @@ function ArrayDiff ({ diff }) {
   )
 }
 
-function ArrayAddDiff ({ diff }) {
+/**
+ * Component that displays one type of inner change to an array
+ */
+function ArrayDiffItem ({ diff, type }) {
   const declrs = addComponentsToDeclarations(diff.content)
+  let borderColor
+  let text
+  switch (type) {
+    case 'add': {
+      borderColor = 'green'
+      text = 'New element added: Row #' + (diff.index + 1)
+      break
+    }
+    case 'delete': {
+      borderColor = 'red'
+      text = 'Element deleted: Row #' + (diff.index + 1)
+      break
+    }
+    case 'move': {
+      borderColor = 'blue'
+      text = `Element moved: From row #${diff.oldIndex + 1} to row #${diff.curIndex + 1}`
+      break
+    }
+  }
   return (
     <div
       className='diff--text-parent' style={{
-        borderColor: 'green'
+        borderColor
       }}
     >
       <div style={{
         marginBottom: '5px'
       }}
       >
-        New element added as row #{diff.index + 1}
+        {text}
       </div>
       <TableModule declrs={declrs} value={diff.value} path={[]} />
     </div>
   )
 }
 
-/** Component for the difference between revisions pge */
+/** Component for the difference between two revisions page */
 export default function Diff ({ diffs }) {
   // function formatValue (value) {
   //   // convert whitespaces
