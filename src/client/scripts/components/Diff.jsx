@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import '../../stylesheets/diff.css'
 import { TableModule, addComponentsToDeclarations } from './EditorComponents'
+import { postAndGetJSON } from '../client-utils'
 
 /**
  * Get a readable path from the pretty path from diffs
@@ -21,6 +22,10 @@ function SimpleDiff ({ diff }) {
     }
     case 'TEXTLONG': {
       component = <TextlongDiff diff={diff} />
+      break
+    }
+    case 'ID': {
+      component = <IDDiff diff={diff} />
       break
     }
   }
@@ -48,11 +53,12 @@ function CharDiffText ({ diff, add }) {
 
   return (
     <div className='flex'>
-      {diff.map(change => {
+      {diff.map((change, i) => {
         if ((!add && !change.added) || (add && !change.removed)) {
           const colorClass = ((add && change.added) || (!add && change.removed)) ? className : ''
-          return <span className={`${colorClass}`}>{change.value.replace(' ', '\u00A0')}</span>
+          return <span key={i} className={`${colorClass}`}>{change.value.replace(' ', '\u00A0')}</span>
         }
+        return undefined
       })}
     </div>
   )
@@ -113,11 +119,37 @@ function TextlongDiff ({ diff }) {
         return <LineDiffComponent diff={change.value} key={i} />
       }
     }
+    return undefined
   })
   return (
     <div>
       {components}
     </div>
+  )
+}
+
+/** Component that shows difference between IDs */
+function IDDiff ({ diff }) {
+  const [delta, setDelta] = React.useState([])
+
+  useEffect(() => {
+    (async () => {
+      const ids = {
+        old: diff.old,
+        cur: diff.cur
+      }
+      for (const idName in ids) {
+        const id = ids[idName]
+        console.log(id)
+        const { name } = await postAndGetJSON('api/get-name', { id })
+        ids[idName] = name
+      }
+      setDelta([{ removed: true, value: ids.old }, { added: true, value: ids.cur }])
+    })()
+  }, [])
+
+  return (
+    <LineDiffComponent diff={delta} />
   )
 }
 

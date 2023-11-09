@@ -455,7 +455,8 @@ function getShowRowElements (fullscreenPath, path) {
 export function MoveableRowsModule ({ value, Component, declrs, path }) {
   const [array, setArray] = useState(() => {
     if (value) {
-      return deepcopy(value)
+      // tried using deepcopy, but for some very weird react reason it needs to be destructured
+      return [...value]
     } else {
       return []
     }

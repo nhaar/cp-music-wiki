@@ -284,6 +284,9 @@ class SimpleDiff extends DiffItem {
         }
       }
       this.delta = changes
+    } else if (content === 'ID') {
+      this.old = old
+      this.cur = cur
     }
   }
 }
