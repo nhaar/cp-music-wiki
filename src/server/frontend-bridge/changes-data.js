@@ -215,7 +215,7 @@ class ChangesData {
           if (prop.array) {
             checkArray(prop.content, delta, newPath, newPrettyPath, prop.matrix)
           } else if (prop.object) {
-            checkObject(content, delta, newPath, newPrettyPath)
+            checkObject(prop.content, delta, newPath, newPrettyPath)
           } else {
             // for normal properties, it is expected only to change
             diffs.push(new SimpleDiff(newPrettyPath, prop.content, delta[0], delta[1]))
@@ -257,7 +257,33 @@ class SimpleDiff extends DiffItem {
     this.cur = cur
     this.content = content
     if (content === 'TEXTSHORT') {
+      old = old || ''
+      cur = cur || ''
       this.delta = Diff.diffChars(old, cur)
+    } else if (content === 'TEXTLONG') {
+      old = old || ''
+      cur = cur || ''
+      const diffLines = Diff.diffLines(old, cur)
+      const changes = []
+      for (let i = 0; i < diffLines.length; i++) {
+        const line = diffLines[i]
+        const nextLine = diffLines[i + 1]
+        if (nextLine && nextLine.added && line.removed) {
+          changes.push({
+            type: 'change',
+            value: Diff.diffChars(line.value, nextLine.value)
+          })
+          i++
+        } else {
+          if (line.added || line.removed) {
+            changes.push({
+              type: line.added ? 'add' : 'remove',
+              value: line.value
+            })
+          }
+        }
+      }
+      this.delta = changes
     }
   }
 }

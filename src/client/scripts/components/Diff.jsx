@@ -19,6 +19,10 @@ function SimpleDiff ({ diff }) {
       component = <TextshortDiff diff={diff} />
       break
     }
+    case 'TEXTLONG': {
+      component = <TextlongDiff diff={diff} />
+      break
+    }
   }
 
   return (
@@ -41,7 +45,7 @@ function CharDiffText ({ diff, add }) {
   const className = add
     ? 'add-span'
     : 'remove-span'
-    (diff)
+
   return (
     <div className='flex'>
       {diff.map(change => {
@@ -60,7 +64,7 @@ function CharDiffText ({ diff, add }) {
  * diff is the result of diffLines
  * add should be true if the line is being placed on the right side
  */
-function LineDiffComponent ({ diff, add }) {
+function LineDiffDeltaComponent ({ diff, add }) {
   const sign = add ? '+' : '-'
   return (
     <div
@@ -83,8 +87,7 @@ function LineDiffComponent ({ diff, add }) {
   )
 }
 
-/** Component for a TEXTSHORT diff */
-function TextshortDiff ({ diff }) {
+function LineDiffComponent ({ diff }) {
   return (
     <div style={{
       display: 'grid',
@@ -92,8 +95,28 @@ function TextshortDiff ({ diff }) {
       width: '100%'
     }}
     >
-      <LineDiffComponent diff={diff.delta} />
-      <LineDiffComponent diff={diff.delta} add />
+      <LineDiffDeltaComponent diff={diff} />
+      <LineDiffDeltaComponent diff={diff} add />
+    </div>
+  )
+}
+
+/** Component for a TEXTSHORT diff */
+function TextshortDiff ({ diff }) {
+  return <LineDiffComponent diff={diff.delta} />
+}
+
+function TextlongDiff ({ diff }) {
+  const components = diff.delta.map((change, i) => {
+    switch (change.type) {
+      case 'change': {
+        return <LineDiffComponent diff={change.value} key={i} />
+      }
+    }
+  })
+  return (
+    <div>
+      {components}
     </div>
   )
 }
